@@ -31,7 +31,7 @@ export default function QueuePage() {
     <div className="glass-card p-4 animate-fade-up" style={{ overflow: 'visible' }}>
       <div className="flex items-start gap-3">
         <div className="w-9 h-9 rounded-lg flex items-center justify-center text-[15px] shrink-0"
-          style={{ background: 'rgba(26,115,232,0.09)', color: 'var(--brand)' }}>
+          style={{ background: 'rgba(138,21,56,0.09)', color: 'var(--brand)' }}>
           {TYPE_ICONS[item.type] || '✎'}
         </div>
         <div className="flex-1 min-w-0">

@@ -38,7 +38,7 @@ export default function DataPage() {
             <button key={t.name} onClick={() => { setActive(t.name); setOffset(0); setSearch(''); }}
               className="w-full text-left px-3 py-2 rounded-lg transition-all"
               style={t.name === active
-                ? { background: 'rgba(26,115,232,0.12)', border: '1px solid rgba(26,115,232,0.30)', borderLeft: '3px solid var(--brand)' }
+                ? { background: 'rgba(138,21,56,0.12)', border: '1px solid rgba(138,21,56,0.30)', borderLeft: '3px solid var(--brand)' }
                 : { border: '1px solid transparent' }}>
               <p className="text-[12px] font-bold" style={{ color: t.name === active ? 'var(--brand-lo)' : 'var(--text-md)' }}>
                 {t.name}
@@ -63,10 +63,10 @@ export default function DataPage() {
             style={{ background: 'rgba(255,255,255,0.6)', borderColor: 'rgba(15,23,42,0.12)', color: 'var(--text)' }} />
           <div className="flex items-center gap-1.5 text-[10.5px]" style={{ color: 'var(--text-dim)' }}>
             <button disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - limit))}
-              className="px-2 py-1 rounded disabled:opacity-30 hover:bg-[rgba(26,115,232,0.08)]">◀</button>
+              className="px-2 py-1 rounded disabled:opacity-30 hover:bg-[rgba(138,21,56,0.08)]">◀</button>
             {offset + 1}–{Math.min(offset + limit, total)} of {total.toLocaleString()}
             <button disabled={offset + limit >= total} onClick={() => setOffset(offset + limit)}
-              className="px-2 py-1 rounded disabled:opacity-30 hover:bg-[rgba(26,115,232,0.08)]">▶</button>
+              className="px-2 py-1 rounded disabled:opacity-30 hover:bg-[rgba(138,21,56,0.08)]">▶</button>
           </div>
         </div>
         <div className="flex-1 overflow-auto">

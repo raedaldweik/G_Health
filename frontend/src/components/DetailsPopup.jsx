@@ -11,7 +11,7 @@ export default function DetailsPopup({ data, query, onClose, onOpenSource }) {
       <div className="glass-card w-full max-w-[760px] max-h-[85vh] flex flex-col animate-slide-up"
         onClick={(e) => e.stopPropagation()} style={{ background: 'rgba(255,255,255,0.96)' }}>
 
-        <div className="flex items-center justify-between px-5 py-3 border-b border-[rgba(26,115,232,0.10)]">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-[rgba(138,21,56,0.10)]">
           <div className="flex items-center gap-2">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" strokeWidth="2">
               <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
@@ -19,7 +19,7 @@ export default function DetailsPopup({ data, query, onClose, onOpenSource }) {
             </svg>
             <span className="text-sm font-bold" style={{ color: 'var(--text)' }}>Full trace</span>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[rgba(26,115,232,0.08)]" style={{ color: 'var(--text-dim)' }}>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[rgba(138,21,56,0.08)]" style={{ color: 'var(--text-dim)' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
             </svg>
@@ -27,7 +27,7 @@ export default function DetailsPopup({ data, query, onClose, onOpenSource }) {
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
-          <div className="rounded-xl px-4 py-3" style={{ background: 'rgba(26,115,232,0.05)', border: '1px solid rgba(26,115,232,0.14)' }}>
+          <div className="rounded-xl px-4 py-3" style={{ background: 'rgba(138,21,56,0.05)', border: '1px solid rgba(138,21,56,0.14)' }}>
             <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--text-dim)' }}>Question</p>
             <p className="text-[12.5px] leading-relaxed" style={{ color: 'var(--text)' }}>{query || '(unknown)'}</p>
           </div>
@@ -50,10 +50,10 @@ export default function DetailsPopup({ data, query, onClose, onOpenSource }) {
             </p>
             <div className="space-y-2">
               {(data.trace || []).map((t, i) => (
-                <div key={i} className="rounded-lg px-3 py-2.5" style={{ border: '1px solid rgba(26,115,232,0.10)' }}>
+                <div key={i} className="rounded-lg px-3 py-2.5" style={{ border: '1px solid rgba(138,21,56,0.10)' }}>
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
-                      style={{ background: 'rgba(26,115,232,0.12)', color: 'var(--brand)' }}>{i + 1}</span>
+                      style={{ background: 'rgba(138,21,56,0.12)', color: 'var(--brand)' }}>{i + 1}</span>
                     <AgentChip agent={t.agent} />
                     <span className="text-[12px] font-bold font-mono" style={{ color: 'var(--brand-lo)' }}>{t.tool}</span>
                     {t.duration_ms != null && <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>{t.duration_ms} ms</span>}
@@ -85,7 +85,7 @@ export default function DetailsPopup({ data, query, onClose, onOpenSource }) {
               </p>
               <div className="space-y-2">
                 {data.citations.map((c, i) => (
-                  <div key={i} className="rounded-lg px-3 py-2.5" style={{ border: '1px solid rgba(26,115,232,0.10)' }}>
+                  <div key={i} className="rounded-lg px-3 py-2.5" style={{ border: '1px solid rgba(138,21,56,0.10)' }}>
                     <div className="flex items-center gap-2 mb-1.5">
                       <span className="text-[11.5px] font-bold truncate" style={{ color: 'var(--brand-lo)' }}>{c.doc}</span>
                       <span className="badge badge-blue">p. {c.page}</span>

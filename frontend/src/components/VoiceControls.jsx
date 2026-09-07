@@ -39,7 +39,7 @@ export function VoiceInput({ onTranscript, disabled, lang }) {
     <button onClick={toggle} disabled={disabled}
       title={`Speak instead of typing (${lang === 'ar' ? 'العربية' : 'English'})`}
       className={`relative w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-all ${
-        listening ? 'bg-red-500/15 text-red-500' : 'hover:bg-[rgba(26,115,232,0.08)]'
+        listening ? 'bg-red-500/15 text-red-500' : 'hover:bg-[rgba(138,21,56,0.08)]'
       } disabled:opacity-30`}
       style={!listening ? { color: 'var(--text-dim)' } : {}}>
       {listening && <span className="absolute w-10 h-10 rounded-lg border-2 border-red-400/40 animate-ping" />}
@@ -89,7 +89,7 @@ export function SpeakerToggle({ speaker }) {
         speaker.setEnabled(!speaker.enabled);
       }}
       title={speaker.enabled ? 'Spoken answers: on' : 'Spoken answers: off'}
-      className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-all hover:bg-[rgba(26,115,232,0.08)]"
+      className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-all hover:bg-[rgba(138,21,56,0.08)]"
       style={{ color: speaker.enabled ? 'var(--brand)' : 'var(--text-dim)' }}>
       {speaker.enabled ? (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">

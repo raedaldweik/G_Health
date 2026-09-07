@@ -16,13 +16,13 @@ const md = {
   h3: (p) => <h3 className="text-[13px] font-semibold my-1.5" style={{ color: 'var(--brand-lo)' }} {...p} />,
   table: (p) => (
     <div className="my-2 overflow-x-auto">
-      <table className="border-collapse text-[12px] w-full" style={{ border: '1px solid rgba(26,115,232,0.15)' }} {...p} />
+      <table className="border-collapse text-[12px] w-full" style={{ border: '1px solid rgba(138,21,56,0.15)' }} {...p} />
     </div>
   ),
-  thead: (p) => <thead style={{ background: 'rgba(26,115,232,0.06)' }} {...p} />,
-  th: (p) => <th className="px-2 py-1.5 text-left font-semibold" style={{ border: '1px solid rgba(26,115,232,0.15)', color: 'var(--brand)' }} {...p} />,
-  td: (p) => <td className="px-2 py-1.5" style={{ border: '1px solid rgba(26,115,232,0.10)' }} {...p} />,
-  code: (p) => <code className="px-1 py-0.5 rounded text-[12px]" style={{ background: 'rgba(26,115,232,0.08)', color: 'var(--brand)' }} {...p} />,
+  thead: (p) => <thead style={{ background: 'rgba(138,21,56,0.06)' }} {...p} />,
+  th: (p) => <th className="px-2 py-1.5 text-left font-semibold" style={{ border: '1px solid rgba(138,21,56,0.15)', color: 'var(--brand)' }} {...p} />,
+  td: (p) => <td className="px-2 py-1.5" style={{ border: '1px solid rgba(138,21,56,0.10)' }} {...p} />,
+  code: (p) => <code className="px-1 py-0.5 rounded text-[12px]" style={{ background: 'rgba(138,21,56,0.08)', color: 'var(--brand)' }} {...p} />,
   pre: (p) => <pre className="p-2 rounded my-1 text-[12px] overflow-x-auto" style={{ background: 'rgba(0,0,0,0.04)' }} {...p} />,
   blockquote: (p) => <blockquote className="pl-3 my-2 italic" style={{ borderLeft: '2px solid var(--brand-lo)', color: 'var(--text-md)' }} {...p} />,
 };
@@ -57,7 +57,7 @@ export default function ResponseCard({ data, onOpenSource, onOpenDetails }) {
             <button key={i} onClick={() => onOpenSource?.(c)}
               title="Open the cited guideline passage"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] transition-all cursor-pointer hover:shadow-md hover:-translate-y-[1px]"
-              style={{ color: 'var(--brand-lo)', background: 'rgba(26,115,232,0.06)', border: '1px solid rgba(26,115,232,0.18)' }}>
+              style={{ color: 'var(--brand-lo)', background: 'rgba(138,21,56,0.06)', border: '1px solid rgba(138,21,56,0.18)' }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
               </svg>
@@ -88,7 +88,7 @@ export default function ResponseCard({ data, onOpenSource, onOpenDetails }) {
       <div className="flex items-center gap-3 px-1 text-[10px]" style={{ color: 'var(--text-faint)' }}>
         {onOpenDetails && (
           <button onClick={() => onOpenDetails(data)} title="Full trace: every agent hop, tool call and token count"
-            className="p-1 rounded-md transition-all hover:bg-[rgba(26,115,232,0.10)]" style={{ color: 'var(--text-dim)' }}>
+            className="p-1 rounded-md transition-all hover:bg-[rgba(138,21,56,0.10)]" style={{ color: 'var(--text-dim)' }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
               <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />

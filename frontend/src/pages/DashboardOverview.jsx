@@ -1,7 +1,16 @@
 import { useEffect, useState } from 'react';
 import { getDashboard } from '../services/api';
 import DynamicChart from '../components/DynamicChart';
-import { KpiTile, Panel, Spinner } from '../components/ui';
+import { KpiStrip, Panel, Spinner } from '../components/ui';
+
+const KPI_META = [
+  { icon: 'users', tone: 'cyan' },
+  { icon: 'droplet', tone: 'teal', trend: '0.3pp YoY', trendDir: 'up' },
+  { icon: 'check', tone: 'green' },
+  { icon: 'heart', tone: 'violet' },
+  { icon: 'alert', tone: 'red' },
+  { icon: 'coins', tone: 'gold' },
+];
 
 /** Dashboard 1 — The nation's pulse: who we serve, how we're doing, where demand goes. */
 export default function DashboardOverview() {
@@ -15,10 +24,13 @@ export default function DashboardOverview() {
     ...d.visits.history.map((h) => ({ month: h.month, Actual: h.visits })),
     ...d.visits.forecast.map((f) => ({ month: f.month, Forecast: f.visits })),
   ];
-  const fac = d.facility_benchmark.map((f) => ({
-    facility: f.facility_name.replace(' Health Center', '').replace(' General Hospital', ' GH').replace(' Hospital', ' H.'),
-    controlled: f.pct_controlled,
-  }));
+  // Top 10 facilities, short labels — 3D bars need breathing room
+  const fac = d.facility_benchmark.slice(0, 10).map((f) => {
+    const name = f.facility_name.replace(' Health Center', '').replace(' General Hospital', '')
+      .replace(' Hospital', '').trim();
+    const words = name.split(' ');
+    return { facility: words.length > 1 ? words.slice(0, 2).join(' ') : name, controlled: f.pct_controlled };
+  });
 
   return (
     <div className="h-full p-3 overflow-hidden flex flex-col gap-2.5">
@@ -34,9 +46,7 @@ export default function DashboardOverview() {
         <p className="text-[10px]" style={{ color: 'var(--text-faint)' }}>Synthetic QHIE cohort · me-central1 (Doha) target region</p>
       </div>
 
-      <div className="grid grid-cols-6 gap-2.5 shrink-0">
-        {d.kpis.map((k, i) => <KpiTile key={i} {...k} />)}
-      </div>
+      <KpiStrip items={d.kpis.map((k, i) => ({ ...k, ...KPI_META[i] }))} />
 
       <div className="flex-1 grid grid-cols-6 grid-rows-2 gap-2.5 min-h-0">
         <div className="col-span-4">
@@ -58,7 +68,7 @@ export default function DashboardOverview() {
         </div>
 
         <div className="col-span-3">
-          <Panel title="Facility benchmark — % of diabetes cohort well-controlled">
+          <Panel title="Facility benchmark — % well-controlled (top 10)">
             <DynamicChart bare spec={{
               type: 'bar', xKey: 'facility', data: fac,
               yKeys: [{ key: 'controlled', label: '% well-controlled' }],

@@ -43,12 +43,12 @@ export default function LandingPage({ go }) {
         <div className="flex items-center justify-center gap-3">
           <button onClick={() => go('assistant')}
             className="px-6 py-3 rounded-xl text-[13px] font-bold text-white transition-all hover:scale-[1.03]"
-            style={{ background: 'var(--brand-grad)', boxShadow: '0 6px 20px rgba(26,115,232,0.35)' }}>
+            style={{ background: 'var(--brand-grad)', boxShadow: '0 6px 20px rgba(138,21,56,0.35)' }}>
             Open the Assistant →
           </button>
           <button onClick={() => go('overview')}
             className="px-6 py-3 rounded-xl text-[13px] font-bold transition-all hover:scale-[1.03]"
-            style={{ background: 'var(--glass-strong)', color: 'var(--brand-lo)', border: '1px solid rgba(26,115,232,0.25)' }}>
+            style={{ background: 'var(--glass-strong)', color: 'var(--brand-lo)', border: '1px solid rgba(138,21,56,0.25)' }}>
             View the dashboards
           </button>
         </div>

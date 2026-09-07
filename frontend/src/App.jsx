@@ -45,12 +45,12 @@ function PersonaSelector() {
         className="flex items-center gap-2 pl-3 pr-2.5 py-1.5 rounded-lg text-[12px] font-semibold transition-all"
         style={{
           background: 'rgba(255,255,255,0.65)', backdropFilter: 'blur(12px)',
-          border: '1px solid rgba(26,115,232,0.22)', color: 'var(--text)', minWidth: 210,
+          border: '1px solid rgba(138,21,56,0.22)', color: 'var(--text)', minWidth: 210,
         }}>
         <span className="w-2 h-2 rounded-full shrink-0" style={{ background: 'var(--green)' }} />
         <span className="flex-1 text-left truncate">{personaInfo.name}</span>
         <span className="text-[8.5px] font-bold tracking-wider uppercase px-1.5 py-0.5 rounded shrink-0"
-          style={{ background: 'rgba(26,115,232,0.10)', color: 'var(--brand)' }}>
+          style={{ background: 'rgba(138,21,56,0.10)', color: 'var(--brand)' }}>
           {persona}
         </span>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" strokeWidth="2.5"
@@ -62,7 +62,7 @@ function PersonaSelector() {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div className="absolute right-0 top-full mt-1 rounded-xl shadow-xl overflow-hidden z-50 w-[280px] animate-fade-up"
-            style={{ background: 'rgba(255,255,255,0.97)', border: '1px solid rgba(26,115,232,0.2)', backdropFilter: 'blur(20px)' }}>
+            style={{ background: 'rgba(255,255,255,0.97)', border: '1px solid rgba(138,21,56,0.2)', backdropFilter: 'blur(20px)' }}>
             <p className="px-3 pt-2.5 pb-1 text-[9px] font-bold tracking-widest uppercase" style={{ color: 'var(--text-dim)' }}>
               Personas
             </p>
@@ -71,8 +71,8 @@ function PersonaSelector() {
                 const active = u.id === persona;
                 return (
                   <button key={u.id} onClick={() => { setPersona(u.id); setOpen(false); }}
-                    className="w-full text-left px-3 py-2 transition-all hover:bg-[rgba(26,115,232,0.06)] flex items-center gap-2.5"
-                    style={active ? { background: 'rgba(26,115,232,0.10)', borderLeft: '3px solid var(--brand)' }
+                    className="w-full text-left px-3 py-2 transition-all hover:bg-[rgba(138,21,56,0.06)] flex items-center gap-2.5"
+                    style={active ? { background: 'rgba(138,21,56,0.10)', borderLeft: '3px solid var(--brand)' }
                       : { borderLeft: '3px solid transparent' }}>
                     <div className={`w-7 h-7 rounded-full ${u.color} flex items-center justify-center text-white text-[10px] font-bold shrink-0`}>
                       {u.avatar}
@@ -116,6 +116,7 @@ function Header({ tab, setTab }) {
       </button>
 
       <div className="title-block">
+        <div className="header-eyebrow">Qatar Health Information Exchange · Agentic Intelligence Layer</div>
         <div className="title-row">
           <h1 className="app-title">
             <b>Nabd</b> <span className="title-ar">نبض</span> — Population Health Intelligence
@@ -123,22 +124,25 @@ function Header({ tab, setTab }) {
           <div className="accent-line" />
         </div>
         <div className="nav-row">
-          {tabs.map((t) => (
-            <button key={t.id} onClick={() => setTab(t.id)}
-              className={`nav-pill ${activeTop === t.id ? 'active' : ''}`}>
-              {t.label}
-            </button>
-          ))}
+          <div className="seg-track">
+            {tabs.map((t) => (
+              <button key={t.id} onClick={() => setTab(t.id)}
+                className={`seg-pill ${activeTop === t.id ? 'active' : ''}`}>
+                {t.label}
+              </button>
+            ))}
+          </div>
           {isDash && (
             <>
               <span className="nav-divider" />
-              {DASH_TABS.map((t) => (
-                <button key={t.id} onClick={() => setTab(t.id)}
-                  className={`nav-pill ${tab === t.id ? 'active' : ''}`}
-                  style={{ fontSize: 11, padding: '5px 12px' }}>
-                  {t.label}
-                </button>
-              ))}
+              <div className="seg-track">
+                {DASH_TABS.map((t) => (
+                  <button key={t.id} onClick={() => setTab(t.id)}
+                    className={`seg-pill ${tab === t.id ? 'active' : ''}`}>
+                    {t.label}
+                  </button>
+                ))}
+              </div>
             </>
           )}
         </div>

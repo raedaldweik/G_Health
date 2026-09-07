@@ -3,6 +3,7 @@ import {
   PieChart, Pie, Cell, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ReferenceLine,
 } from 'recharts';
+import { Bar3D, Donut3D } from './Chart3D';
 
 /*
  * DynamicChart — renders a chart spec (from the agent's render_chart tool or a
@@ -15,8 +16,8 @@ import {
  *         referenceY }
  */
 
-// Validated categorical palette — fixed order, never cycled past slot 6.
-export const PALETTE = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300'];
+// Validated categorical palette — the reports ramp mid-tones, fixed order.
+export const PALETTE = ['#2b7fb2', '#b8862e', '#6d4fa8', '#3a8e5a', '#e07ab2', '#b03c3c'];
 
 const AXIS_TICK = { fontSize: 10, fill: '#64748b', fontFamily: 'Manrope' };
 const GRID = 'rgba(15,23,42,0.07)';
@@ -66,12 +67,40 @@ export default function DynamicChart({ spec, bare = false, height = 230 }) {
       domain={type === 'line' || type === 'area' ? ['auto', 'auto'] : [0, 'auto']} />
   );
   const grid = <CartesianGrid stroke={GRID} vertical={false} />;
-  const tip = <Tooltip content={<GlassTooltip />} cursor={{ fill: 'rgba(26,115,232,0.05)' }} />;
+  const tip = <Tooltip content={<GlassTooltip />} cursor={{ fill: 'rgba(138,21,56,0.05)' }} />;
   const legend = multi ? <Legend wrapperStyle={legendStyle} iconSize={9} /> : null;
   const refLine = spec.referenceY != null ? (
     <ReferenceLine y={spec.referenceY} stroke="#94a3b8" strokeDasharray="4 3"
       label={{ value: spec.referenceLabel || 'target', fontSize: 9.5, fill: '#64748b', position: 'right' }} />
   ) : null;
+
+  // Single-series bar → the signature reports 3D bar; pie → the 3D donut.
+  const to3dRows = (k) => data.map((r) => ({ label: String(r[spec.xKey] ?? ''), value: Number(r[k.key]) }))
+    .filter((r) => isFinite(r.value));
+  const wrap3d = (inner, minH) => bare
+    ? <div style={{ width: '100%', height: '100%' }}>{inner}</div>
+    : (
+      <div className="mt-2 max-w-full animate-fade-up">
+        <div className="text-[12.5px] font-bold mb-0.5" style={{ color: 'var(--brand)' }}>{spec.title || 'Chart'}</div>
+        {spec.subtitle && <div className="text-[11px] mb-1.5" style={{ color: 'var(--text-dim)' }}>{spec.subtitle}</div>}
+        <div className="rounded-xl px-2 pt-2 pb-1" style={{
+          background: 'var(--glass-strong)', border: '1px solid var(--glass-border)',
+          boxShadow: 'var(--glass-shadow)', backdropFilter: 'blur(14px)', height: minH,
+        }}>
+          {inner}
+        </div>
+        {spec.footnote && <div className="text-[10px] mt-1 px-1" style={{ color: 'var(--text-faint)' }}>{spec.footnote}</div>}
+      </div>
+    );
+
+  if (type === 'bar' && yKeys.length === 1 && !spec.stacked) {
+    return wrap3d(<Bar3D data={to3dRows(yKeys[0])} ramp={spec.ramp ?? 0} maxBars={20} />, height + 30);
+  }
+  if (type === 'pie') {
+    return wrap3d(
+      <Donut3D data={to3dRows(yKeys[0])} centerLabel={spec.centerLabel || yKeys[0].label} />,
+      height + 60);
+  }
 
   let chart = null;
   if (type === 'bar') {

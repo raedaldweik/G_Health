@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getDashboard } from '../services/api';
 import DynamicChart from '../components/DynamicChart';
+import { Donut3D } from '../components/Chart3D';
 import { Panel, Spinner } from '../components/ui';
 
 /** Dashboard 2 — Clinical quality: where care falls short of the guideline, measure by measure. */
@@ -46,7 +47,7 @@ export default function DashboardClinical() {
                       <td>
                         <div className="relative h-2.5 rounded-full overflow-hidden" style={{ background: 'rgba(15,23,42,0.07)' }}>
                           <div className="absolute inset-y-0 left-0 rounded-full"
-                            style={{ width: `${Math.min(m.rate_pct, 100)}%`, background: m.met ? 'var(--green)' : '#2a78d6' }} />
+                            style={{ width: `${Math.min(m.rate_pct, 100)}%`, background: m.met ? 'var(--green)' : '#2b7fb2' }} />
                           <div className="absolute inset-y-0 w-[2px]" style={{ left: `${m.target_pct}%`, background: 'var(--text-dim)' }} />
                         </div>
                         <div className="text-[9px] mt-0.5" style={{ color: 'var(--text-faint)' }}>target {m.target_pct}%</div>
@@ -74,20 +75,12 @@ export default function DashboardClinical() {
         </div>
         <div className="col-span-1">
           <Panel title="BP control (hypertension)">
-            <div className="h-full flex flex-col items-center justify-center gap-1">
-              <p className="text-[30px] font-extrabold leading-none" style={{ color: 'var(--text)' }}>
-                {((bp.controlled / bpTotal) * 100).toFixed(0)}%
-              </p>
-              <p className="text-[10px] text-center" style={{ color: 'var(--text-dim)' }}>
-                controlled &lt;140/90
-              </p>
-              <p className="text-[10.5px] font-bold" style={{ color: 'var(--red)' }}>
-                {bp.uncontrolled.toLocaleString()} uncontrolled
-              </p>
-              <p className="text-[9.5px]" style={{ color: 'var(--text-faint)' }}>
-                LDL at target: {d.ldl_at_target_pct}%
-              </p>
-            </div>
+            <Donut3D
+              data={[{ label: 'Controlled', value: bp.controlled, ramp: 2 },
+                     { label: 'Uncontrolled', value: bp.uncontrolled, ramp: 3 }]}
+              centerValue={`${((bp.controlled / bpTotal) * 100).toFixed(0)}%`}
+              centerLabel="controlled <140/90"
+              valueFormatter={(v) => v.toLocaleString()} showLegend={true} />
           </Panel>
         </div>
 

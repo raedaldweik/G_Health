@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getDashboard } from '../services/api';
 import DynamicChart from '../components/DynamicChart';
-import { KpiTile, Panel, Spinner } from '../components/ui';
+import { KpiStrip, Panel, Spinner } from '../components/ui';
 
 /** Dashboard 4 — Cost & Equity: where the riyal goes, and who the system is missing. */
 export default function DashboardCost() {
@@ -26,14 +26,16 @@ export default function DashboardCost() {
         </p>
       </div>
 
-      <div className="grid grid-cols-4 gap-2.5 shrink-0">
-        <KpiTile label="Total annual cost" value={`${(cc.total_annual_cost_qar / 1e6).toFixed(1)}`} suffix="M QAR" />
-        <KpiTile label="Top 10% of patients" value={`${cc.top10pct_share_pct}%`} sub="of all spend" />
-        <KpiTile label="Equity spread (HbA1c)" value={`${gapPP}`} suffix="pp" accent="red"
-          sub={`${eq[0].nationality} vs ${eq[eq.length - 1].nationality}`} />
-        <KpiTile label="Costliest segment" value={d.segments[0]?.segment ?? '—'}
-          sub={`${(Math.max(...d.segments.map((s) => s.total_cost)) / 1e6).toFixed(1)}M QAR`} />
-      </div>
+      <KpiStrip items={[
+        { icon: 'coins', tone: 'gold', label: 'Total annual cost',
+          value: (cc.total_annual_cost_qar / 1e6).toFixed(1), suffix: 'M QAR' },
+        { icon: 'users', tone: 'cyan', label: 'Top 10% of patients — share of spend',
+          value: `${cc.top10pct_share_pct}%` },
+        { icon: 'alert', tone: 'red', label: `Equity spread — ${eq[0].nationality} vs ${eq[eq.length - 1].nationality}`,
+          value: gapPP, suffix: 'pp' },
+        { icon: 'activity', tone: 'violet', label: 'Costliest segment',
+          value: [...d.segments].sort((a, b) => b.total_cost - a.total_cost)[0]?.segment ?? '—' },
+      ]} />
 
       <div className="flex-1 grid grid-cols-6 grid-rows-2 gap-2.5 min-h-0">
         <div className="col-span-2">

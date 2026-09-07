@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getDashboard } from '../services/api';
 import DynamicChart, { PALETTE } from '../components/DynamicChart';
-import { KpiTile, Panel, Spinner } from '../components/ui';
+import { KpiStrip, Panel, Spinner } from '../components/ui';
 import {
   ResponsiveContainer, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
 } from 'recharts';
@@ -37,13 +37,16 @@ export default function DashboardRisk() {
         </div>
       </div>
 
-      <div className="grid grid-cols-6 gap-2.5 shrink-0">
-        <KpiTile label="Risk model AUC" value={d.auc} sub={`vs ${d.legacy_auc} legacy registry score`} />
-        <KpiTile label="Expected events (12 mo)" value={Math.round(d.expected_events_12m).toLocaleString()} accent="red" />
-        {bands.map((b) => (
-          <KpiTile key={b.band} label={`Model band · ${b.band}`} value={b.patients.toLocaleString()} />
-        ))}
-      </div>
+      <KpiStrip items={[
+        { icon: 'gauge', tone: 'teal', label: `Model AUC (legacy ${d.legacy_auc})`, value: d.auc,
+          trend: `+${((d.auc - d.legacy_auc) * 100).toFixed(0)}pts`, trendDir: 'up' },
+        { icon: 'alert', tone: 'red', label: 'Expected events · 12 mo',
+          value: Math.round(d.expected_events_12m).toLocaleString() },
+        ...bands.map((b, i) => ({
+          icon: 'activity', tone: ['green', 'cyan', 'amber', 'violet'][i] || 'teal',
+          label: `Model band · ${b.band}`, value: b.patients.toLocaleString(),
+        })),
+      ]} />
 
       <div className="flex-1 grid grid-cols-6 grid-rows-2 gap-2.5 min-h-0">
         <div className="col-span-2">
@@ -68,7 +71,7 @@ export default function DashboardRisk() {
             <div className="overflow-y-auto h-full px-3 pb-3 space-y-2">
               {d.model_cards.map((c) => (
                 <div key={c.model_id} className="rounded-lg px-3 py-2.5 cursor-pointer transition-all hover:shadow-md"
-                  style={{ border: '1px solid rgba(26,115,232,0.12)', background: 'rgba(255,255,255,0.35)' }}
+                  style={{ border: '1px solid rgba(138,21,56,0.12)', background: 'rgba(255,255,255,0.35)' }}
                   onClick={() => setCard(c)}>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-[11.5px] font-bold" style={{ color: 'var(--text)' }}>{c.name}</span>
