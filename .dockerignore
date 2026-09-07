@@ -1,0 +1,8 @@
+.git
+frontend/node_modules
+frontend/dist
+backend/models
+backend/data/runtime
+backend/.env
+**/__pycache__
+docs

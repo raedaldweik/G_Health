@@ -1,0 +1,10 @@
+{
+  "facilities": "One row per healthcare facility: facility_id, name, type (Hospital/Primary Care), region, quality factor.",
+  "patients": "Registry of 4,000 cardiometabolic patients: demographics, nationality, district, insurance, primary facility, diabetes type, consent status.",
+  "conditions": "Active problem list per patient with ICD-10-CM and SNOMED CT codes and onset dates (diabetes, hypertension, dyslipidaemia, CAD, heart failure, stroke, PAD, AF, CKD, obesity, retinopathy, neuropathy).",
+  "observations": "Longitudinal LOINC-coded labs and vitals over 36 months: HbA1c, fasting glucose, SBP/DBP, LDL/HDL/TG, eGFR, ACR, BMI, ejection fraction. Columns: patient_id, obs_key, loinc_code, effective_date, value, unit.",
+  "medications": "ATC-coded medication orders with drug class, start date, status (active/stopped) and annual cost: metformin, SGLT2i, GLP-1 RA, insulin, statins, RAAS inhibitors, beta blockers, MRA, ARNI, antiplatelets, anticoagulants.",
+  "encounters": "All visits over 36 months: outpatient, telehealth, emergency, inpatient (with length of stay and admission reason), facility, date.",
+  "care_gaps": "Open guideline-derived care gaps per patient: HbA1c overdue, retinal/foot/ACR screening, statin gap, BP uncontrolled, GLP-1/SGLT2 gap, HF GDMT gap, AF anticoagulation gap.",
+  "patient_summary": "Wide per-patient analytical table: latest labs, therapy flags (on_statin, on_sglt2_glp1, on_anticoagulant, ...), CV risk band, ASCVD 10-yr %, care gaps, 12-month utilisation, annual cost (QAR), and the event_next_12m outcome label used to train the risk model."
+}

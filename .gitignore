@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+
+# Trained model artifacts are rebuilt from data by scripts/train_models.py
+# (they are version-locked to the installed sklearn/xgboost, so never commit them)
+backend/models/*
+!backend/models/.gitkeep
+
+# RAG embedding cache (built lazily at runtime when GEMINI_API_KEY is set)
+backend/data/runtime/embeddings*
+backend/data/runtime/queue.json
+backend/data/runtime/audit.json
+
+# Full FHIR export is regenerated on demand (only the sample is committed)
+backend/data/fhir_full/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Misc
+.DS_Store
+*.log

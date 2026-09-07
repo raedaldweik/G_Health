@@ -243,6 +243,14 @@ Likely questions and the prepared line:
 
 ## 10. Build plan
 
+> **Phasing update (aligned):** Phase 1 is the complete product on **Railway**
+> (single container, like the original demo) using Google tech end-to-end where it
+> matters — Gemini via API key, real ADK multi-agent, real MCP, gemini-embedding
+> RAG, real trained models. Phase 2 lifts the same contracts onto GCP-native
+> services (FHIR store, BigQuery/BQML/TimesFM, RAG Engine, Agent Engine,
+> me-central1). Voice ships in Phase 1 as browser speech (EN/AR) + spoken answers;
+> the Gemini Live API is the Phase 2 upgrade.
+
 ### Phase 1 — the working product (build first)
 1. `g_health` scaffold: FastAPI backend + React/Vite/Tailwind frontend in the Roads_RAM_UI
    aesthetic, Google-flavored palette. Single Dockerfile → Cloud Run.
