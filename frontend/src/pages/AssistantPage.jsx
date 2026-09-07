@@ -4,12 +4,16 @@ import { getScenarios, streamChat } from '../services/api';
 import ResponseCard from '../components/ResponseCard';
 import SourceViewer from '../components/SourceViewer';
 import DetailsPopup from '../components/DetailsPopup';
-import ToolTrace from '../components/ToolTrace';
 import { VoiceInput, SpeakerToggle, useSpeaker } from '../components/VoiceControls';
 import { AgentChip } from '../components/ui';
 
 export default function AssistantPage() {
-  const { persona, personaInfo, messages, addMessage, patchLastMessage, resetChat, sessionId } = useApp();
+  const {
+    persona, personaInfo, chats, activeChat, activeChatId,
+    setActiveChatId, createNewChat, addMessage, renameChat, deleteChat,
+  } = useApp();
+  const messages = activeChat?.messages || [];
+
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [liveSteps, setLiveSteps] = useState([]);
@@ -18,6 +22,9 @@ export default function AssistantPage() {
   const [source, setSource] = useState(null);
   const [details, setDetails] = useState(null);
   const [voiceLang, setVoiceLang] = useState('en');
+  const [chatMenu, setChatMenu] = useState(null);
+  const [renaming, setRenaming] = useState(null);
+  const [renameValue, setRenameValue] = useState('');
   const speaker = useSpeaker();
   const inputRef = useRef(null);
   const endRef = useRef(null);
@@ -33,82 +40,128 @@ export default function AssistantPage() {
 
   const send = async (text, scenarioId = null) => {
     const q = (text || input).trim();
-    if (!q || loading) return;
+    if (!q || loading || !activeChat) return;
+    const chatId = activeChat.id;
     setInput('');
-    addMessage({ role: 'user', content: q });
+    addMessage(chatId, { role: 'user', content: q });
     setLoading(true);
     setLiveSteps([]);
     try {
       let finalData = null;
-      await streamChat({ message: q, sessionId, persona, scenarioId }, (ev) => {
-        if (ev.type === 'step') {
-          setLiveSteps((prev) => [...prev, ev]);
-        } else if (ev.type === 'final') {
-          finalData = ev;
-        }
+      await streamChat({ message: q, sessionId: chatId, persona, scenarioId }, (ev) => {
+        if (ev.type === 'step') setLiveSteps((prev) => [...prev, ev]);
+        else if (ev.type === 'final') finalData = ev;
       });
       if (finalData) {
-        addMessage({ role: 'assistant', data: finalData, query: q });
+        addMessage(chatId, { role: 'assistant', data: finalData, query: q });
         speaker.speak(finalData.answer);
       } else {
-        addMessage({ role: 'assistant', error: 'The stream ended without an answer — try again.' });
+        addMessage(chatId, { role: 'assistant', error: 'The stream ended without an answer — try again.' });
       }
     } catch (e) {
-      addMessage({ role: 'assistant', error: `Connection error: ${e.message}` });
+      addMessage(chatId, { role: 'assistant', error: `Connection error: ${e.message}` });
     }
     setLoading(false);
     setLiveSteps([]);
     inputRef.current?.focus();
   };
 
+  const startRename = (chat) => { setRenaming(chat.id); setRenameValue(chat.title); setChatMenu(null); };
+  const finishRename = (id) => { if (renameValue.trim()) renameChat(id, renameValue.trim()); setRenaming(null); };
+
   const liveVisible = liveSteps.filter((s) => s.status === 'done').slice(-6);
 
   return (
-    <div className="h-full flex gap-4 p-4">
-      {/* Left rail: scenario chips + agents online */}
-      <div className="w-[280px] shrink-0 flex flex-col gap-4 min-h-0">
-        <div className="glass-card p-4 shrink-0">
-          <p className="panel-title mb-3">Suggested scenarios</p>
-          <div className="flex flex-col gap-2">
-            {scenarios.map((s) => (
-              <button key={s.id} className="suggestion-chip !justify-start text-left"
-                disabled={loading}
-                onClick={() => send(s.question, s.id)}>
-                <span className="chip-tag">{s.tag}</span>
-                <span className="truncate">{s.label}</span>
-              </button>
-            ))}
+    <div className="h-full flex gap-4 p-4 pt-3">
+
+      {/* Left rail — Recent conversations (Roads recipe) + agent system */}
+      <div className="w-[262px] shrink-0 flex flex-col gap-3 min-h-0">
+        <div className="glass-card flex flex-col flex-1 min-h-0">
+          <div className="p-4 border-b border-[rgba(15,23,42,0.07)]">
+            <p className="panel-title">Recent conversations</p>
+          </div>
+          <div className="flex-1 overflow-y-auto p-2 space-y-1">
+            {chats.map((chat) => {
+              const isRenaming = renaming === chat.id;
+              const menuOpen = chatMenu === chat.id;
+              return (
+                <div key={chat.id} className="relative group">
+                  {isRenaming ? (
+                    <div className="px-2 py-1.5">
+                      <input value={renameValue} onChange={(e) => setRenameValue(e.target.value)}
+                        onBlur={() => finishRename(chat.id)}
+                        onKeyDown={(e) => e.key === 'Enter' && finishRename(chat.id)} autoFocus
+                        className="w-full rounded-lg px-2 py-1.5 text-xs border outline-none"
+                        style={{ background: 'rgba(255,255,255,0.5)', borderColor: 'var(--brand-hi)', color: 'var(--text)' }} />
+                    </div>
+                  ) : (
+                    <div className="flex items-center">
+                      <button onClick={() => setActiveChatId(chat.id)}
+                        className={`flex-1 flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs text-left truncate transition-all ${
+                          chat.id === activeChatId ? 'font-semibold' : 'hover:bg-[rgba(26,115,232,0.05)] border border-transparent'
+                        }`}
+                        style={chat.id === activeChatId
+                          ? { color: 'var(--brand-lo)', background: 'rgba(26,115,232,0.14)', border: '1px solid rgba(26,115,232,0.30)', borderLeft: '3px solid var(--brand)' }
+                          : { color: 'var(--text-md)' }}>
+                        <span className="text-sm">💬</span>
+                        <span className="truncate flex-1">{chat.title}</span>
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); setChatMenu(menuOpen ? null : chat.id); }}
+                        className="p-1 rounded-md opacity-0 group-hover:opacity-100 hover:bg-[rgba(26,115,232,0.1)] transition-all shrink-0 ml-0.5"
+                        style={{ color: 'var(--text-faint)' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <circle cx="12" cy="5" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="12" cy="19" r="1" />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
+                  {menuOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setChatMenu(null)} />
+                      <div className="absolute right-0 top-full mt-0.5 rounded-xl shadow-xl overflow-hidden z-50 min-w-[130px] animate-fade-up"
+                        style={{ background: 'rgba(255,255,255,0.96)', border: '1px solid rgba(26,115,232,0.2)', backdropFilter: 'blur(20px)' }}>
+                        <button onClick={() => startRename(chat)}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-[11px] hover:bg-[rgba(26,115,232,0.05)]"
+                          style={{ color: 'var(--text-md)' }}>
+                          Rename
+                        </button>
+                        <button onClick={() => { setChatMenu(null); deleteChat(chat.id); }}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-[11px] hover:bg-[var(--red-bg)]"
+                          style={{ color: 'var(--red)' }}>
+                          Delete
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <div className="p-3 border-t border-[rgba(15,23,42,0.07)]">
+            <button onClick={createNewChat}
+              className="w-full py-2.5 rounded-lg text-xs font-bold transition-all"
+              style={{ border: '2px dashed rgba(26,115,232,0.35)', color: 'var(--brand)', background: 'rgba(26,115,232,0.03)' }}>
+              + New conversation
+            </button>
           </div>
         </div>
 
-        <div className="glass-card p-4 flex-1 min-h-0 overflow-y-auto">
-          <p className="panel-title mb-3">Agent system</p>
-          {[
-            ['nabd_supervisor', 'Gemini supervisor — plans & routes'],
-            ['cohort_agent', 'HIE structured queries'],
-            ['guideline_agent', 'Guideline RAG + citations'],
-            ['risk_agent', 'ML scoring · simulation · forecast'],
-            ['pophealth_agent', 'population-health MCP server ★'],
-            ['action_agent', 'Human-in-the-loop drafts'],
-          ].map(([a, d]) => (
-            <div key={a} className="flex items-start gap-2 mb-2.5">
-              <span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0"
-                style={{ background: 'var(--green)', animation: 'pulse-dot 2.4s infinite' }} />
-              <div className="min-w-0">
-                <AgentChip agent={a} />
-                <p className="text-[10px] mt-0.5 leading-snug" style={{ color: 'var(--text-dim)' }}>{d}</p>
-              </div>
-            </div>
-          ))}
-          <div className="mt-3 pt-3 border-t border-[rgba(15,23,42,0.07)] text-[10px]" style={{ color: 'var(--text-faint)' }}>
-            {llmInfo?.enabled
-              ? <>Live multi-agent · <b style={{ color: 'var(--text-dim)' }}>{llmInfo.model}</b></>
-              : <>Scripted engine · live data (set GEMINI_API_KEY for free-form)</>}
+        {/* Compact agent roster */}
+        <div className="glass-card p-3.5 shrink-0">
+          <p className="panel-title mb-2.5">Agent system</p>
+          <div className="flex flex-wrap gap-1.5">
+            {['nabd_supervisor', 'cohort_agent', 'guideline_agent', 'risk_agent', 'pophealth_agent', 'action_agent']
+              .map((a) => <AgentChip key={a} agent={a} />)}
           </div>
+          <p className="text-[9.5px] mt-2 leading-snug" style={{ color: 'var(--text-faint)' }}>
+            {llmInfo?.enabled
+              ? <>Live multi-agent · <b style={{ color: 'var(--text-dim)' }}>{llmInfo.model}</b> · MCP over stdio</>
+              : <>Scripted engine on live data — set GEMINI_API_KEY for free-form chat</>}
+          </p>
         </div>
       </div>
 
-      {/* Chat column */}
+      {/* Main chat card */}
       <div className="flex-1 glass-card flex flex-col relative min-w-0" style={{ boxShadow: 'var(--glass-shadow-lg)' }}>
         <img src="/nabd-mark.svg" alt="" className="chat-watermark" />
 
@@ -116,35 +169,16 @@ export default function AssistantPage() {
           <div className="flex items-center gap-2 min-w-0">
             <span className="w-[3px] h-4 rounded shrink-0" style={{ background: 'var(--brand-grad)' }} />
             <span className="text-sm font-bold truncate" style={{ color: 'var(--text)' }}>
-              Nabd Assistant
-            </span>
-            <span className="text-[10.5px] px-2 py-0.5 rounded-full font-semibold"
-              style={{ background: 'rgba(26,115,232,0.08)', color: 'var(--brand-lo)' }}>
-              {personaInfo.sub}
+              {activeChat?.title || 'New conversation'}
             </span>
           </div>
-          <button onClick={resetChat}
-            className="text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all"
-            style={{ border: '1px dashed rgba(26,115,232,0.35)', color: 'var(--brand)' }}>
-            + New conversation
-          </button>
+          <span className="text-[10.5px] px-2 py-0.5 rounded-full font-semibold shrink-0"
+            style={{ background: 'rgba(26,115,232,0.08)', color: 'var(--brand-lo)' }}>
+            {personaInfo.sub}
+          </span>
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5 relative z-[1]">
-          {messages.length === 0 && !loading && (
-            <div className="h-full flex flex-col items-center justify-center text-center px-8">
-              <img src="/nabd-mark.svg" alt="" className="w-14 h-14 mb-4 opacity-90" />
-              <p className="text-[15px] font-bold mb-1" style={{ color: 'var(--text)' }}>
-                {persona === 'clinician' ? `Good morning, ${personaInfo.name.split(' ')[1]}.` : `Welcome, ${personaInfo.name}.`}
-              </p>
-              <p className="text-[12px] max-w-[400px] leading-relaxed" style={{ color: 'var(--text-dim)' }}>
-                Ask anything about the {persona === 'clinician' ? 'panel' : 'national registry'} — I query the
-                HIE, ground answers in national guidelines, score risk with deployed ML models, and draft
-                actions for your approval. Try a scenario on the left, type, or use the mic.
-              </p>
-            </div>
-          )}
-
           {messages.map((msg, i) => (
             <div key={i} className={`flex gap-2.5 animate-fade-up ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
               {msg.role === 'user' ? (
@@ -163,8 +197,10 @@ export default function AssistantPage() {
                     {msg.content}
                   </div>
                 ) : msg.error ? (
-                  <div className="msg-bot-bubble px-4 py-3 text-[13px]" style={{ color: 'var(--red)' }}>
-                    {msg.error}
+                  <div className="msg-bot-bubble px-4 py-3 text-[13px]" style={{ color: 'var(--red)' }}>{msg.error}</div>
+                ) : msg.welcome ? (
+                  <div className="msg-bot-bubble px-4 py-3 text-[13px] leading-[1.75]" style={{ color: 'var(--text)' }}>
+                    {msg.content}
                   </div>
                 ) : (
                   <ResponseCard data={msg.data}
@@ -216,8 +252,19 @@ export default function AssistantPage() {
           <div ref={endRef} />
         </div>
 
-        {/* Input bar */}
-        <div className="px-5 pb-4 pt-2 relative z-[1]">
+        {/* Scenario chips + input bar */}
+        <div className="px-5 pb-4 pt-1 relative z-[1]">
+          {scenarios.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {scenarios.map((s) => (
+                <button key={s.id} className="suggestion-chip" disabled={loading}
+                  onClick={() => send(s.question, s.id)}>
+                  <span className="chip-tag">{s.tag}</span>
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="flex items-center gap-1.5 px-2 py-1 rounded-xl border border-[rgba(15,23,42,0.10)] transition-all focus-within:border-[var(--brand-hi)] focus-within:shadow-[0_0_0_3px_rgba(26,115,232,0.10)]"
             style={{ background: 'var(--glass-strong)', backdropFilter: 'blur(12px)' }}>
             <VoiceInput onTranscript={(t) => send(t)} disabled={loading} lang={voiceLang} />

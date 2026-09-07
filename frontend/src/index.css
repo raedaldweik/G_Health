@@ -142,6 +142,62 @@ html, body, #root {
 ::-webkit-scrollbar-thumb { background: rgba(15,23,42,0.18); border-radius: 5px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(15,23,42,0.30); }
 
+/* ═══ Header — the Roads/RAM light glass header recipe ═══ */
+.app-header {
+  position: relative; z-index: 20;
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 1.4cqw;
+  padding: 1.2cqw 1.8cqw 0;
+}
+.brand-logo {
+  height: 4.8cqw; width: auto; min-height: 44px; max-height: 64px;
+  object-fit: contain; display: block;
+  border-radius: 0.9cqw;
+  filter: drop-shadow(0 1px 2px rgba(15, 23, 42, 0.08));
+}
+.title-block { display: flex; flex-direction: column; gap: 0.6cqw; min-width: 0; }
+.title-row { display: flex; align-items: center; gap: 1.4cqw; width: 100%; }
+.app-title {
+  font-family: 'Manrope', sans-serif;
+  font-size: clamp(17px, 1.7cqw, 26px);
+  font-weight: 500;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  white-space: nowrap; flex-shrink: 0;
+}
+.app-title b { font-weight: 800; }
+.app-title .title-ar { color: var(--text-dim); font-weight: 400; }
+
+/* Main navigation — glass pills on the pearl backdrop (no dark bar) */
+.nav-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.nav-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.80), rgba(247,243,236,0.65));
+  border: 1px solid rgba(15,23,42,0.10);
+  border-radius: 999px;
+  font-size: 12px; font-weight: 700;
+  color: var(--text-md);
+  cursor: pointer; transition: all 0.18s;
+  box-shadow: 0 1px 2px rgba(15,23,42,0.06), inset 0 1px 0 rgba(255,255,255,0.9);
+  white-space: nowrap;
+}
+.nav-pill:hover {
+  transform: translateY(-1px);
+  border-color: rgba(26,115,232,0.35);
+  box-shadow: 0 3px 10px rgba(26,115,232,0.15);
+}
+.nav-pill.active {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+  box-shadow: 0 3px 12px rgba(26,115,232,0.30);
+}
+.nav-divider { width: 1px; height: 18px; background: rgba(15,23,42,0.12); margin: 0 4px; }
+
 /* ═══ Glass panels ═══ */
 .glass-card {
   background: linear-gradient(180deg, rgba(255,255,255,0.32) 0%, rgba(255,255,255,0.12) 100%);

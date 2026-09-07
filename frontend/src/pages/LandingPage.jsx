@@ -14,17 +14,9 @@ export default function LandingPage({ go }) {
   return (
     <div className="h-full overflow-y-auto flex items-center justify-center p-8">
       <div className="max-w-[860px] text-center animate-fade-up">
-        <div className="flex items-center justify-center gap-4 mb-5">
-          <img src="/nabd-mark.svg" alt="Nabd" className="w-16 h-16" />
-          <div className="text-left">
-            <h1 className="text-[34px] font-extrabold tracking-tight leading-none" style={{ color: 'var(--text)' }}>
-              Nabd <span className="text-[20px] font-bold" style={{ color: 'var(--text-dim)' }}>نبض</span>
-            </h1>
-            <p className="text-[12px] font-semibold tracking-[0.18em] uppercase mt-1" style={{ color: 'var(--brand)' }}>
-              National Population Health Intelligence
-            </p>
-          </div>
-        </div>
+        <h1 className="text-[30px] font-extrabold tracking-tight leading-tight mb-4" style={{ color: 'var(--text)' }}>
+          The nation's pulse, <span style={{ color: 'var(--brand)' }}>made intelligible.</span>
+        </h1>
 
         <p className="text-[14px] leading-relaxed max-w-[640px] mx-auto mb-2" style={{ color: 'var(--text-md)' }}>
           An agentic AI layer on top of the national Health Information Exchange — a
