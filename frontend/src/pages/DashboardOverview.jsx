@@ -4,10 +4,10 @@ import DynamicChart from '../components/DynamicChart';
 import { KpiStrip, Panel, Spinner } from '../components/ui';
 
 const KPI_META = [
-  { icon: 'users', tone: 'cyan' },
-  { icon: 'droplet', tone: 'teal', trend: '0.3pp YoY', trendDir: 'up' },
+  { icon: 'users', tone: 'sand' },
+  { icon: 'droplet', tone: 'rose', trend: '0.3pp YoY', trendDir: 'up' },
   { icon: 'check', tone: 'green' },
-  { icon: 'heart', tone: 'violet' },
+  { icon: 'heart', tone: 'maroon' },
   { icon: 'alert', tone: 'red' },
   { icon: 'coins', tone: 'gold' },
 ];

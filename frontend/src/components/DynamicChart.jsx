@@ -17,7 +17,7 @@ import { Bar3D, Donut3D } from './Chart3D';
  */
 
 // Validated categorical palette — the reports ramp mid-tones, fixed order.
-export const PALETTE = ['#2b7fb2', '#b8862e', '#6d4fa8', '#3a8e5a', '#e07ab2', '#b03c3c'];
+export const PALETTE = ['#9b1c46', '#b8862e', '#6d4fa8', '#3a8e5a', '#d97706', '#a8407a'];
 
 const AXIS_TICK = { fontSize: 10, fill: '#64748b', fontFamily: 'Manrope' };
 const GRID = 'rgba(15,23,42,0.07)';

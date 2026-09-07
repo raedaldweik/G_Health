@@ -77,3 +77,23 @@ def data_rows(table: str, offset: int = 0, limit: int = 50, search: str = ""):
     page = df.iloc[offset:offset + min(limit, 200)].replace({np.nan: None})
     return {"table": table, "total": int(len(df)), "offset": offset,
             "rows": page.to_dict("records")}
+
+
+# ── Single patient (landing-page story card + deep links) ──
+@router.get("/api/patient/{patient_id}")
+def patient(patient_id: str):
+    from services import ml
+    rec = hie.get_patient(patient_id)
+    if not rec.get("found"):
+        raise HTTPException(404, "patient not found")
+    if rec.get("consent") == "DENIED":
+        return {"patient_id": patient_id, "consent": "DENIED"}
+    rec["risk"] = ml.score_patient(patient_id)
+    return rec
+
+
+@router.get("/api/story/hero")
+def story_hero():
+    """The patient the demo follows — the highest-yield, believable deep-dive case."""
+    from services import scenarios
+    return patient(scenarios._pick_deepdive_patient())

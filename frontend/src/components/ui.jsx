@@ -32,7 +32,7 @@ export function Panel({ title, right, children, className = '', pad = true }) {
 
 export const AGENT_COLORS = {
   nabd_supervisor: { bg: 'rgba(138,21,56,0.10)', fg: '#4a0c20', label: 'supervisor' },
-  cohort_agent: { bg: 'rgba(42,120,214,0.12)', fg: '#1c5cab', label: 'cohort' },
+  cohort_agent: { bg: 'rgba(138,106,78,0.14)', fg: '#5c3f2a', label: 'cohort' },
   guideline_agent: { bg: 'rgba(0,131,0,0.10)', fg: '#006300', label: 'guidelines' },
   risk_agent: { bg: 'rgba(235,104,52,0.12)', fg: '#9a3b12', label: 'risk · ML' },
   pophealth_agent: { bg: 'rgba(74,58,167,0.12)', fg: '#4a3aa7', label: 'pop-health MCP' },

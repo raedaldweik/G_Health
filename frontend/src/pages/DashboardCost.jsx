@@ -29,7 +29,7 @@ export default function DashboardCost() {
       <KpiStrip items={[
         { icon: 'coins', tone: 'gold', label: 'Total annual cost',
           value: (cc.total_annual_cost_qar / 1e6).toFixed(1), suffix: 'M QAR' },
-        { icon: 'users', tone: 'cyan', label: 'Top 10% of patients — share of spend',
+        { icon: 'users', tone: 'sand', label: 'Top 10% of patients — share of spend',
           value: `${cc.top10pct_share_pct}%` },
         { icon: 'alert', tone: 'red', label: `Equity spread — ${eq[0].nationality} vs ${eq[eq.length - 1].nationality}`,
           value: gapPP, suffix: 'pp' },

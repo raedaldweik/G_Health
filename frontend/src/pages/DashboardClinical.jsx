@@ -47,7 +47,7 @@ export default function DashboardClinical() {
                       <td>
                         <div className="relative h-2.5 rounded-full overflow-hidden" style={{ background: 'rgba(15,23,42,0.07)' }}>
                           <div className="absolute inset-y-0 left-0 rounded-full"
-                            style={{ width: `${Math.min(m.rate_pct, 100)}%`, background: m.met ? 'var(--green)' : '#2b7fb2' }} />
+                            style={{ width: `${Math.min(m.rate_pct, 100)}%`, background: m.met ? 'var(--green)' : '#9b1c46' }} />
                           <div className="absolute inset-y-0 w-[2px]" style={{ left: `${m.target_pct}%`, background: 'var(--text-dim)' }} />
                         </div>
                         <div className="text-[9px] mt-0.5" style={{ color: 'var(--text-faint)' }}>target {m.target_pct}%</div>
@@ -76,8 +76,8 @@ export default function DashboardClinical() {
         <div className="col-span-1">
           <Panel title="BP control (hypertension)">
             <Donut3D
-              data={[{ label: 'Controlled', value: bp.controlled, ramp: 2 },
-                     { label: 'Uncontrolled', value: bp.uncontrolled, ramp: 3 }]}
+              data={[{ label: 'Controlled', value: bp.controlled, ramp: 3 },
+                     { label: 'Uncontrolled', value: bp.uncontrolled, ramp: 6 }]}
               centerValue={`${((bp.controlled / bpTotal) * 100).toFixed(0)}%`}
               centerLabel="controlled <140/90"
               valueFormatter={(v) => v.toLocaleString()} showLegend={true} />

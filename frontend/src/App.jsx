@@ -112,11 +112,11 @@ function Header({ tab, setTab }) {
   return (
     <header className="app-header">
       <button onClick={() => setTab('landing')}>
-        <img className="brand-logo" src="/nabd-mark.svg" alt="Nabd" />
+        <img className="brand-logo" src="/google-g.svg" alt="Google" />
       </button>
 
       <div className="title-block">
-        <div className="header-eyebrow">Qatar Health Information Exchange · Agentic Intelligence Layer</div>
+        <div className="header-eyebrow">Google Cloud · Doha region (me-central1) · Qatar Health Information Exchange</div>
         <div className="title-row">
           <h1 className="app-title">
             <b>Nabd</b> <span className="title-ar">نبض</span> — Population Health Intelligence

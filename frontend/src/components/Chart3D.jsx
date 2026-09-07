@@ -9,16 +9,16 @@ import { useId, useMemo, useRef, useState } from 'react';
 
 // The reports 4-step colour ramps (light → dark), verbatim.
 export const RAMPS = [
-  ['#b5dfff', '#5cc6e8', '#2d80a8', '#1a4d66'],   // teal
+  ['#f4b6c8', '#d15a82', '#9b1c46', '#4a0c20'],   // qatar maroon
   ['#ffe1a8', '#ebbf6a', '#b8862e', '#7a571a'],   // honey gold
-  ['#a8f5b8', '#6ddc8a', '#3a8e5a', '#1f5a36'],   // emerald
-  ['#ffb8b8', '#f08585', '#b03c3c', '#6f1f1f'],   // crimson
   ['#d8c5f5', '#a98ae0', '#6d4fa8', '#3f2a6b'],   // violet
+  ['#a8f5b8', '#6ddc8a', '#3a8e5a', '#1f5a36'],   // emerald
   ['#ffd0a8', '#fb923c', '#b06024', '#6e3a12'],   // amber
-  ['#c2ecec', '#72cfc9', '#2d8f88', '#15534e'],   // sea
   ['#f5c0dc', '#e07ab2', '#a8407a', '#651f47'],   // rose
-  ['#c9d4e4', '#8da3c0', '#52688a', '#2c3a52'],   // slate
+  ['#ffb8b8', '#f08585', '#b03c3c', '#6f1f1f'],   // crimson
   ['#f7e8a8', '#e3cb5d', '#a8902a', '#6b5a14'],   // citrine
+  ['#e9d9c8', '#c9a98a', '#8a6a4e', '#4e3728'],   // desert sand
+  ['#c2ecec', '#72cfc9', '#2d8f88', '#15534e'],   // sea (last resort)
 ];
 
 export function fmt3d(v) {

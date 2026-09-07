@@ -25,7 +25,7 @@ export default function ToolTrace({ trace }) {
           {trace.map((t, i) => (
             <div key={i} className="trace-step">
               <div className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold mt-0.5"
-                style={{ background: 'rgba(12,110,122,0.15)', color: 'var(--teal)' }}>
+                style={{ background: 'rgba(138,100,32,0.15)', color: 'var(--teal)' }}>
                 {i + 1}
               </div>
               <div className="flex-1 min-w-0">

@@ -43,7 +43,7 @@ export default function DashboardRisk() {
         { icon: 'alert', tone: 'red', label: 'Expected events · 12 mo',
           value: Math.round(d.expected_events_12m).toLocaleString() },
         ...bands.map((b, i) => ({
-          icon: 'activity', tone: ['green', 'cyan', 'amber', 'violet'][i] || 'teal',
+          icon: 'activity', tone: ['green', 'sand', 'amber', 'maroon'][i] || 'teal',
           label: `Model band · ${b.band}`, value: b.patients.toLocaleString(),
         })),
       ]} />

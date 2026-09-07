@@ -49,3 +49,6 @@ export async function streamChat({ message, sessionId, persona, scenarioId }, on
     try { onEvent(JSON.parse(buf)); } catch { /* ignore */ }
   }
 }
+
+export const getStoryHero = () => fetch('/api/story/hero').then(json);
+export const getPatient = (id) => fetch(`/api/patient/${id}`).then(json);

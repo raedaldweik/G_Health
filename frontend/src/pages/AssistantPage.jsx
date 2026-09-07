@@ -163,7 +163,7 @@ export default function AssistantPage() {
 
       {/* Main chat card */}
       <div className="flex-1 glass-card flex flex-col relative min-w-0" style={{ boxShadow: 'var(--glass-shadow-lg)' }}>
-        <img src="/nabd-mark.svg" alt="" className="chat-watermark" />
+        <img src="/google-g.svg" alt="" className="chat-watermark" />
 
         <div className="flex items-center justify-between px-6 py-3 border-b border-[rgba(15,23,42,0.07)] relative z-[5]">
           <div className="flex items-center gap-2 min-w-0">
@@ -187,8 +187,8 @@ export default function AssistantPage() {
                 </div>
               ) : (
                 <div className="w-8 h-8 rounded-lg shrink-0 flex items-center justify-center p-1"
-                  style={{ background: 'var(--nav-grad)', border: '1px solid rgba(173,58,92,0.3)' }}>
-                  <img src="/nabd-mark.svg" alt="Nabd" className="w-full h-full object-contain" />
+                  style={{ background: 'rgba(255,255,255,0.92)', border: '1px solid rgba(15,23,42,0.10)', boxShadow: '0 1px 3px rgba(15,23,42,0.08)' }}>
+                  <img src="/google-g.svg" alt="Nabd" className="w-full h-full object-contain" />
                 </div>
               )}
               <div className="max-w-[78%] min-w-0">
@@ -214,8 +214,8 @@ export default function AssistantPage() {
           {loading && (
             <div className="flex gap-2.5 animate-fade-up">
               <div className="w-8 h-8 rounded-lg shrink-0 flex items-center justify-center p-1"
-                style={{ background: 'var(--nav-grad)', border: '1px solid rgba(173,58,92,0.3)' }}>
-                <img src="/nabd-mark.svg" alt="" className="w-full h-full object-contain" />
+                style={{ background: 'rgba(255,255,255,0.92)', border: '1px solid rgba(15,23,42,0.10)', boxShadow: '0 1px 3px rgba(15,23,42,0.08)' }}>
+                <img src="/google-g.svg" alt="" className="w-full h-full object-contain" />
               </div>
               <div className="msg-bot-bubble px-4 py-3 min-w-[240px]">
                 {liveVisible.length > 0 && (
