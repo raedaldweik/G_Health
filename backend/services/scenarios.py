@@ -15,7 +15,7 @@ import asyncio
 import json
 from typing import AsyncGenerator
 
-from services import hie, ml, rag
+from services import geo, hie, ml, rag
 from services import audit as audit_svc
 from services import queue_service
 
@@ -256,11 +256,15 @@ async def sc_national_picture(persona: str):
          "result_summary": f"{len(trend)} monthly points"},
         {"agent": "cohort_agent", "tool": "facility_benchmark", "args_summary": "18 facilities",
          "result_summary": f"top {fac[0]['facility_name']}"},
+        {"agent": "nabd_supervisor", "tool": "render_map", "args_summary": "pct_controlled, flagged facilities ringed",
+         "result_summary": "facility map rendered"},
     ]
     async for e in _steps(ev):
         yield e
     yoy = trend[-1]["mean_hba1c"] - trend[-13]["mean_hba1c"] if len(trend) > 13 else 0
     flagged = [f for f in fac if f["status"] == "flagged"]
+    fac_map = geo.map_spec(None, "pct_controlled", "Where control is won and lost — % well-controlled by facility",
+                           highlight=[f["facility_name"] for f in flagged])
     answer = f"""**National glycaemic picture** — {kpi['patients']:,} patients on the exchange.
 
 Mean HbA1c is **{kpi['mean_hba1c']}%** ({'down' if yoy<0 else 'up'} {abs(yoy):.2f}pp year-on-year); **{kpi['pct_well_controlled']}%** of the diabetes cohort is well-controlled and **{kpi['pct_uncontrolled']}%** remains uncontrolled.
@@ -268,9 +272,12 @@ Mean HbA1c is **{kpi['mean_hba1c']}%** ({'down' if yoy<0 else 'up'} {abs(yoy):.2
 **Facility spread is the real story:** control ranges from **{fac[-1]['pct_controlled']:.0f}%** ({fac[-1]['facility_name']}) to **{fac[0]['pct_controlled']:.0f}%** ({fac[0]['facility_name']}). {len(flagged)} facilities sit below the flag line — {', '.join(f['facility_name'] for f in flagged[:3])} — that spread is an operational lever, not a clinical mystery.
 
 One in three patients (**{kpi['pct_established_cvd']}%**) already has established cardiovascular disease — this is a cardiometabolic programme, not a glucose programme.
+
+**And it has a geography.** The map shows it: control is a Doha phenomenon — the flagged facilities sit in the north (Al Shamal, Al Khor) and in the Industrial Area (Hazm Mebaireek), where the expatriate workforce lives. Distance from the capital and the equity gradient are the same line.
 """
     yield {"type": "final", "answer": answer, "trace": _trace(ev),
            "charts": [
+               fac_map,
                {"type": "line", "title": "National mean HbA1c — 36 months",
                 "data": [{"month": t["month"], "HbA1c": t["mean_hba1c"]} for t in trend],
                 "xKey": "month", "yKeys": [{"key": "HbA1c", "label": "Mean HbA1c %"}]},

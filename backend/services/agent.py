@@ -220,6 +220,19 @@ def render_chart(spec_json: str) -> dict:
     return {"ok": True, "chart": spec}
 
 
+def render_map(metric: str = "pct_controlled", facility_names_json: str = "",
+               title: str = "", highlight_json: str = "") -> dict:
+    """Emit a colour-coded FACILITY MAP of Qatar for the UI. metric: pct_controlled |
+    gaps_per_100 | statin_gap | mean_risk_pct | mean_cost | mean_hba1c.
+    facility_names_json: optional JSON list of facility names to include (empty = all 18).
+    highlight_json: optional JSON list of facility names to ring-highlight.
+    Use whenever the user asks about facilities, regions, geography, or 'where'."""
+    from services import geo
+    names = json.loads(facility_names_json) if facility_names_json else None
+    hl = json.loads(highlight_json) if highlight_json else None
+    return {"ok": True, "chart": geo.map_spec(names, metric, title or None, hl)}
+
+
 def draft_prescription(patient_id: str, drug: str, dose: str, rationale: str,
                        citation: str = "") -> dict:
     """Draft a prescription for HUMAN clinician approval. It is queued, never submitted."""
@@ -269,7 +282,7 @@ You are a SUPERVISOR of specialist agents, each exposed as a tool:
 - pophealth_agent: population-health MCP tools — quality measures, care gaps, cohort building, risk stratification, policy simulation, and drafting population interventions. Prefer it for care-gap / quality-measure / campaign questions.
 - action_agent: draft prescriptions, recalls, referrals. Drafts ALWAYS go to the human approval queue — never present a clinical action as done.
 
-You also own render_chart: call it whenever the user asks to see/plot/compare data or a chart clearly helps. Keep chart data compact (≤24 rows).
+You also own render_chart (charts) and render_map (a colour-coded facility map of Qatar): call them whenever the user asks to see/plot/compare data, or asks about facilities/regions/geography. Keep chart data compact (≤24 rows).
 
 Rules:
 1. Route to specialists for facts; never fabricate numbers, patient data, or citations.
@@ -354,7 +367,7 @@ def _build_tools_map():
         description="Nabd population-health supervisor",
         instruction=SUPERVISOR_INSTRUCTION,
         tools=[AgentTool(cohort_agent), AgentTool(guideline_agent), AgentTool(risk_agent),
-               AgentTool(pophealth_agent), AgentTool(action_agent), render_chart])
+               AgentTool(pophealth_agent), AgentTool(action_agent), render_chart, render_map])
     return supervisor
 
 
@@ -471,6 +484,8 @@ async def stream_chat(message: str, session_id: str, persona: str = "clinician",
                 trace.append({"agent": step["agent"], "tool": fr.name,
                               "args_summary": step["args_summary"],
                               "result_summary": summary, "duration_ms": dur})
+                if fr.name == "render_map" and isinstance(resp, dict) and resp.get("chart"):
+                    charts.append(resp["chart"])
                 if fr.name == "search_guidelines" and isinstance(resp, dict):
                     for h in resp.get("hits", []):
                         citations.append({"doc": h.get("doc"), "file": h.get("file"),

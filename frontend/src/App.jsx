@@ -7,6 +7,7 @@ import DashboardOverview from './pages/DashboardOverview';
 import DashboardClinical from './pages/DashboardClinical';
 import DashboardRisk from './pages/DashboardRisk';
 import DashboardCost from './pages/DashboardCost';
+import DashboardMap from './pages/DashboardMap';
 import QueuePage from './pages/QueuePage';
 import DocumentsPage from './pages/DocumentsPage';
 import DataPage from './pages/DataPage';
@@ -17,6 +18,7 @@ const DASH_TABS = [
   { id: 'clinical', label: 'Clinical Quality' },
   { id: 'risk', label: 'Risk & Models' },
   { id: 'cost', label: 'Cost & Equity' },
+  { id: 'geography', label: 'Geography' },
 ];
 const DASH_IDS = DASH_TABS.map((t) => t.id);
 
@@ -175,6 +177,7 @@ function Layout() {
       case 'clinical': return <DashboardClinical />;
       case 'risk': return <DashboardRisk />;
       case 'cost': return <DashboardCost />;
+      case 'geography': return <DashboardMap />;
       case 'queue': return <QueuePage />;
       case 'documents': return <DocumentsPage />;
       case 'data': return <DataPage />;

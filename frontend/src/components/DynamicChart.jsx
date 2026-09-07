@@ -4,6 +4,7 @@ import {
   Tooltip, Legend, ReferenceLine,
 } from 'recharts';
 import { Bar3D, Donut3D } from './Chart3D';
+import MapCard from './MapCard';
 
 /*
  * DynamicChart — renders a chart spec (from the agent's render_chart tool or a
@@ -43,6 +44,7 @@ function GlassTooltip({ active, payload, label }) {
 const legendStyle = { fontSize: 10.5, fontFamily: 'Manrope' };
 
 export default function DynamicChart({ spec, bare = false, height = 230 }) {
+  if (spec?.type === 'map') return <MapCard spec={spec} height={bare ? '100%' : 360} compact={bare} />;
   if (!spec || !Array.isArray(spec.data) || spec.data.length === 0) return null;
   const type = (spec.type || 'bar').toLowerCase();
   const yKeys = (spec.yKeys || []).filter(Boolean).map((k, i) => ({

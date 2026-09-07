@@ -723,3 +723,44 @@ html, body, #root {
 
 .reveal { opacity: 0; transform: translateY(14px); animation: fadeUp 0.7s ease forwards; }
 .d1 { animation-delay: 0.05s } .d2 { animation-delay: 0.18s } .d3 { animation-delay: 0.32s } .d4 { animation-delay: 0.46s } .d5 { animation-delay: 0.6s }
+
+/* ═══ MapCard — facility map, glass-themed (the Roads MapCard recipe) ═══ */
+.mc-wrap { margin-top: 8px; max-width: 100%; }
+.mc-title { font-size: 12.5px; font-weight: 700; color: var(--brand); margin: 0 2px 6px; letter-spacing: 0.01em; }
+.mc-frame {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow-lg);
+  background: #efe8dc;
+}
+.mc-map { width: 100%; }
+.mc-legend {
+  position: absolute; left: 10px; bottom: 10px; z-index: 2;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 10px; border-radius: 999px;
+  background: var(--glass-strong); backdrop-filter: blur(10px);
+  border: 1px solid var(--hairline); box-shadow: 0 2px 8px rgba(15,23,42,0.10);
+  font-size: 9.5px; font-weight: 700; color: var(--text-dim); letter-spacing: 0.04em;
+}
+.mc-legend-bar { width: 70px; height: 7px; border-radius: 999px; background: linear-gradient(90deg, #efe1cf, #d17d99, #8A1538, #4a0c20); }
+.mc-legend-metric { margin-left: 4px; padding-left: 8px; border-left: 1px solid var(--hairline); color: var(--text); text-transform: uppercase; letter-spacing: 0.1em; font-size: 8.5px; }
+.mc-popup .maplibregl-popup-content {
+  border-radius: 12px; padding: 10px 12px;
+  background: var(--glass-strong);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow-lg);
+  font-family: 'Manrope', sans-serif;
+}
+.mc-popup .maplibregl-popup-tip { display: none; }
+.mc-pop-title { font-size: 12px; font-weight: 800; color: var(--brand); margin-bottom: 3px; }
+.mc-pop-row { font-size: 11px; color: var(--text-md); line-height: 1.55; }
+.mc-pop-row .mc-k { color: var(--text-faint); font-weight: 600; margin-right: 4px; }
+.mc-frame .maplibregl-ctrl-group {
+  border-radius: 10px; overflow: hidden;
+  box-shadow: 0 2px 8px rgba(15,23,42,0.12);
+  border: 1px solid var(--glass-border);
+}
+.mc-frame .maplibregl-ctrl-attrib { font-size: 9px; background: rgba(255,255,255,0.6); border-radius: 6px; }

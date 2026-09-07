@@ -100,3 +100,9 @@ def cost():
         "equity": hie.equity_breakdown(),
         "risk_cost_scatter": scatter.to_dict("records"),
     }
+
+
+@router.get("/api/dashboards/map")
+def geography():
+    from services import geo
+    return geo.map_payload()

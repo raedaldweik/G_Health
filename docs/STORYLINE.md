@@ -91,6 +91,7 @@ Switch persona to **Dr. Khalid Al-Kuwari**, Population Health Executive. Same pl
 | **E1 National picture** (chat) | Facility spread: Mesaimeer 52% controlled vs Hazm Mebaireek 28% | *"Twenty-four points between facilities. That's an operational lever, not a clinical mystery."* |
 | **E3 Policy simulation** | Four interventions, 24 months, ranked by net benefit; combined view | *"Statins and anticoagulation pay for themselves. The GLP-1 programme, at list price, does not within 24 months — and I'd rather the model tell the minister that than a slide."* **Honest analytics is a feature.** |
 | **E4 Equity** | Mean HbA1c by nationality — Bangladeshi 7.7% vs Qatari 7.1% | *"That gradient tracks access, not biology. Multilingual outreach is the cheapest lever on the board — and it's a National Health Strategy pillar."* |
+| **Dashboards → Geography** | The facility map: 18 facilities sized by patients, coloured sand→maroon, gold rings on the 8 flagged ones — **Al Shamal and Al Khor in the north, Hazm Mebaireek in the Industrial Area**. Toggle Qatar → Greater Doha. Click Hazm Mebaireek → its profile (26.8% controlled, highest expat share). | *"Control is a Doha phenomenon. The further from the capital — and the closer to the Industrial Area where the workforce lives — the worse it gets. Distance and the equity gradient are the same line. That's a bus route and a clinic-hours decision, not a drug."* **Then ask the assistant** *"Show me the statin gap on a map"* — the agent draws the same map inside the chat. |
 | **Dashboards → Risk & Models** | AUC 0.853 vs legacy 0.774; calibration curve; feature importance; governance cards | *"Four models, versioned, with cards. Click one — intended use, limitations, and what it becomes on Google Cloud."* |
 
 Keep **E5 forecast / E6 quality scorecard** in reserve; the scorecard is the natural bridge to Act III.
@@ -184,6 +185,7 @@ Stop talking. Let them ask.
 - [ ] Gemini CLI configured with the MCP server (`backend/pophealth_mcp/README.md`); test one call.
 - [ ] Clear the queue and audit trail (`backend/data/runtime/*.json`) so the panel sees only today's story — or leave Dr. Al-Mansoori's one approval for the audit beat.
 - [ ] Chrome, 1600×900 or wider, zoom 100%; mic permission granted for the voice moment (EN/AR toggle).
+- [ ] Open the Geography tab once before the demo so the map tiles are cached (the outline and circles render even offline).
 - [ ] Two laptops or a phone hotspot. The scripted engine works with zero internet after load.
 
 ## 11. Failure playbook
@@ -201,7 +203,7 @@ Stop talking. Let them ask.
 1. The **pulse line and count-up** in the first 10 seconds.
 2. The **live agent trace** streaming while Gemini works — six agents visibly collaborating.
 3. **Angelica** — a named person, a real explanation, a real draft, a real signature.
-4. The **3D charts** rendered *by the agent* inside a chat answer.
+4. The **3D charts and the facility map** rendered *by the agent* inside a chat answer.
 5. **Counterfactual policy** that admits one intervention doesn't pay.
 6. **AUC 0.853 vs 0.774** with a calibration curve — real ML, defended.
 7. The **MCP reveal** with the exact inventory of what Google already ships.
