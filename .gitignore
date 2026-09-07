@@ -14,6 +14,7 @@ backend/models/*
 backend/data/runtime/embeddings*
 backend/data/runtime/queue.json
 backend/data/runtime/audit.json
+backend/data/runtime/agent_eval_results.json
 
 # Full FHIR export is regenerated on demand (only the sample is committed)
 backend/data/fhir_full/

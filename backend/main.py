@@ -16,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from routers import chat, dashboards, ops
+from routers import chat, dashboards, evals, ops
 from services import agent, audit, hie, rag
 
 FRONTEND_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
@@ -47,6 +47,7 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"],
 app.include_router(chat.router)
 app.include_router(dashboards.router)
 app.include_router(ops.router)
+app.include_router(evals.router)
 
 
 @app.get("/api/health")

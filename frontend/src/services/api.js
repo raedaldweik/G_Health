@@ -52,3 +52,10 @@ export async function streamChat({ message, sessionId, persona, scenarioId }, on
 
 export const getStoryHero = () => fetch('/api/story/hero').then(json);
 export const getPatient = (id) => fetch(`/api/patient/${id}`).then(json);
+
+export const getModelEval = (t = 0.12) => fetch(`/api/evals/model?threshold=${t}`).then(json);
+export const getAgentEval = () => fetch('/api/evals/agent').then(json);
+export const runAgentEval = (mode = 'auto') => fetch(`/api/evals/agent/run?mode=${mode}`, { method: 'POST' }).then(json);
+export const getAgentEvalStatus = () => fetch('/api/evals/agent/status').then(json);
+export const getLlmSelection = () => fetch('/api/evals/llm').then(json);
+export const getGovernance = () => fetch('/api/evals/governance').then(json).then((d) => d.controls);

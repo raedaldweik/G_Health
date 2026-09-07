@@ -93,6 +93,14 @@ def train_risk_model(s: pd.DataFrame) -> dict:
     # Compare against the legacy rules-based registry score
     legacy_auc = roc_auc_score(y_te, s.loc[X_te.index, "legacy_risk_score"])
 
+    # Persist held-out predictions so the AI Evaluation tab computes ROC, calibration,
+    # threshold sweeps and subgroup fairness from real test data (never training data).
+    ev = s.loc[X_te.index, ["patient_id", "nationality", "gender", "age", "primary_facility_id",
+                            "cv_risk_band", "legacy_risk_score"]].copy()
+    ev["y_true"] = y_te.values
+    ev["p"] = p_te
+    ev.to_csv(OUT / "eval_predictions.csv.gz", index=False, compression="gzip")
+
     booster.save_model(OUT / "complication_risk.xgb.json")
     (OUT / "complication_risk.features.json").write_text(json.dumps({
         "features": RISK_FEATURES, "intervenable": INTERVENABLE}))

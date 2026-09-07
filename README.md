@@ -19,12 +19,14 @@ BigQuery (ML + AI.FORECAST/TimesFM + VECTOR_SEARCH) and Agent Engine.
 |---|---|---|
 | Data | 8-table relational HIE (patients, conditions, observations, medications, encounters, care gaps) + FHIR R4 sample bundle | Cloud Healthcare API FHIR R4 store → BigQuery streaming export (ANALYTICS_V2) |
 | ML | XGBoost complication risk (**AUC 0.853** vs 0.774 legacy score, SHAP explanations) · KMeans segments · patient similarity · seasonal demand forecast | BigQuery ML BOOSTED_TREE → Vertex Model Registry → online endpoint · AI.FORECAST (TimesFM) · VECTOR_SEARCH |
-| Agents | **ADK supervisor + 5 specialists** (cohort, guidelines, risk/ML, pop-health MCP, actions) on Gemini | Same graph on Agent Engine (sessions, memory, OTel) + A2A |
+| Agents | **ADK supervisor + 5 specialists** (cohort, guidelines, risk/ML, pop-health MCP, actions) on Gemini 3.8 Flash | Same graph on Cloud Run in me-central1 (sessions in AlloyDB, OTel → Cloud Trace); Agent Engine when offered in Doha |
 | RAG | Hybrid BM25 + gemini-embedding-001 over national guideline PDFs, page-level citations | Vertex AI RAG Engine managed corpus |
 | MCP | ★ `pophealth_mcp` — quality measures, care gaps, cohorts, model-backed stratification, counterfactual simulation, draft-only write-back | Same server re-hosted on Cloud Run beside Google's official BigQuery + cloud-healthcare MCP tools |
 | Simulation | Counterfactual re-scoring of the eligible cohort through the risk model (never canned numbers) | Identical logic as ML.PREDICT over counterfactual rows |
 | Safety | Consent enforcement, HITL approval queue, full audit trail | FHIR consent enforcement, Cloud Audit Logs |
-| UI | React glass UI: assistant with live agent trace, 4 storytelling dashboards, queue, documents, HIE browser, audit | + Looker / Agent Search embeds |
+| Evaluation | **AI Evaluation tab** — held-out ROC/PR/calibration/threshold economics/subgroup fairness for the risk model; golden agent evalset (trajectory recall, groundedness, action safety, numeric faithfulness, latency, cost); LLM selection matrix with measured flat-vs-hierarchical token cost; governance checklist | `adk eval` in Cloud Build as a release gate + Gen AI Evaluation Service judge + weekly production sampling |
+| Architecture | **Architecture tab** — interactive 6-lane target design with animated flows, click-through node rationale, real-time vs batch table, scale & inference model, 10 ADRs, phase map, Doha list-price run cost | The Terraform for it |
+| UI | React glass UI: assistant with live agent trace, 5 storytelling dashboards (incl. facility map), architecture, evaluation, queue, documents, HIE browser, audit | + Looker embeds |
 
 ## Quickstart
 
@@ -81,7 +83,7 @@ through `McpToolset` — a genuine MCP hop you can watch in the UI's agent trace
 ```
 backend/
   main.py                FastAPI app (serves API + built frontend)
-  routers/               chat (NDJSON streaming) · dashboards · queue/audit/docs/data
+  routers/               chat (NDJSON streaming) · dashboards · evals · queue/audit/docs/data
   services/
     hie.py               the HIE query engine (single source of truth for chat + dashboards)
     ml.py                model scoring, SHAP drivers, similarity, segments, counterfactual simulator
@@ -90,14 +92,19 @@ backend/
     scenarios.py         scripted demo engine (same services, real numbers, demo-day failover)
     queue_service.py     human-in-the-loop approval queue
     audit.py             governance trail
+    evals.py             evaluation harness: held-out model metrics, agent evalset runner, LLM cost model, governance
+    geo.py               facility geography (map payloads, regional roll-ups)
   pophealth_mcp/         ★ the population-health MCP server (FastMCP, stdio)
   scripts/
     generate_hie_data.py deterministic synthetic HIE generator (+ FHIR R4 export)
-    train_models.py      trains the 4 models, writes model_cards.json
+    train_models.py      trains the 4 models, writes model_cards.json + held-out predictions for the eval tab
   data/hie/              the committed synthetic exchange (8 tables, csv.gz)
   data/guidelines/       national clinical guideline PDFs (RAG corpus)
   data/fhir_sample/      FHIR R4 NDJSON sample bundle (Patient/Condition/Observation/…)
-frontend/                React + Vite + Tailwind + Recharts glass UI
+  data/evals/            golden agent evalset (10 cases, ADK-compatible shape)
+frontend/                React + Vite + Tailwind + Recharts + MapLibre glass UI
+  src/data/architecture.js   the target-architecture content (nodes, flows, ADRs, phases, cost model)
+  src/pages/ArchitecturePage.jsx · EvaluationPage.jsx
 docs/STORYLINE.md        the full interview storyline, run-of-show and Q&A prep
 ```
 

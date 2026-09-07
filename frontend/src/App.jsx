@@ -12,6 +12,8 @@ import QueuePage from './pages/QueuePage';
 import DocumentsPage from './pages/DocumentsPage';
 import DataPage from './pages/DataPage';
 import AuditPage from './pages/AuditPage';
+import ArchitecturePage from './pages/ArchitecturePage';
+import EvaluationPage from './pages/EvaluationPage';
 
 const DASH_TABS = [
   { id: 'overview', label: 'Overview' },
@@ -103,6 +105,8 @@ function Header({ tab, setTab }) {
     { id: 'landing', label: 'Home' },
     { id: 'assistant', label: 'Assistant' },
     { id: 'overview', label: 'Dashboards' },
+    { id: 'architecture', label: 'Architecture' },
+    { id: 'evaluation', label: 'AI Evaluation' },
     { id: 'queue', label: 'Queue' },
     { id: 'documents', label: 'Documents' },
     { id: 'data', label: 'Data' },
@@ -178,6 +182,8 @@ function Layout() {
       case 'risk': return <DashboardRisk />;
       case 'cost': return <DashboardCost />;
       case 'geography': return <DashboardMap />;
+      case 'architecture': return <ArchitecturePage />;
+      case 'evaluation': return <EvaluationPage />;
       case 'queue': return <QueuePage />;
       case 'documents': return <DocumentsPage />;
       case 'data': return <DataPage />;

@@ -62,6 +62,19 @@ Point at the diagram; name the pieces as they pulse:
 One line on currency: *"This runs on the Gemini Enterprise Agent Platform — what Google called
 Vertex AI until May."* Knowing the rename is a small flex; don't dwell.
 
+Then click **Architecture** in the nav (30 seconds, no more — the tab is there for Q&A):
+
+- Select the flow **"Clinician asks a question"** — the diagram dims to the synchronous path and the
+  arrows animate. *"Six lanes, four kinds of arrows. Per-patient signals stream; per-population numbers
+  batch at 02:00. Nothing is streamed because streaming is fashionable."*
+- Click the **ADK runtime** node. *"This is the honest bit. Agent Engine is the right managed runtime, but
+  its region list doesn't include Doha — and the conversation state carries clinical context. So the same
+  ADK tree runs on Cloud Run in me-central1 with sessions in AlloyDB, and moving to Agent Engine is a deploy
+  target the day it launches in Qatar. Same story for Model Armor and Model Monitoring: in-region
+  equivalents today, managed services when they arrive."*
+- *"Every node answers five questions — why, how it scales, what I rejected, what runs today, what it
+  costs. Ten decision records behind it. We can go anywhere you like in Q&A."*
+
 ---
 
 ## 4. Act I — Angelica (clinician persona, ~8 minutes)
@@ -120,7 +133,30 @@ back to Product and Engineering.** This gap analysis is a memo I'd send to the H
 
 ---
 
-## 7. Free-form + trust — ~4 minutes
+## 7. Trust — the AI Evaluation tab (~3 minutes)
+
+Click **AI Evaluation**. This is where "is this AI garbage?" gets answered before anyone asks it.
+
+- **Risk model** (45 s): *"Everything on this page is computed from 1,000 patients the model never saw."*
+  ROC: maroon line is ours (0.853), gold is the registry's legacy points score (0.774). Drag the
+  **operating-threshold slider** — the confusion tiles and 'reviews per event found' update live.
+  *"The model doesn't choose the threshold. The ministry does — and now they can see what each choice costs
+  in nurse time and missed events."* Point at the **fairness table**: TPR gap 3.7 points across nationality
+  groups, small groups shown but not judged; the age gap is prevalence, not bias, and I say so on the page.
+- **Agent evalset** (60 s): press **Run evalset**. Ten real questions go through the real supervisor graph
+  and are scored on four things a clinician would demand: did it call the right tools, did every clinical
+  claim carry a citation, did nothing bypass the human queue, and does every number in the answer match a
+  recomputation from the tables. *"A fluent wrong number is the classic LLM failure — this catches it."*
+  With the Gemini key on, tokens and cost per question appear too.
+- **LLM & cost** (45 s): *"Why Flash 3.8 — chosen on this evalset, not a leaderboard; GA; a year from
+  deprecation; a third of Pro's price. Pro is the judge, never the hot path."* Then the arithmetic:
+  *"Did I just add many agents? A flat agent re-reads 2.5k schema tokens on every hop; the supervisor reads
+  700. Since Gemini 3.5 function declarations are billed as input tokens, so that gap is literally the
+  invoice — about $1,700 a month at 20k questions a day — and the specialists are also how the guideline
+  agent is physically unable to draft a prescription."*
+- **Governance** (15 s): nine controls implemented, six delivered by the platform, zero autonomous writes.
+
+## 7b. Free-form — ~2 minutes
 
 - Ask the panel for a question, or type: *"Which facility has the worst BP control among high-risk Qatari
   patients, show me a chart, and what does the guideline say?"* — three agents fire, a 3D chart renders,
@@ -140,7 +176,8 @@ Back to the landing page, scroll to **Built on Google Cloud**:
 becomes BigQuery over a streamed Cloud Healthcare API FHIR store; the risk model becomes BigQuery ML
 registered into the Model Registry and served on an endpoint, scored through the official `/mcp/predict`
 toolset; the forecast becomes `AI.FORECAST` on TimesFM; the guideline corpus becomes RAG Engine; the
-agents run on Agent Engine with A2A between them; all of it in me-central1.
+agents run as the same ADK graph on Cloud Run in Doha — Agent Engine the day it reaches me-central1 — with
+PHI never leaving the Qatar Data Boundary and the LLM seeing pseudonymous data only.
 
 I built this in the shape of the job: understand the customer, build on the portfolio, find the gap,
 prototype the fix, hand it to the team that ships it."
@@ -164,12 +201,26 @@ Stop talking. Let them ask.
 - *Why ADK over LangGraph/CrewAI?* — Native Gemini function-calling, `McpToolset` as a first-class MCP client, A2A built in, Agent Engine as the managed runtime. Same graph deploys to phase 2 unchanged.
 - *Why not just use Google's healthcare MCP tools?* — I do. Ours sits above them: population reasoning, not record retrieval. I can list exactly what theirs cover.
 - *How do you stop hallucinated clinical advice?* — Numbers only come from tools; recommendations only with a citation; actions only via the queue. Then eval: trajectory tests + LLM-judge. Then Model Armor on the runtime.
-- *Latency?* — Each specialist is a Gemini Flash call; a typical clinician question is 3–5 tool hops. Streaming the trace makes the wait feel like work, not delay.
+- *Latency?* — Each specialist is a Gemini Flash call; a typical clinician question is 3 tool hops. `thinking_level LOW` on routing turns keeps first token under a second; streaming the trace makes the wait feel like work, not delay.
+
+**Architecture (the "deploy, not demo" questions)**
+- *Real-time or batch?* — Both, deliberately. Per-patient signals stream (a new HbA1c re-scores that patient in seconds via FHIR store → Pub/Sub → endpoint). Per-population metrics batch at 02:00 (stratification, gaps, quality measures, equity). Streaming the aggregates would cost ~100× for numbers that move over weeks. The Real-time vs batch view lists every path with its budget.
+- *How does it scale?* — Compute isn't the constraint anywhere: one scorer replica covers 50× the national peak, BigQuery is serverless, ingest autoscales on backlog. The variables that actually move cost and latency are Gemini tokens per question and synchronous hops — which is why the eval tab measures both.
+- *Where does inference run?* — Risk: XGBoost on a Vertex online endpoint in Doha (~1 ms CPU per score, p50 < 10 ms) plus nightly batch for the cohort. LLM: Gemini 3.8 Flash on the global endpoint — acceptable because the prompt only ever carries pseudonymous ids and aggregates (ADR-01). Retrieval: RAG Engine. Voice: Chirp 3 for Arabic.
+- *Data residency with Gemini?* — Identity zone and reasoning zone are separated. PHI (FHIR, BigQuery, AlloyDB, Feature Store) sits in me-central1 under an Assured Workloads Qatar Data Boundary with CMEK and VPC-SC. The agents see the pseudonymised analytics zone; re-identification is an audited app-layer join inside the perimeter. That makes the LLM's region a latency question, not a PHI question.
+- *Why isn't the agent on Agent Engine?* — Its region list doesn't include Doha, and conversation state carries clinical context. So ADK runs on Cloud Run in me-central1 with sessions in AlloyDB. Deploy-target change when Agent Engine lands in Qatar — same for Model Armor and Model Monitoring, which I replaced with Sensitive Data Protection and BigQuery drift jobs in-region.
+- *What does it cost to run?* — Order of magnitude at Doha list prices: ~$1.6k/month for a 4-site pilot, ~$12.6k/month national at 20k questions a day, 30% of it Gemini tokens. One avoided complication admission is QAR 32k, so the national platform costs about 1.4 admissions a month.
+
+**Evaluation (the "is this AI garbage?" questions)**
+- *How did you choose the LLM?* — On our own evalset: trajectory recall, groundedness, faithfulness, latency and cost per question across Flash 3.8, Flash 3.5 and Pro 3.1. Flash 3.8 matched Pro on tool-structured tasks at a third of the cost; it's GA and a year from deprecation; 2.5 Flash was excluded because it retires in October. Pro is the judge and the monthly synthesis — never the hot path.
+- *Is this the most cost-effective way, or did you just add agents?* — Measured, not asserted: flat agent 2,555 schema tokens per hop × 3 hops vs supervisor 687 + one specialist each. Function declarations are billed as input tokens since Gemini 3.5, so it's ~30% cheaper per question at scale — and least privilege, independent evaluation and a swappable MCP agent come with it. The one cost is ~0.7 s of extra hop, hidden by streaming the trace.
+- *How do you know the agent isn't hallucinating?* — Three walls and a test. Numbers only from tools; clinical claims only with a citation; actions only through the queue. Then the golden evalset re-computes every headline number from the tables and fails the case if it doesn't match. Phase 2 runs the same set in Cloud Build on every PR and on 2% of production weekly, with Gemini 3.1 Pro as an LLM judge for tone and Arabic fidelity.
+- *Is the model fair?* — Subgroup TPR/FPR at the operating threshold, by nationality group, gender and age; gaps computed only over groups with enough events; small groups shown but not judged. The age gap is prevalence (24% vs 5%), and the page says so. Monthly drift jobs re-run this table in phase 2.
 
 **Google-specific**
 - *What changed at Next '26?* — Vertex AI became the Gemini Enterprise Agent Platform; 50+ managed MCP servers went GA; Agent Engine sessions/memory GA'd. Firebase Studio is sunsetting → AI Studio Build.
 - *What's deprecated that you avoided?* — MedLM (Sept 2025), Healthcare NL API (May 2026), Healthcare Data Engine (Sept 2025), Gemini 2.5 (retiring Oct 2026). Gemini + MedGemma is the current medical story.
-- *Sovereignty?* — Data at rest in me-central1; open-weight MedGemma can run in-region for the clinical-language pieces; documented processing locations for anything that can't yet.
+- *Sovereignty?* — PHI and the agent runtime in me-central1 under the Qatar Data Boundary; the LLM sees pseudonymous aggregates only; open-weight MedGemma can run in-region later for the clinical-language pieces. PDPPL (Law 13/2016) is the frame.
 
 **Judgment**
 - *What would you cut?* — The forecast. It's the weakest model and the least surprising insight. I'd trade it for the AF anticoagulation loop, which saves strokes.
@@ -210,3 +261,6 @@ Stop talking. Let them ask.
 8. The **same MCP server answering Gemini CLI**.
 9. **Arabic voice input** — one click, one question, in the customer's language.
 10. The **audit trail** carrying the whole story you just told.
+11. **Run evalset** — ten real questions through the real graph, scored live, including "does every number match a recomputation".
+12. The **threshold slider** — the ministry choosing its own trade-off between nurse time and missed events.
+13. The **architecture that admits Doha's limits** — Agent Engine, Model Armor and Model Monitoring aren't in me-central1, and the design says what replaces them today.
