@@ -27,18 +27,28 @@ FRONTEND_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 # Warm-up state — the agent graph and model resolution happen in the background so the
 # process answers /api/health within seconds of boot (Railway's healthcheck must not wait on
 # the Gemini API). Chat requests that arrive before warm-up completes simply build the runner.
-WARM = {"ready": False, "error": None, "seconds": None}
+WARM = {"ready": False, "error": None, "seconds": None, "self_test": None}
 
 
 def _warm_up():
     t0 = time.time()
     try:
         model = agent.resolve_model()
+        print(f"· Model resolution: {model} — {agent.RESOLUTION['source']}"
+              + (f" · error: {agent.RESOLUTION['error']}" if agent.RESOLUTION.get("error") else "")
+              + (f" · visible: {', '.join(agent.RESOLUTION['visible'][:8])}" if agent.RESOLUTION.get("visible") else ""),
+              flush=True)
         agent._get_runner()
+        test = agent.self_test()
+        WARM["self_test"] = test
         WARM["seconds"] = round(time.time() - t0, 1)
         WARM["ready"] = True
-        print(f"✓ Multi-agent mode ready in {WARM['seconds']}s: Gemini · model {model} "
-              f"(ADK supervisor + 5 specialists + MCP)", flush=True)
+        if test.get("ok"):
+            print(f"✓ Multi-agent mode ready in {WARM['seconds']}s: Gemini · model {model} answered in "
+                  f"{test['ms']} ms (ADK supervisor + 5 specialists + MCP)", flush=True)
+        else:
+            print(f"✗ Gemini self-test FAILED for {model}: {test.get('error') or test} — "
+                  f"free-form chat will fall back to the scripted engine until this is fixed", flush=True)
     except Exception as e:                      # never take the process down over warm-up
         WARM["error"] = f"{type(e).__name__}: {e}"
         print(f"✗ Agent warm-up failed (chat will retry on first request): {WARM['error']}", flush=True)
@@ -81,6 +91,7 @@ def health():
     return {"status": "ok", "app": "nabd",
             "mode": "multi-agent" if live else "scripted",
             "model": (agent.resolve_model() if WARM["ready"] else "warming") if live else None,
+            "model_source": agent.RESOLUTION.get("source") if live else None,
             "warmup": WARM if live else None,
             "patients": len(hie.summary())}
 

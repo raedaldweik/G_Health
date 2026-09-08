@@ -100,6 +100,9 @@ function Header({ tab, setTab }) {
   const [health, setHealth] = useState(null);
   useEffect(() => { getHealth().then(setHealth).catch(() => setHealth({ status: 'down' })); }, []);
   const ok = health?.status === 'ok';
+  const selfTest = health?.warmup?.self_test;
+  const warming = ok && health.mode === 'multi-agent' && !health.warmup?.ready;
+  const keyBad = ok && health.mode === 'multi-agent' && selfTest && !selfTest.ok;
 
   const tabs = [
     { id: 'landing', label: 'Home' },
@@ -156,13 +159,15 @@ function Header({ tab, setTab }) {
 
       <div className="flex items-center gap-3">
         <div className="status-pill">
-          <span className={`w-2 h-2 rounded-full ${ok ? '' : 'animate-pulse'}`}
-            style={{ background: ok ? 'var(--green)' : health ? 'var(--red)' : 'var(--amber)' }} />
-          <span>
+          <span className={`w-2 h-2 rounded-full ${ok && !warming && !keyBad ? '' : 'animate-pulse'}`}
+            style={{ background: !ok ? (health ? 'var(--red)' : 'var(--amber)') : keyBad ? 'var(--red)' : warming ? 'var(--amber)' : 'var(--green)' }} />
+          <span title={keyBad ? selfTest.error : undefined}>
             {health == null ? 'Connecting…'
               : !ok ? 'Backend offline'
-              : health.mode === 'multi-agent' ? `6 agents · MCP · ${health.model}`
-              : '6 agents · MCP · scripted engine'}
+              : health.mode !== 'multi-agent' ? '6 agents · MCP · scripted engine'
+              : warming ? '6 agents · MCP · warming up…'
+              : keyBad ? `Gemini self-test failed (${health.model}) — scripted fallback`
+              : `6 agents · MCP · ${health.model}`}
           </span>
         </div>
         <PersonaSelector />

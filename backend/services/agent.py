@@ -21,6 +21,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import re
 import sys
 import time
 from functools import lru_cache
@@ -38,33 +39,83 @@ if _KEY and not os.getenv("GOOGLE_API_KEY"):
     os.environ["GOOGLE_API_KEY"] = _KEY
 os.environ.setdefault("GOOGLE_GENAI_USE_VERTEXAI", "FALSE")
 
-MODEL_CANDIDATES = [m for m in [
-    os.getenv("MODEL", "").strip() or None,
-    "gemini-3.8-flash", "gemini-3.5-flash", "gemini-2.5-flash", "gemini-2.0-flash",
-] if m]
+# Preference order. IDs shift monthly, so we verify against what THIS key can see.
+PREFERRED_MODELS = [
+    "gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash",
+    "gemini-3.1-flash", "gemini-2.5-flash",
+]
+FALLBACK_MODEL = "gemini-2.5-flash"
+MODEL_CANDIDATES = [m for m in [os.getenv("MODEL", "").strip() or None, *PREFERRED_MODELS] if m]
+
+# How the model was chosen — surfaced on /api/health and in the deploy log so a wrong
+# key or an invisible model is obvious before demo day.
+RESOLUTION: dict = {"model": None, "source": None, "visible": [], "error": None}
 
 
 def llm_enabled() -> bool:
     return bool(_KEY)
 
 
+def _version_key(name: str) -> tuple:
+    m = re.search(r"gemini-(\d+)(?:\.(\d+))?", name)
+    return (int(m.group(1)), int(m.group(2) or 0)) if m else (0, 0)
+
+
 @lru_cache(maxsize=1)
 def resolve_model() -> str:
-    """Pick the newest Gemini flash model this key can see — IDs shift monthly."""
+    """Pick the newest Gemini Flash this key can actually see.
+
+    Order: explicit MODEL env → first preferred ID present in models.list() → newest
+    visible non-lite Flash → unverified fallback (logged loudly)."""
+    pinned = os.getenv("MODEL", "").strip()
+    if pinned:
+        RESOLUTION.update(model=pinned, source="env MODEL (unverified pin)")
+        return pinned
     if not _KEY:
-        return MODEL_CANDIDATES[0]
+        RESOLUTION.update(model=PREFERRED_MODELS[0], source="scripted mode (no key)")
+        return PREFERRED_MODELS[0]
     try:
         from google import genai
         client = genai.Client(api_key=_KEY)
-        for m in MODEL_CANDIDATES:
-            try:
-                client.models.get(model=m)
-                return m
-            except Exception:
-                continue
-    except Exception:
-        pass
-    return MODEL_CANDIDATES[-1]
+        visible = []
+        for m in client.models.list():
+            name = (m.name or "").split("/")[-1]
+            actions = getattr(m, "supported_actions", None) or []
+            if name.startswith("gemini") and (not actions or "generateContent" in actions):
+                visible.append(name)
+        RESOLUTION["visible"] = visible
+        for cand in PREFERRED_MODELS:
+            if cand in visible:
+                RESOLUTION.update(model=cand, source="verified via models.list")
+                return cand
+        flash = [n for n in visible if "flash" in n and not any(
+            x in n for x in ("lite", "image", "tts", "live", "audio", "native", "exp", "thinking", "8b"))]
+        if flash:
+            best = max(flash, key=lambda n: (_version_key(n), "preview" not in n, len(n) * -1))
+            RESOLUTION.update(model=best, source="newest visible Flash")
+            return best
+        RESOLUTION["error"] = f"none of {PREFERRED_MODELS} visible; saw {visible[:12]}"
+    except Exception as e:
+        RESOLUTION["error"] = f"{type(e).__name__}: {str(e)[:300]}"
+    RESOLUTION.update(model=FALLBACK_MODEL, source="UNVERIFIED fallback — check the key")
+    return FALLBACK_MODEL
+
+
+def self_test() -> dict:
+    """One real generate_content call so the deploy log proves key + model work."""
+    model = resolve_model()
+    if not _KEY:
+        return {"ok": False, "skipped": "no key"}
+    t0 = time.time()
+    try:
+        from google import genai
+        client = genai.Client(api_key=_KEY)
+        r = client.models.generate_content(model=model, contents="Reply with the single word OK.")
+        text = (r.text or "").strip()
+        return {"ok": bool(text), "model": model, "reply": text[:40], "ms": int((time.time() - t0) * 1000)}
+    except Exception as e:
+        return {"ok": False, "model": model, "error": f"{type(e).__name__}: {str(e)[:300]}",
+                "ms": int((time.time() - t0) * 1000)}
 
 
 # ─────────────────────────── function tools ───────────────────────────
