@@ -53,6 +53,7 @@ export default function AssistantPage() {
       await streamChat({ message: q, sessionId: chatId, persona, scenarioId }, (ev) => {
         if (ev.type === 'step') setLiveSteps((prev) => [...prev, ev]);
         else if (ev.type === 'delta') setDraft((prev) => prev + ev.text);
+        else if (ev.type === 'reset') { setDraft(''); setLiveSteps([]); }
         else if (ev.type === 'final') finalData = ev;
       });
       if (finalData) {

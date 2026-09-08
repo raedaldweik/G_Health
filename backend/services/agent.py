@@ -117,21 +117,80 @@ def generation_config(model: str):
     return None
 
 
-def self_test() -> dict:
-    """One real generate_content call so the deploy log proves key + model work."""
-    model = resolve_model()
+# The model actually serving traffic. Starts as resolve_model(); moves down the preference
+# list when Gemini answers 503/429 ("high demand") so the demo never stalls on one model.
+_active: dict = {"model": None, "switches": []}
+
+
+def active_model() -> str:
+    if _active["model"] is None:
+        _active["model"] = resolve_model()
+    return _active["model"]
+
+
+def fallback_candidates(current: str) -> list[str]:
+    visible = RESOLUTION.get("visible") or []
+    order = [m for m in PREFERRED_MODELS if (not visible or m in visible)] or PREFERRED_MODELS
+    return [m for m in order if m != current and m not in [x["to"] for x in _active["switches"]]]
+
+
+def is_capacity_error(e: Exception) -> bool:
+    code = getattr(e, "code", None) or getattr(getattr(e, "status", None), "code", None)
+    msg = str(e)
+    return code in (429, 500, 502, 503, 504) or any(
+        k in msg for k in ("UNAVAILABLE", "RESOURCE_EXHAUSTED", "high demand", "overloaded", " 503", " 429"))
+
+
+def switch_model(reason: str) -> str | None:
+    cur = active_model()
+    nxt = next(iter(fallback_candidates(cur)), None)
+    if nxt:
+        _active["model"] = nxt
+        _active["switches"].append({"from": cur, "to": nxt, "reason": reason[:160], "at": time.time()})
+        print(f"⚠ Gemini capacity error on {cur} — switching to {nxt}: {reason[:160]}", flush=True)
+    return nxt
+
+
+def _retry_options():
+    from google.genai import types as gtypes
+    return gtypes.HttpRetryOptions(attempts=5, initial_delay=1.0, max_delay=8.0, exp_base=2.0,
+                                   jitter=0.3, http_status_codes=[429, 500, 502, 503, 504])
+
+
+def _llm(model: str):
+    """ADK Gemini connection with client-side retries on 429/5xx (exponential backoff)."""
+    from google.adk.models.google_llm import Gemini
+    return Gemini(model=model, retry_options=_retry_options())
+
+
+def self_test(model: str | None = None) -> dict:
+    """One real generate_content call so the deploy log proves key + model work.
+    Retries transient capacity errors and, if a model is saturated, moves to the next."""
     if not _KEY:
         return {"ok": False, "skipped": "no key"}
-    t0 = time.time()
-    try:
-        from google import genai
-        client = genai.Client(api_key=_KEY)
-        r = client.models.generate_content(model=model, contents="Reply with the single word OK.")
-        text = (r.text or "").strip()
-        return {"ok": bool(text), "model": model, "reply": text[:40], "ms": int((time.time() - t0) * 1000)}
-    except Exception as e:
-        return {"ok": False, "model": model, "error": f"{type(e).__name__}: {str(e)[:300]}",
-                "ms": int((time.time() - t0) * 1000)}
+    from google import genai
+    from google.genai import types as gtypes
+    client = genai.Client(api_key=_KEY, http_options=gtypes.HttpOptions(retry_options=_retry_options()))
+    tried = []
+    model = model or active_model()
+    while True:
+        t0 = time.time()
+        try:
+            r = client.models.generate_content(model=model, contents="Reply with the single word OK.",
+                                               config=generation_config(model))
+            text = (r.text or "").strip()
+            return {"ok": bool(text), "model": model, "reply": text[:40],
+                    "ms": int((time.time() - t0) * 1000), "tried": tried or None}
+        except Exception as e:
+            err = f"{type(e).__name__}: {str(e)[:300]}"
+            tried.append({"model": model, "error": err})
+            if is_capacity_error(e):
+                nxt = switch_model(err)
+                if nxt:
+                    model = nxt
+                    continue
+            return {"ok": False, "model": model, "error": err, "ms": int((time.time() - t0) * 1000),
+                    "tried": tried, "capacity": is_capacity_error(e)}
 
 
 # ─────────────────────────── function tools ───────────────────────────
@@ -360,21 +419,22 @@ Rules:
 6. Population aggregates are fine to show; do not expose row-level data for restricted-consent patients (the tools enforce this — surface the denial transparently when it happens).
 """
 
-_runner = None
+_runners: dict = {}
 _session_service = None
 
 
-def _build_tools_map():
+def _build_tools_map(model_name: str | None = None):
     from google.adk.agents import LlmAgent
     from google.adk.tools import AgentTool
     from google.adk.tools.mcp_tool import McpToolset, StdioConnectionParams
     from mcp import StdioServerParameters
 
-    model = resolve_model()
+    model = model_name or active_model()
     gen_cfg = generation_config(model)
+    llm = _llm(model)
 
     cohort_agent = LlmAgent(
-        name="cohort_agent", model=model, generate_content_config=gen_cfg,
+        name="cohort_agent", model=llm, generate_content_config=gen_cfg,
         description=("Queries the national HIE: patient records, timelines, cohort filters, "
                      "group-bys, rankings, correlations, facility benchmark, equity view, KPIs."),
         instruction=("You are the HIE data specialist. Use your tools to answer the request "
@@ -386,7 +446,7 @@ def _build_tools_map():
                cohort_kpis, facility_benchmark, equity_breakdown])
 
     guideline_agent = LlmAgent(
-        name="guideline_agent", model=model, generate_content_config=gen_cfg,
+        name="guideline_agent", model=llm, generate_content_config=gen_cfg,
         description="Retrieves and cites national clinical guideline passages (RAG).",
         instruction=("You are the clinical guideline retrieval specialist. Search the corpus, "
                      "then answer with the relevant recommendation(s) and ALWAYS cite document "
@@ -394,7 +454,7 @@ def _build_tools_map():
         tools=[search_guidelines])
 
     risk_agent = LlmAgent(
-        name="risk_agent", model=model, generate_content_config=gen_cfg,
+        name="risk_agent", model=llm, generate_content_config=gen_cfg,
         description=("Runs the deployed ML models: risk scoring with SHAP drivers, cohort "
                      "stratification, similar patients, demand forecast, counterfactual policy "
                      "simulation, model governance cards."),
@@ -412,7 +472,7 @@ def _build_tools_map():
             timeout=30),
     )
     pophealth_agent = LlmAgent(
-        name="pophealth_agent", model=model, generate_content_config=gen_cfg,
+        name="pophealth_agent", model=llm, generate_content_config=gen_cfg,
         description=("Population-health MCP specialist: HEDIS-style quality measures, care-gap "
                      "hunting, cohort building, model-backed stratification, policy simulation, "
                      "and drafting population interventions (human-approved)."),
@@ -423,7 +483,7 @@ def _build_tools_map():
         tools=[pophealth_tools])
 
     action_agent = LlmAgent(
-        name="action_agent", model=model, generate_content_config=gen_cfg,
+        name="action_agent", model=llm, generate_content_config=gen_cfg,
         description="Drafts prescriptions, recall campaigns and referrals for human approval.",
         instruction=("You draft clinical actions. Every draft goes to the human-in-the-loop "
                      "queue — say so explicitly. Include the clinical rationale and guideline "
@@ -431,7 +491,7 @@ def _build_tools_map():
         tools=[draft_prescription, draft_recall, draft_referral])
 
     supervisor = LlmAgent(
-        name="nabd_supervisor", model=model, generate_content_config=gen_cfg,
+        name="nabd_supervisor", model=llm, generate_content_config=gen_cfg,
         description="Nabd population-health supervisor",
         instruction=SUPERVISOR_INSTRUCTION,
         tools=[AgentTool(cohort_agent), AgentTool(guideline_agent), AgentTool(risk_agent),
@@ -439,15 +499,19 @@ def _build_tools_map():
     return supervisor
 
 
-def _get_runner():
-    global _runner, _session_service
-    if _runner is None:
-        from google.adk.runners import Runner
-        from google.adk.sessions import InMemorySessionService
+def _get_runner(model_name: str | None = None):
+    """One ADK Runner per model, sharing a session service so a mid-conversation model
+    switch keeps the conversation."""
+    global _session_service
+    from google.adk.runners import Runner
+    from google.adk.sessions import InMemorySessionService
+    model = model_name or active_model()
+    if _session_service is None:
         _session_service = InMemorySessionService()
-        _runner = Runner(agent=_build_tools_map(), app_name="nabd",
-                         session_service=_session_service)
-    return _runner
+    if model not in _runners:
+        _runners[model] = Runner(agent=_build_tools_map(model), app_name="nabd",
+                                 session_service=_session_service)
+    return _runners[model]
 
 
 def _summarise_args(tool: str, args: dict) -> str:
@@ -495,11 +559,30 @@ def _summarise_result(tool: str, resp: Any) -> str:
 
 async def stream_chat(message: str, session_id: str, persona: str = "clinician",
                       ) -> AsyncGenerator[dict, None]:
-    """Run the multi-agent system, yielding live step events then the final payload."""
+    """Run the multi-agent system, yielding live step events then the final payload.
+    If Gemini answers 503/429 for the active model (after client retries), the request is
+    re-run once on the next model in the preference list."""
+    for attempt in range(3):
+        model = active_model()
+        try:
+            async for ev in _stream_once(message, session_id, persona, model):
+                yield ev
+            return
+        except Exception as e:
+            if attempt < 2 and is_capacity_error(e) and switch_model(f"{type(e).__name__}: {e}"):
+                yield {"type": "reset"}
+                yield {"type": "step", "status": "done", "agent": "system", "tool": "model_fallback",
+                       "detail": f"{model} at capacity (503) — re-running on {active_model()}"}
+                continue
+            raise
+
+
+async def _stream_once(message: str, session_id: str, persona: str, model: str,
+                       ) -> AsyncGenerator[dict, None]:
     from google.genai import types as gtypes
     from google.adk.agents.run_config import RunConfig, StreamingMode
 
-    runner = _get_runner()
+    runner = _get_runner(model)
     sess = await _session_service.get_session(app_name="nabd", user_id="demo",
                                               session_id=session_id)
     if sess is None:
@@ -597,4 +680,4 @@ async def stream_chat(message: str, session_id: str, persona: str = "clinician",
            "trace": trace, "charts": charts, "citations": uniq, "actions": actions,
            "usage": {**usage, "wall_ms": int((time.time() - t_start) * 1000),
                      "first_token_ms": first_token_ms, "thinking_level": THINKING_LEVEL},
-           "model": resolve_model()}
+           "model": model}

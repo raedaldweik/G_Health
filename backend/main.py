@@ -39,19 +39,34 @@ def _warm_up():
               + (f" · visible: {', '.join(agent.RESOLUTION['visible'][:8])}" if agent.RESOLUTION.get("visible") else ""),
               flush=True)
         agent._get_runner()
-        test = agent.self_test()
-        WARM["self_test"] = test
-        WARM["seconds"] = round(time.time() - t0, 1)
-        WARM["ready"] = True
-        if test.get("ok"):
-            print(f"✓ Multi-agent mode ready in {WARM['seconds']}s: Gemini · model {model} answered in "
-                  f"{test['ms']} ms (ADK supervisor + 5 specialists + MCP)", flush=True)
-        else:
-            print(f"✗ Gemini self-test FAILED for {model}: {test.get('error') or test} — "
-                  f"free-form chat will fall back to the scripted engine until this is fixed", flush=True)
+        _record_self_test(agent.self_test(), t0)
+        if not WARM["ready"]:
+            threading.Thread(target=_retest_loop, name="nabd-retest", daemon=True).start()
     except Exception as e:                      # never take the process down over warm-up
         WARM["error"] = f"{type(e).__name__}: {e}"
         print(f"✗ Agent warm-up failed (chat will retry on first request): {WARM['error']}", flush=True)
+
+
+def _record_self_test(test: dict, t0: float):
+    WARM["self_test"] = test
+    WARM["seconds"] = round(time.time() - t0, 1)
+    WARM["ready"] = bool(test.get("ok"))
+    if test.get("ok"):
+        print(f"✓ Multi-agent mode ready in {WARM['seconds']}s: Gemini · model {test['model']} answered in "
+              f"{test['ms']} ms (ADK supervisor + 5 specialists + MCP)"
+              + (f" · after falling back from {test['tried'][0]['model']}" if test.get("tried") else ""), flush=True)
+    else:
+        print(f"✗ Gemini self-test FAILED for {test.get('model')}: {test.get('error') or test} — "
+              f"{'capacity error, will re-test every minute' if test.get('capacity') else 'check the key'}", flush=True)
+
+
+def _retest_loop():
+    """Gemini 503 'high demand' is transient: keep testing every minute until it clears."""
+    for _ in range(120):
+        time.sleep(60)
+        if WARM["ready"]:
+            return
+        _record_self_test(agent.self_test(), time.time())
 
 
 @asynccontextmanager
@@ -90,7 +105,8 @@ def health():
     live = agent.llm_enabled()
     return {"status": "ok", "app": "nabd",
             "mode": "multi-agent" if live else "scripted",
-            "model": (agent.resolve_model() if WARM["ready"] else "warming") if live else None,
+            "model": (agent.active_model() if WARM["ready"] else "warming") if live else None,
+            "model_switches": agent._active["switches"] if live else None,
             "model_source": agent.RESOLUTION.get("source") if live else None,
             "warmup": WARM if live else None,
             "patients": len(hie.summary())}

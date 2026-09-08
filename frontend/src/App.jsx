@@ -112,6 +112,7 @@ function Header({ tab, setTab }) {
   const selfTest = health?.warmup?.self_test;
   const warming = ok && health.mode === 'multi-agent' && !health.warmup?.ready;
   const keyBad = ok && health.mode === 'multi-agent' && selfTest && !selfTest.ok;
+  const switched = health?.model_switches?.length ? health.model_switches[health.model_switches.length - 1] : null;
 
   const tabs = [
     { id: 'landing', label: 'Home' },
@@ -175,8 +176,10 @@ function Header({ tab, setTab }) {
               : !ok ? 'Backend offline'
               : health.mode !== 'multi-agent' ? '6 agents · MCP · scripted engine'
               : warming ? '6 agents · MCP · warming up…'
-              : keyBad ? `Gemini self-test failed (${health.model}) — scripted fallback`
-              : `6 agents · MCP · ${health.model}`}
+              : keyBad ? (selfTest.capacity
+                  ? `Gemini at capacity (503) — retrying every minute · scripted chips still work`
+                  : `Gemini key rejected — scripted chips still work`)
+              : `6 agents · MCP · ${health.model}${switched ? ` (fell back from ${switched.from})` : ''}`}
           </span>
         </div>
         <PersonaSelector />

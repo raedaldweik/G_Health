@@ -26,7 +26,7 @@ class ChatRequest(BaseModel):
 def get_scenarios(persona: str = "clinician"):
     return {"persona": persona, "scenarios": scenarios.list_scenarios(persona),
             "llm_enabled": agent.llm_enabled(),
-            "model": agent.resolve_model() if agent.llm_enabled() else None}
+            "model": agent.active_model() if agent.llm_enabled() else None}
 
 
 def _ndjson(gen):
