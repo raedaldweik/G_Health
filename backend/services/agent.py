@@ -101,6 +101,22 @@ def resolve_model() -> str:
     return FALLBACK_MODEL
 
 
+THINKING_LEVEL = (os.getenv("THINKING_LEVEL", "LOW").strip().upper() or "LOW")
+
+
+def generation_config(model: str):
+    """Per-hop generation settings. Gemini 3.x thinks at HIGH by default, which costs
+    5–15 s of first-token latency on every one of the ~4–8 LLM calls a question needs.
+    Tool routing and summarising need LOW. Override with THINKING_LEVEL=MEDIUM|HIGH."""
+    from google.genai import types as gtypes
+    if model.startswith("gemini-3"):
+        return gtypes.GenerateContentConfig(
+            thinking_config=gtypes.ThinkingConfig(thinking_level=THINKING_LEVEL))
+    if "2.5" in model:                      # 2.5 uses budgets, not levels
+        return gtypes.GenerateContentConfig(thinking_config=gtypes.ThinkingConfig(thinking_budget=0))
+    return None
+
+
 def self_test() -> dict:
     """One real generate_content call so the deploy log proves key + model work."""
     model = resolve_model()
@@ -355,9 +371,10 @@ def _build_tools_map():
     from mcp import StdioServerParameters
 
     model = resolve_model()
+    gen_cfg = generation_config(model)
 
     cohort_agent = LlmAgent(
-        name="cohort_agent", model=model,
+        name="cohort_agent", model=model, generate_content_config=gen_cfg,
         description=("Queries the national HIE: patient records, timelines, cohort filters, "
                      "group-bys, rankings, correlations, facility benchmark, equity view, KPIs."),
         instruction=("You are the HIE data specialist. Use your tools to answer the request "
@@ -369,7 +386,7 @@ def _build_tools_map():
                cohort_kpis, facility_benchmark, equity_breakdown])
 
     guideline_agent = LlmAgent(
-        name="guideline_agent", model=model,
+        name="guideline_agent", model=model, generate_content_config=gen_cfg,
         description="Retrieves and cites national clinical guideline passages (RAG).",
         instruction=("You are the clinical guideline retrieval specialist. Search the corpus, "
                      "then answer with the relevant recommendation(s) and ALWAYS cite document "
@@ -377,7 +394,7 @@ def _build_tools_map():
         tools=[search_guidelines])
 
     risk_agent = LlmAgent(
-        name="risk_agent", model=model,
+        name="risk_agent", model=model, generate_content_config=gen_cfg,
         description=("Runs the deployed ML models: risk scoring with SHAP drivers, cohort "
                      "stratification, similar patients, demand forecast, counterfactual policy "
                      "simulation, model governance cards."),
@@ -395,7 +412,7 @@ def _build_tools_map():
             timeout=30),
     )
     pophealth_agent = LlmAgent(
-        name="pophealth_agent", model=model,
+        name="pophealth_agent", model=model, generate_content_config=gen_cfg,
         description=("Population-health MCP specialist: HEDIS-style quality measures, care-gap "
                      "hunting, cohort building, model-backed stratification, policy simulation, "
                      "and drafting population interventions (human-approved)."),
@@ -406,7 +423,7 @@ def _build_tools_map():
         tools=[pophealth_tools])
 
     action_agent = LlmAgent(
-        name="action_agent", model=model,
+        name="action_agent", model=model, generate_content_config=gen_cfg,
         description="Drafts prescriptions, recall campaigns and referrals for human approval.",
         instruction=("You draft clinical actions. Every draft goes to the human-in-the-loop "
                      "queue — say so explicitly. Include the clinical rationale and guideline "
@@ -414,7 +431,7 @@ def _build_tools_map():
         tools=[draft_prescription, draft_recall, draft_referral])
 
     supervisor = LlmAgent(
-        name="nabd_supervisor", model=model,
+        name="nabd_supervisor", model=model, generate_content_config=gen_cfg,
         description="Nabd population-health supervisor",
         instruction=SUPERVISOR_INSTRUCTION,
         tools=[AgentTool(cohort_agent), AgentTool(guideline_agent), AgentTool(risk_agent),
@@ -480,6 +497,7 @@ async def stream_chat(message: str, session_id: str, persona: str = "clinician",
                       ) -> AsyncGenerator[dict, None]:
     """Run the multi-agent system, yielding live step events then the final payload."""
     from google.genai import types as gtypes
+    from google.adk.agents.run_config import RunConfig, StreamingMode
 
     runner = _get_runner()
     sess = await _session_service.get_session(app_name="nabd", user_id="demo",
@@ -502,14 +520,28 @@ async def stream_chat(message: str, session_id: str, persona: str = "clinician",
     pending: dict[str, dict] = {}
     final_text = ""
 
+    t_start = time.time()
+    first_token_ms = None
     async for event in runner.run_async(user_id="demo", session_id=session_id,
-                                        new_message=content):
+                                        new_message=content,
+                                        run_config=RunConfig(streaming_mode=StreamingMode.SSE)):
+        author = event.author or "agent"
+        if getattr(event, "partial", False):
+            # Streaming chunk: surface the supervisor's prose as it is written so the
+            # clinician reads while the model finishes. Everything else waits for the
+            # aggregated (non-partial) event below.
+            if author == "nabd_supervisor":
+                for part in (event.content.parts if event.content and event.content.parts else []):
+                    if getattr(part, "text", None) and not getattr(part, "thought", False):
+                        if first_token_ms is None:
+                            first_token_ms = int((time.time() - t_start) * 1000)
+                        yield {"type": "delta", "text": part.text}
+            continue
         if event.usage_metadata is not None:
             usage["prompt_tokens"] += int(event.usage_metadata.prompt_token_count or 0)
             usage["completion_tokens"] += int(event.usage_metadata.candidates_token_count or 0)
             usage["total_tokens"] += int(event.usage_metadata.total_token_count or 0)
             usage["llm_calls"] += 1
-        author = event.author or "agent"
         for part in (event.content.parts if event.content and event.content.parts else []):
             fc = getattr(part, "function_call", None)
             if fc is not None:
@@ -563,4 +595,6 @@ async def stream_chat(message: str, session_id: str, persona: str = "clinician",
     yield {"type": "final",
            "answer": final_text or "I wasn't able to produce an answer for that query.",
            "trace": trace, "charts": charts, "citations": uniq, "actions": actions,
-           "usage": usage, "model": resolve_model()}
+           "usage": {**usage, "wall_ms": int((time.time() - t_start) * 1000),
+                     "first_token_ms": first_token_ms, "thinking_level": THINKING_LEVEL},
+           "model": resolve_model()}

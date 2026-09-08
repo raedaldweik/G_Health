@@ -5,7 +5,15 @@ import { Spinner } from '../components/ui';
 /** The RAG corpus: national clinical guidelines the agent grounds every claim in. */
 export default function DocumentsPage() {
   const [d, setD] = useState(null);
-  useEffect(() => { getDocuments().then(setD).catch(() => setD({ documents: [], status: {} })); }, []);
+  useEffect(() => {
+    let timer;
+    const tick = () => getDocuments().then((r) => {
+      setD(r);
+      if (r?.status?.semantic_index === 'building') timer = setTimeout(tick, 3000);
+    }).catch(() => setD({ documents: [], status: {} }));
+    tick();
+    return () => clearTimeout(timer);
+  }, []);
   if (!d) return <Spinner />;
 
   return (
@@ -15,10 +23,15 @@ export default function DocumentsPage() {
           <h1 className="text-[17px] font-extrabold tracking-tight" style={{ color: 'var(--text)' }}>
             Guideline corpus
           </h1>
-          <span className="status-pill">
-            <span className="w-2 h-2 rounded-full" style={{ background: 'var(--green)' }} />
-            {d.status.chunks} chunks indexed · retrieval: {d.status.semantic_index === 'ready'
-              ? `hybrid (BM25 + ${d.status.embed_model})` : 'BM25 keyword'}
+          <span className="status-pill" title={d.status.error || undefined}>
+            <span className={`w-2 h-2 rounded-full ${d.status.semantic_index === 'building' ? 'animate-pulse' : ''}`}
+              style={{ background: d.status.semantic_index === 'ready' ? 'var(--green)'
+                : d.status.semantic_index === 'building' ? 'var(--amber)' : 'var(--red)' }} />
+            {d.status.chunks} chunks · retrieval: {d.status.semantic_index === 'ready'
+              ? `hybrid — BM25 + ${d.status.embed_model} (${d.status.vectors} vectors × ${d.status.dims} dims)`
+              : d.status.semantic_index === 'building' ? `BM25 now · embedding ${d.status.chunks} chunks with ${d.status.embed_model}…`
+              : d.status.semantic_index === 'failed' ? `BM25 only — embeddings failed: ${d.status.error}`
+              : 'BM25 keyword only (no Gemini key)'}
           </span>
         </div>
         <p className="text-[11px] mb-5" style={{ color: 'var(--text-dim)' }}>

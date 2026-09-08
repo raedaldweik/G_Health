@@ -108,8 +108,11 @@ def _build_embeddings_async():
             np.savez_compressed(cache, emb=emb)
             _state["embeddings"] = emb
             _state["embed_status"] = "ready"
+            print(f"✓ Semantic index ready: {len(vecs)} chunks × {emb.shape[1]} dims ({EMBED_MODEL})", flush=True)
         except Exception as e:                      # embeddings are an enhancement, never a blocker
-            _state["embed_status"] = f"failed: {e.__class__.__name__}"
+            _state["embed_status"] = "failed"
+            _state["embed_error"] = f"{e.__class__.__name__}: {str(e)[:200]}"
+            print(f"✗ Semantic index failed — retrieval stays BM25-only: {_state['embed_error']}", flush=True)
 
     threading.Thread(target=work, daemon=True).start()
 
@@ -173,5 +176,9 @@ def list_documents() -> list[dict]:
 
 def status() -> dict:
     ensure_loaded()
+    emb = _state.get("embeddings")
     return {"documents": len(list_documents()), "chunks": len(_state["chunks"]),
-            "semantic_index": _state["embed_status"], "embed_model": EMBED_MODEL}
+            "semantic_index": _state["embed_status"], "embed_model": EMBED_MODEL,
+            "vectors": int(emb.shape[0]) if emb is not None else 0,
+            "dims": int(emb.shape[1]) if emb is not None else 0,
+            "error": _state.get("embed_error")}

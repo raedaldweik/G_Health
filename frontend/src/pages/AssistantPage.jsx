@@ -17,6 +17,7 @@ export default function AssistantPage() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [liveSteps, setLiveSteps] = useState([]);
+  const [draft, setDraft] = useState('');   // supervisor prose streamed token-by-token
   const [scenarios, setScenarios] = useState([]);
   const [llmInfo, setLlmInfo] = useState(null);
   const [source, setSource] = useState(null);
@@ -36,7 +37,7 @@ export default function AssistantPage() {
     }).catch(() => setScenarios([]));
   }, [persona]);
 
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, liveSteps, loading]);
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, liveSteps, loading, draft]);
 
   const send = async (text, scenarioId = null) => {
     const q = (text || input).trim();
@@ -46,10 +47,12 @@ export default function AssistantPage() {
     addMessage(chatId, { role: 'user', content: q });
     setLoading(true);
     setLiveSteps([]);
+    setDraft('');
     try {
       let finalData = null;
       await streamChat({ message: q, sessionId: chatId, persona, scenarioId }, (ev) => {
         if (ev.type === 'step') setLiveSteps((prev) => [...prev, ev]);
+        else if (ev.type === 'delta') setDraft((prev) => prev + ev.text);
         else if (ev.type === 'final') finalData = ev;
       });
       if (finalData) {
@@ -63,6 +66,7 @@ export default function AssistantPage() {
     }
     setLoading(false);
     setLiveSteps([]);
+    setDraft('');
     inputRef.current?.focus();
   };
 
@@ -233,6 +237,11 @@ export default function AssistantPage() {
                     ))}
                   </div>
                 )}
+                {draft && (
+                  <div className="mb-2 text-[13px] leading-[1.7] whitespace-pre-wrap" style={{ color: 'var(--text)' }}>
+                    {draft.replace(/[*#`]/g, '')}<span className="inline-block w-1.5 h-3.5 ml-0.5 align-middle animate-pulse" style={{ background: 'var(--brand)' }} />
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <div className="flex gap-1.5">
                     {[0, 1, 2].map((j) => (
@@ -241,7 +250,8 @@ export default function AssistantPage() {
                     ))}
                   </div>
                   <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>
-                    {liveSteps.filter((s) => s.status === 'done').length > 0
+                    {draft ? 'writing…'
+                      : liveSteps.filter((s) => s.status === 'done').length > 0
                       ? `${liveSteps.filter((s) => s.status === 'done').length} agent steps so far`
                       : 'agents working…'}
                   </span>

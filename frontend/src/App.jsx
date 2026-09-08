@@ -98,7 +98,16 @@ function PersonaSelector() {
 
 function Header({ tab, setTab }) {
   const [health, setHealth] = useState(null);
-  useEffect(() => { getHealth().then(setHealth).catch(() => setHealth({ status: 'down' })); }, []);
+  useEffect(() => {
+    let timer;
+    const tick = () => getHealth().then((h) => {
+      setHealth(h);
+      // keep polling until the agent graph has warmed up (or the key has failed)
+      if (h?.mode === 'multi-agent' && !h.warmup?.ready) timer = setTimeout(tick, 3000);
+    }).catch(() => setHealth({ status: 'down' }));
+    tick();
+    return () => clearTimeout(timer);
+  }, []);
   const ok = health?.status === 'ok';
   const selfTest = health?.warmup?.self_test;
   const warming = ok && health.mode === 'multi-agent' && !health.warmup?.ready;
