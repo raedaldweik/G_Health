@@ -131,12 +131,15 @@ def active_model() -> str:
 def fallback_candidates(current: str) -> list[str]:
     visible = RESOLUTION.get("visible") or []
     order = [m for m in PREFERRED_MODELS if (not visible or m in visible)] or PREFERRED_MODELS
-    return [m for m in order if m != current and m not in [x["to"] for x in _active["switches"]]]
+    burnt = {current} | {x["from"] for x in _active["switches"]} | {x["to"] for x in _active["switches"]}
+    return [m for m in order if m not in burnt]
 
 
 def is_capacity_error(e: Exception) -> bool:
     code = getattr(e, "code", None) or getattr(getattr(e, "status", None), "code", None)
     msg = str(e)
+    if isinstance(e, (StallError, asyncio.TimeoutError, TimeoutError)):
+        return True
     return code in (429, 500, 502, 503, 504) or any(
         k in msg for k in ("UNAVAILABLE", "RESOURCE_EXHAUSTED", "high demand", "overloaded", " 503", " 429"))
 
@@ -151,16 +154,40 @@ def switch_model(reason: str) -> str | None:
     return nxt
 
 
+HTTP_TIMEOUT_MS = int(os.getenv("GEMINI_HTTP_TIMEOUT_MS", "45000"))   # per HTTP request
+STALL_SECONDS = float(os.getenv("AGENT_STALL_SECONDS", "40"))          # no event from the graph
+TURN_DEADLINE_SECONDS = float(os.getenv("AGENT_TURN_DEADLINE_SECONDS", "150"))
+
+
+class StallError(RuntimeError):
+    """The agent graph produced no event for STALL_SECONDS — treated like a capacity error."""
+
+
 def _retry_options():
     from google.genai import types as gtypes
-    return gtypes.HttpRetryOptions(attempts=5, initial_delay=1.0, max_delay=8.0, exp_base=2.0,
+    return gtypes.HttpRetryOptions(attempts=3, initial_delay=1.0, max_delay=4.0, exp_base=2.0,
                                    jitter=0.3, http_status_codes=[429, 500, 502, 503, 504])
 
 
+def _http_options():
+    from google.genai import types as gtypes
+    return gtypes.HttpOptions(timeout=HTTP_TIMEOUT_MS, retry_options=_retry_options())
+
+
 def _llm(model: str):
-    """ADK Gemini connection with client-side retries on 429/5xx (exponential backoff)."""
+    """ADK Gemini connection with a hard HTTP timeout and client-side retries on 429/5xx.
+    Without the timeout a stalled streaming response during a 'high demand' incident
+    hangs the turn forever; ADK's own client sets none."""
+    from functools import cached_property
     from google.adk.models.google_llm import Gemini
-    return Gemini(model=model, retry_options=_retry_options())
+    from google.genai import Client
+
+    class NabdGemini(Gemini):
+        @cached_property
+        def api_client(self) -> Client:                       # noqa: D401 — ADK hook
+            return Client(api_key=_KEY, http_options=_http_options())
+
+    return NabdGemini(model=model, retry_options=_retry_options())
 
 
 def self_test(model: str | None = None) -> dict:
@@ -170,7 +197,7 @@ def self_test(model: str | None = None) -> dict:
         return {"ok": False, "skipped": "no key"}
     from google import genai
     from google.genai import types as gtypes
-    client = genai.Client(api_key=_KEY, http_options=gtypes.HttpOptions(retry_options=_retry_options()))
+    client = genai.Client(api_key=_KEY, http_options=_http_options())
     tried = []
     model = model or active_model()
     while True:
@@ -565,16 +592,37 @@ async def stream_chat(message: str, session_id: str, persona: str = "clinician",
     for attempt in range(3):
         model = active_model()
         try:
-            async for ev in _stream_once(message, session_id, persona, model):
+            async for ev in _watchdog(_stream_once(message, session_id, persona, model)):
                 yield ev
             return
         except Exception as e:
             if attempt < 2 and is_capacity_error(e) and switch_model(f"{type(e).__name__}: {e}"):
+                why = "went silent" if isinstance(e, StallError) else "at capacity (503)"
                 yield {"type": "reset"}
                 yield {"type": "step", "status": "done", "agent": "system", "tool": "model_fallback",
-                       "detail": f"{model} at capacity (503) — re-running on {active_model()}"}
+                       "detail": f"{model} {why} — re-running on {active_model()}"}
                 continue
             raise
+
+
+async def _watchdog(agen: AsyncGenerator[dict, None]) -> AsyncGenerator[dict, None]:
+    """Re-yield events; abort if the graph is silent for STALL_SECONDS or the turn exceeds
+    TURN_DEADLINE_SECONDS. A hung HTTP stream must never hang the demo."""
+    started = time.time()
+    try:
+        while True:
+            remaining = TURN_DEADLINE_SECONDS - (time.time() - started)
+            if remaining <= 0:
+                raise StallError(f"turn exceeded {TURN_DEADLINE_SECONDS:.0f}s")
+            try:
+                ev = await asyncio.wait_for(agen.__anext__(), timeout=min(STALL_SECONDS, remaining))
+            except StopAsyncIteration:
+                return
+            except asyncio.TimeoutError:
+                raise StallError(f"no event from the agent graph for {STALL_SECONDS:.0f}s") from None
+            yield ev
+    finally:
+        await agen.aclose()
 
 
 async def _stream_once(message: str, session_id: str, persona: str, model: str,

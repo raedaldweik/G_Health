@@ -22,21 +22,39 @@ export const getDataRows = (table, offset = 0, limit = 50, search = '') =>
  * Stream a chat turn. The backend answers NDJSON: {type:"step"...} events while the
  * agents work, then one {type:"final"...} payload. onEvent fires per line.
  */
+const STREAM_IDLE_MS = 75000;   // last-resort client guard; the server watchdog fires first
+
 export async function streamChat({ message, sessionId, persona, scenarioId }, onEvent) {
-  const res = await fetch('/api/chat', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      message, session_id: sessionId, persona, scenario_id: scenarioId || null,
-    }),
-  });
-  if (!res.ok || !res.body) throw new Error(`chat failed: ${res.status}`);
+  const ctrl = new AbortController();
+  let idle = setTimeout(() => ctrl.abort(), STREAM_IDLE_MS);
+  const touch = () => { clearTimeout(idle); idle = setTimeout(() => ctrl.abort(), STREAM_IDLE_MS); };
+  let res;
+  try {
+    res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message, session_id: sessionId, persona, scenario_id: scenarioId || null,
+      }),
+      signal: ctrl.signal,
+    });
+  } catch (e) {
+    clearTimeout(idle);
+    throw new Error(e.name === 'AbortError' ? 'no response from the agent for 75 s — Gemini may be saturated; try again or use a scenario chip' : e.message);
+  }
+  if (!res.ok || !res.body) { clearTimeout(idle); throw new Error(`chat failed: ${res.status}`); }
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buf = '';
   for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
+    let chunk;
+    try { chunk = await reader.read(); } catch (e) {
+      clearTimeout(idle);
+      throw new Error(e.name === 'AbortError' ? 'the agent went silent for 75 s — Gemini may be saturated; try again or use a scenario chip' : e.message);
+    }
+    const { done, value } = chunk;
+    if (done) { clearTimeout(idle); break; }
+    touch();
     buf += decoder.decode(value, { stream: true });
     const lines = buf.split('\n');
     buf = lines.pop();
