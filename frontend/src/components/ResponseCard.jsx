@@ -97,7 +97,10 @@ export default function ResponseCard({ data, onOpenSource, onOpenDetails }) {
         )}
         {data.model && <span>{data.model}</span>}
         {usage?.total_tokens != null && (
-          <span>{usage.total_tokens.toLocaleString()} tokens · {usage.llm_calls} LLM calls</span>
+          <span>{usage.total_tokens.toLocaleString()} tokens · {usage.llm_calls} LLM calls
+            {usage.wall_ms != null && ` · ${(usage.wall_ms / 1000).toFixed(1)} s`}
+            {usage.first_token_ms != null && ` · first token ${(usage.first_token_ms / 1000).toFixed(1)} s`}
+            {usage.thinking_level && ` · thinking ${usage.thinking_level.toLowerCase()}`}</span>
         )}
         {data.trace?.length > 0 && <span>{data.trace.length} tool steps</span>}
       </div>

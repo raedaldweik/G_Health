@@ -39,6 +39,8 @@ export default function DetailsPopup({ data, query, onClose, onOpenSource }) {
                 <span className="badge badge-blue">{usage.total_tokens.toLocaleString()} tokens</span>
                 <span className="badge badge-blue">{usage.prompt_tokens?.toLocaleString()} prompt / {usage.completion_tokens?.toLocaleString()} completion</span>
                 <span className="badge badge-blue">{usage.llm_calls} LLM calls</span>
+                {usage.wall_ms != null && <span className="badge badge-blue">{(usage.wall_ms / 1000).toFixed(1)} s wall · first token {usage.first_token_ms != null ? `${(usage.first_token_ms / 1000).toFixed(1)} s` : '—'}</span>}
+                {usage.thinking_level && <span className="badge badge-blue">thinking {usage.thinking_level.toLowerCase()}</span>}
               </>
             )}
             <span className="badge badge-blue">{(data.trace || []).length} tool steps</span>
