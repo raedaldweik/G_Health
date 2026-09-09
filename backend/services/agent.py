@@ -130,11 +130,47 @@ def generation_config(model: str):
 # The model actually serving traffic. Starts as resolve_model(); moves down the preference
 # list when Gemini answers 503/429 ("high demand") so the demo never stalls on one model.
 _active: dict = {"model": None, "switches": []}
+MODEL_STATE = Path(BACKEND_DIR) / "data" / "runtime" / "model_state.json"
+MODEL_STATE_TTL_S = int(os.getenv("MODEL_STATE_TTL_S", str(6 * 3600)))   # forget a burnt model after 6 h
+
+
+def _load_model_state() -> dict | None:
+    """A capacity fallback survives a process restart: if this container moved off a
+    saturated model in the last few hours, start on the model that worked instead of
+    re-discovering the 503 in front of the user."""
+    try:
+        st = json.loads(MODEL_STATE.read_text())
+        if time.time() - float(st.get("at", 0)) < MODEL_STATE_TTL_S and st.get("model"):
+            return st
+    except Exception:
+        pass
+    return None
+
+
+def _save_model_state():
+    try:
+        MODEL_STATE.parent.mkdir(parents=True, exist_ok=True)
+        MODEL_STATE.write_text(json.dumps({"model": _active["model"], "switches": _active["switches"],
+                                           "at": time.time()}))
+    except Exception:
+        pass
+
+
+def pretty_model(name: str) -> str:
+    """gemini-3.8-flash -> Gemini 3.8 Flash"""
+    parts = (name or "").replace("-preview", "").split("-")
+    return " ".join(w.capitalize() if not w[:1].isdigit() else w for w in parts)
 
 
 def active_model() -> str:
     if _active["model"] is None:
-        _active["model"] = resolve_model()
+        st = None if os.getenv("MODEL", "").strip() else _load_model_state()
+        if st:
+            _active["model"], _active["switches"] = st["model"], st.get("switches", [])
+            RESOLUTION.update(model=st["model"], source="capacity fallback remembered from an earlier start")
+            print(f"· Starting on {st['model']} (earlier capacity fallback, {len(_active['switches'])} switch(es) remembered)", flush=True)
+        else:
+            _active["model"] = resolve_model()
     return _active["model"]
 
 
@@ -160,6 +196,7 @@ def switch_model(reason: str) -> str | None:
     if nxt:
         _active["model"] = nxt
         _active["switches"].append({"from": cur, "to": nxt, "reason": reason[:160], "at": time.time()})
+        _save_model_state()
         print(f"⚠ Gemini capacity error on {cur}, switching to {nxt}: {reason[:160]}", flush=True)
     return nxt
 
@@ -638,11 +675,11 @@ async def stream_chat(message: str, session_id: str, persona: str = "clinician",
             return
         except Exception as e:
             if attempt < 2 and (is_capacity_error(e) or is_model_missing(e)) and switch_model(f"{type(e).__name__}: {e}"):
-                why = ("went silent" if isinstance(e, StallError) else "not available on this endpoint"
-                       if is_model_missing(e) else "at capacity (503)")
+                why = ("stopped responding" if isinstance(e, StallError) else "is not available on this endpoint"
+                       if is_model_missing(e) else "is busy")
                 yield {"type": "reset"}
                 yield {"type": "step", "status": "done", "agent": "system", "tool": "model_fallback",
-                       "detail": f"{model} {why}, re-running on {active_model()}"}
+                       "detail": f"{pretty_model(model)} {why}; continuing on {pretty_model(active_model())}"}
                 continue
             raise
 
