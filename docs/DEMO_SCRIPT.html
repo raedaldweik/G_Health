@@ -1,0 +1,414 @@
+<title>Nabd Final Round Script</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root {
+  --paper:#f8f6f7; --ink:#1b1520; --ink-2:#4a434f; --meta:#736c78; --rule:#e3dde0; --panel:#ffffff;
+  --maroon:#8A1538; --maroon-soft:rgba(138,21,56,0.08); --gold:#a8792a; --gold-soft:rgba(168,121,42,0.10);
+  --screen:#3c5a6b; --screen-soft:rgba(60,90,107,0.08); --note:#5f5a63; --note-soft:rgba(95,90,99,0.08);
+  --sans:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --serif:"Newsreader", Georgia, "Times New Roman", serif;
+  --mono:"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper:#17131a; --ink:#ebe5e8; --ink-2:#c9c1c6; --meta:#a099a4; --rule:#2e2731; --panel:#1f1a23;
+  --maroon:#d4657f; --maroon-soft:rgba(212,101,127,0.12); --gold:#d2a552; --gold-soft:rgba(210,165,82,0.12);
+  --screen:#8fb3c7; --screen-soft:rgba(143,179,199,0.10); --note:#a099a4; --note-soft:rgba(160,153,164,0.10);
+} }
+:root[data-theme="dark"] {
+  --paper:#17131a; --ink:#ebe5e8; --ink-2:#c9c1c6; --meta:#a099a4; --rule:#2e2731; --panel:#1f1a23;
+  --maroon:#d4657f; --maroon-soft:rgba(212,101,127,0.12); --gold:#d2a552; --gold-soft:rgba(210,165,82,0.12);
+  --screen:#8fb3c7; --screen-soft:rgba(143,179,199,0.10); --note:#a099a4; --note-soft:rgba(160,153,164,0.10);
+}
+* { box-sizing:border-box; }
+body { margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:15px; line-height:1.55; }
+a { color:inherit; }
+a:focus-visible, button:focus-visible { outline:2px solid var(--maroon); outline-offset:2px; }
+.wrap { display:grid; grid-template-columns:260px minmax(0, 76ch); gap:56px; max-width:1180px; margin:0 auto; padding:40px 28px 96px; }
+@media (max-width:1040px) { .wrap { grid-template-columns:minmax(0,1fr); gap:0; padding:24px 18px 72px; } .side { display:none; } }
+.side { position:sticky; top:24px; align-self:start; max-height:calc(100vh - 48px); overflow-y:auto; padding-right:8px; }
+.side h4 { font:600 10.5px/1 var(--mono); letter-spacing:0.14em; text-transform:uppercase; color:var(--meta); margin:0 0 10px; }
+.side .nav a { display:flex; gap:10px; text-decoration:none; font-size:13px; padding:5px 0; color:var(--ink-2); border-bottom:1px solid var(--rule); }
+.side .nav a .n { font-family:var(--mono); color:var(--meta); min-width:1.4em; font-size:12px; }
+.side .nav a:hover { color:var(--maroon); }
+.side .rail { margin-top:22px; }
+.side .rail a { display:grid; grid-template-columns:44px 1fr; gap:10px; text-decoration:none; font-size:12px; color:var(--ink-2); padding:3px 0; align-items:baseline; }
+.side .rail a .clock { font-family:var(--mono); font-size:11.5px; color:var(--maroon); font-variant-numeric:tabular-nums; }
+.side .rail a:hover { color:var(--maroon); }
+header.top { grid-column:1 / -1; border-bottom:1px solid var(--rule); padding-bottom:22px; margin-bottom:8px; }
+header.top .eyebrow { font:500 11px/1 var(--mono); letter-spacing:0.16em; text-transform:uppercase; color:var(--maroon); margin-bottom:12px; }
+header.top h1 { font:600 40px/1.05 var(--serif); letter-spacing:-0.01em; margin:0 0 12px; text-wrap:balance; }
+header.top .strip { display:flex; flex-wrap:wrap; gap:8px 18px; font-family:var(--mono); font-size:12px; color:var(--meta); font-variant-numeric:tabular-nums; }
+header.top .strip b { color:var(--ink); font-weight:600; }
+main { min-width:0; }
+section { margin-top:44px; }
+h2 { font:600 24px/1.2 var(--serif); margin:0 0 14px; display:flex; gap:12px; align-items:baseline; text-wrap:balance; }
+h2 .num { font:500 12px/1 var(--mono); color:var(--maroon); letter-spacing:0.08em; }
+h3 { display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:baseline; margin:30px 0 10px; padding-top:14px; border-top:1px solid var(--rule); font:600 16px/1.3 var(--sans); }
+h3 .clock { font:600 13px/1 var(--mono); color:var(--maroon); font-variant-numeric:tabular-nums; }
+h3 .dur { font:400 11.5px/1 var(--mono); color:var(--meta); }
+p { margin:0 0 10px; max-width:70ch; color:var(--ink-2); }
+ul { margin:0 0 12px; padding-left:20px; color:var(--ink-2); }
+ul li { margin:4px 0; max-width:68ch; }
+ul.check { list-style:none; padding-left:0; }
+ul.check li { display:flex; gap:10px; align-items:flex-start; }
+ul.check .box { flex:0 0 14px; width:14px; height:14px; margin-top:4px; border:1.5px solid var(--meta); border-radius:3px; }
+.blk { display:grid; grid-template-columns:78px minmax(0,1fr); gap:14px; margin:8px 0; }
+.blk .lbl { font:600 10.5px/1.2 var(--mono); letter-spacing:0.12em; text-transform:uppercase; padding-top:7px; text-align:right; }
+.blk .body { max-width:70ch; }
+.blk.say .lbl { color:var(--maroon); }
+.blk.say .body { font-family:var(--serif); font-size:18.5px; line-height:1.5; color:var(--ink); padding:4px 0; }
+.blk.say .cue { font-family:var(--sans); font-size:12.5px; color:var(--meta); font-style:italic; }
+.blk.do .lbl { color:var(--gold); }
+.blk.do .body { background:var(--gold-soft); border-radius:8px; padding:7px 12px; font-weight:500; color:var(--ink); }
+.blk.screen .lbl { color:var(--screen); }
+.blk.screen .body { background:var(--screen-soft); border-radius:8px; padding:7px 12px; color:var(--ink-2); font-size:14px; }
+.blk.note .lbl, .blk.if .lbl, .blk.rule .lbl, .blk.meta .lbl { color:var(--note); }
+.blk.note .body, .blk.if .body, .blk.rule .body, .blk.meta .body { color:var(--ink-2); font-size:14px; border-left:2px solid var(--rule); padding-left:12px; }
+.blk.meta .body { font-size:13.5px; color:var(--meta); }
+.qa { margin:14px 0 18px; padding:12px 14px; border-radius:10px; background:var(--panel); border:1px solid var(--rule); max-width:74ch; }
+.qa .q { font-weight:600; font-size:15px; margin-bottom:6px; color:var(--ink); }
+.qa .q::before { content:"Q"; font:600 10.5px/1 var(--mono); color:var(--maroon); margin-right:10px; letter-spacing:0.1em; }
+.qa .a { font-family:var(--serif); font-size:17px; line-height:1.5; color:var(--ink); }
+.tbl { overflow-x:auto; margin:8px 0 14px; }
+table { border-collapse:collapse; width:100%; font-size:13.5px; }
+th { text-align:left; font:600 10.5px/1.3 var(--mono); letter-spacing:0.1em; text-transform:uppercase; color:var(--meta); padding:6px 10px 8px 0; border-bottom:1px solid var(--rule); }
+td { padding:7px 10px 7px 0; border-bottom:1px solid var(--rule); vertical-align:top; color:var(--ink-2); font-variant-numeric:tabular-nums; }
+td:first-child { color:var(--ink); font-weight:500; white-space:nowrap; }
+section#s9 td:first-child, section#s8 td:first-child { white-space:normal; }
+code { font-family:var(--mono); font-size:0.9em; background:var(--maroon-soft); padding:1px 5px; border-radius:4px; }
+strong { color:var(--ink); font-weight:600; }
+.arr { color:var(--meta); }
+@media print { .side { display:none; } .wrap { grid-template-columns:1fr; padding:0; } .blk.say .body { font-size:15px; } }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior:smooth; } }
+</style>
+<div class="wrap">
+  <header class="top">
+    <div class="eyebrow">Run of show · Google Cloud AI Customer Engineer · final round</div>
+    <h1>Nabd — Final Round Script</h1>
+    <div class="strip"><span><b>45:00</b> total</span><span><b>10:00</b> deck</span><span><b>20:00</b> live demo</span><span><b>15:00</b> Q&amp;A</span><span>verified against the live build 2026-09-09</span></div>
+  </header>
+  <aside class="side">
+    <h4>Sections</h4>
+    <div class="nav"><a href='#s1'><span class='n'>0</span>What the panel must walk away believing</a><a href='#s2'><span class='n'>1</span>Timing plan</a><a href='#s3'><span class='n'>2</span>Pre-flight, thirty minutes before</a><a href='#s4'><span class='n'>3</span>Opening (0:00, one minute)</a><a href='#s5'><span class='n'>4</span>The deck (1:00 to 10:00)</a><a href='#s6'><span class='n'>5</span>The demo (10:00 to 29:00)</a><a href='#s7'><span class='n'>6</span>Q&amp;A bank</a><a href='#s8'><span class='n'>7</span>Questions to ask them</a><a href='#s9'><span class='n'>8</span>Failure playbook</a><a href='#s10'><span class='n'>9</span>Numbers to have in your head</a></div>
+    <div class="rail"><h4>Clock</h4><a href='#b1'><span class='clock'>1:00</span>Slide 1 — Title</a><a href='#b2'><span class='clock'>1:45</span>Slide 2 — The problem</a><a href='#b3'><span class='clock'>3:00</span>Slide 3 — The journey</a><a href='#b4'><span class='clock'>4:00</span>Slide 4 — Solution overview</a><a href='#b5'><span class='clock'>5:15</span>Slide 5 — How it works</a><a href='#b6'><span class='clock'>6:30</span>Slide 6 — Reference architecture A, SAS Viya</a><a href='#b7'><span class='clock'>7:45</span>Slide 7 — Reference architecture B, Google Cloud in Doha</a><a href='#b8'><span class='clock'>9:30</span>Slide 8 — Phased delivery and the demo agenda</a><a href='#b9'><span class='clock'>10:00</span>Landing page</a><a href='#b10'><span class='clock'>11:00</span>Act I, beat 1 — Morning panel briefing</a><a href='#b11'><span class='clock'>12:30</span>Act I, beat 2 — Patient review and draft prescription</a><a href='#b12'><span class='clock'>15:30</span>Act I, beat 3 — The queue</a><a href='#b13'><span class='clock'>16:15</span>Act I, beat 4 — Treatment intensification gap</a><a href='#b14'><span class='clock'>18:00</span>Risk simulator</a><a href='#b15'><span class='clock'>21:00</span>Act II, beat 1 — The national picture</a><a href='#b16'><span class='clock'>22:30</span>Act II, beat 2 — Programme simulation</a><a href='#b17'><span class='clock'>24:30</span>Act II, beat 3 — Equity</a><a href='#b18'><span class='clock'>26:00</span>Trust — the Evaluation tab</a><a href='#b19'><span class='clock'>29:00</span>Close</a></div>
+  </aside>
+  <main>
+<div class='blk meta'><span class='lbl'>Meta</span><div class='body'>Google Cloud AI Customer Engineer, final round · 45 minutes · deck 10 min · live demo 20 min · Q&amp;A 15 min. Verified against the live build on 2026-09-09. Every number in this script is what the app computed on that day. If the screen shows something different on the day, read the screen. The screen is the truth; that is the point of the product.</div></div>
+<section id='s1'><h2><span class='num'>0</span>What the panel must walk away believing</h2>
+<ul>
+<li><strong>You start from the customer, not the model.</strong> A real ministry, a real registry, a real programme you worked on, and a specific next step.</li>
+<li><strong>You build for real.</strong> Trained models evaluated on held-out data, a multi-agent graph on ADK, an MCP server, a human-approval queue, an evaluation harness. Nothing mocked.</li>
+<li><strong>You know the Google portfolio well enough to say what exists, what does not, and what you built in the gap.</strong> That is the credibility test for a customer engineer.</li>
+</ul>
+<p>Everything else is supporting detail. If time collapses, protect these three.</p>
+</section><section id='s2'><h2><span class='num'>1</span>Timing plan</h2>
+<div class='tbl'><table><thead><tr><th>Clock</th><th>Segment</th><th>Minutes</th></tr></thead><tbody>
+<tr><td>0:00</td><td>Opening and framing</td><td>1</td></tr>
+<tr><td>1:00</td><td>Deck, eight slides</td><td>9</td></tr>
+<tr><td>10:00</td><td>Demo: landing page</td><td>1</td></tr>
+<tr><td>11:00</td><td>Act I: the clinician's morning (Kamal Miah)</td><td>7</td></tr>
+<tr><td>18:00</td><td>Risk simulator</td><td>3</td></tr>
+<tr><td>21:00</td><td>Act II: the ministry's view</td><td>5</td></tr>
+<tr><td>26:00</td><td>Trust: the Evaluation tab</td><td>3</td></tr>
+<tr><td>29:00</td><td>Close</td><td>1</td></tr>
+<tr><td>30:00</td><td>Q&amp;A</td><td>15</td></tr>
+</tbody></table></div>
+<div class='blk rule'><span class='lbl'>Rule</span><div class='body'>Check the clock at 18:00 and at 26:00. More than two minutes behind at 18:00: drop the C3 intensification beat and the equity beat, keep the simulator and the Evaluation tab. Behind at 26:00: do Evaluation in ninety seconds, risk model and evalset only. Never cut the close.</div></div>
+</section><section id='s3'><h2><span class='num'>2</span>Pre-flight, thirty minutes before</h2>
+<ul class='check'>
+<li><span class='box'></span><span>Tab 1: the Railway URL. The header pill shows a live model name, not "warming up" and not a key error. If it says warming up, wait; it takes under a minute. If the key has failed, the scenario chips still run on the scripted engine with live data; only free-form questions need the key.</span></li>
+<li><span class='box'></span><span>Tab 2: the same URL, already loaded. This is the parachute if tab 1 misbehaves.</span></li>
+<li><span class='box'></span><span>Persona set to Dr. Amal Al-Mansoori (clinician) in tab 1.</span></li>
+<li><span class='box'></span><span>Run "Patient review + draft prescription" once. Confirm the hero is Kamal Miah at about 33%. This also warms Gemini.</span></li>
+<li><span class='box'></span><span>Queue tab: approve or reject anything left over from rehearsal so the panel sees only today's draft.</span></li>
+<li><span class='box'></span><span>Open Dashboards <span class='arr'>→</span> Geography once so the map tiles are cached.</span></li>
+<li><span class='box'></span><span>Open Simulator once, press Reset. Kamal is preselected.</span></li>
+<li><span class='box'></span><span>Deck open in PowerPoint presenter view. Notes on your screen only. Slide 1 showing.</span></li>
+<li><span class='box'></span><span>Browser at 100% zoom, window at least 1,600 px wide. Close every other tab. Notifications off.</span></li>
+<li><span class='box'></span><span>Phone hotspot ready as a second network. Water within reach. A clock you can see.</span></li>
+</ul>
+</section><section id='s4'><h2><span class='num'>3</span>Opening (0:00, one minute)</h2>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>Thank you for the time. I will do this in three parts. About ten minutes of context: a customer problem I care about and the architecture I would propose for it. Then twenty minutes inside a working system I built for that problem. The rest is yours for questions. Please interrupt whenever you like. Everything in the demo is live, so we can go wherever a question takes us.</div></div>
+<div class='blk note'><span class='lbl'>Note</span><div class='body'>Do not narrate your CV. The first slide is the customer, and the deck says who you are by what you chose to build.</div></div>
+</section><section id='s5'><h2><span class='num'>4</span>The deck (1:00 to 10:00)</h2>
+<h3 id='b1'><span class='clock'>1:00</span><span class='h3t'>Slide 1 — Title</span><span class='dur'>45 seconds</span></h3>
+<div class='blk screen'><span class='lbl'>On screen</span><div class='body'>Nabd, the Google colours, the subtitle.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>The customer is Qatar's Ministry of Public Health. They already have a national Health Information Exchange, a diabetes registry, and a predictive programme that was built on SAS Viya. I worked on that programme. What I want to show today is the next step: letting any clinician or any director ask the exchange a question and get an answer that is grounded, governed and actionable, running on Google Cloud in Doha.</div></div>
+<h3 id='b2'><span class='clock'>1:45</span><span class='h3t'>Slide 2 — The problem</span><span class='dur'>75 seconds</span></h3>
+<div class='blk screen'><span class='lbl'>On screen</span><div class='body'>three numbers across the top, three pains below.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>Three numbers frame it. Qatar is in the top five countries for adult diabetes prevalence. The cost of diabetes care is projected to rise from 1.8 to 5 billion riyals a year by 2035. And half of all dialysis in the country is attributable to diabetes.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>What clinicians and the ministry told us is not about those numbers. It is three frustrations. The patient story is fragmented: eighteen-plus facilities, an exchange with eight relational tables, and guidelines in PDFs. Care is reactive: risk is recognised at the admission, not before it. And insight is rationed: a director's question becomes an analyst's week, and a clinician cannot ask at all.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>The sentence I would underline is this one. The registry can describe the population. It cannot yet tell a nurse who to call this morning.</div></div>
+<h3 id='b3'><span class='clock'>3:00</span><span class='h3t'>Slide 3 — The journey</span><span class='dur'>60 seconds</span></h3>
+<div class='blk screen'><span class='lbl'>On screen</span><div class='body'>three stages, the third highlighted.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>The ministry is already two stages into this journey. Stage one is the registry: describe. How many, where, who. Stage two is the predictive programme: deterioration prediction, high versus low risk profiles, visit forecasts, cost impact. That is the work you saw on SAS.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>Stage three is what I am proposing: ask and act. Any clinician or director asks in plain language; agents query the exchange, cite the national guideline, run the models, and draft actions a human signs. Nothing is thrown away. The registry and the models become tools the agent calls.</div></div>
+<h3 id='b4'><span class='clock'>4:00</span><span class='h3t'>Slide 4 — Solution overview</span><span class='dur'>75 seconds</span></h3>
+<div class='blk screen'><span class='lbl'>On screen</span><div class='body'>four capability tiles on the left, the trust column on the right.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>Nabd is the Arabic word for pulse. It is one conversation over the exchange, the guidelines and the models. Four capabilities, deliberately the same four as the programme: a diabetic patient 360, risk stratification and visit prediction, guideline-grounded decision support, and population and cost simulation.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>The right-hand column is the answer to the question everyone is thinking, which is whether this is AI garbage. Four rules, all enforced in code and all visible in the demo. Numbers come only from tools; the model narrates, it never invents a value. Clinical claims come only with a citation, document and page. Actions come only with a signature; drafts wait in a queue for a named clinician. And every step is audited. Arabic and English, by voice.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>Scope for this build: type 2 diabetes, a 4,000-patient synthetic exchange shaped like QHIE, coded in LOINC, ICD-10 and ATC, thirty-six months, FHIR R4 export. Zero PHI.</div></div>
+<h3 id='b5'><span class='clock'>5:15</span><span class='h3t'>Slide 5 — How it works</span><span class='dur'>75 seconds</span></h3>
+<div class='blk screen'><span class='lbl'>On screen</span><div class='body'>the question at the top, the supervisor, five specialists, the evidence strip.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>One supervisor, five specialists. The supervisor is Gemini 3.8 Flash on the Agent Development Kit. It plans, routes and composes; it never produces a number itself. The data specialist queries the exchange, BigQuery in phase two. The guideline specialist retrieves from the national guidelines with page citations. The risk specialist runs the four models. The population-health specialist talks over the Model Context Protocol to a server we built; hold that thought, it is the most interesting part. And the action specialist drafts prescriptions, recalls and referrals into a human approval queue.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>Why five agents and not one? Least privilege: the guideline agent physically cannot draft a prescription. Independent evaluation: each specialist has its own test set. And it is cheaper per question, which I will show you measured, not asserted.</div></div>
+<h3 id='b6'><span class='clock'>6:30</span><span class='h3t'>Slide 6 — Reference architecture A, SAS Viya</span><span class='dur'>75 seconds</span></h3>
+<div class='blk screen'><span class='lbl'>On screen</span><div class='body'>the SAS diagram.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>Credit where it is due. This is where the pattern was proven, at a federal health entity in the region, and I was part of that build. An orchestrating agent with guideline grounding over a vector store, and an MCP server exposing four tools: SQL over the in-memory CAS tables, a decision flow in Intelligent Decisioning, model runs for forecasting and simulation, and chart generation. It delivered natural-language questions into governed analytics, cohorts and charts.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>The pattern is right. The question for the ministry is which platform runs it at national scale, in Doha, with managed services underneath. That is the next slide.</div></div>
+<h3 id='b7'><span class='clock'>7:45</span><span class='h3t'>Slide 7 — Reference architecture B, Google Cloud in Doha</span><span class='dur'>105 seconds</span></h3>
+<div class='blk screen'><span class='lbl'>On screen</span><div class='body'>ingestion subsystem left, serving subsystem right, sovereignty strip at the bottom.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>Read it left to right, the way Google's own RAG reference architecture is drawn: a data ingestion subsystem and a serving subsystem.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>Ingestion. The FHIR exchange and the hospital EHR feeds land in the Cloud Healthcare API: a FHIR store with consent enforcement, de-identification and Pub/Sub events. From there the exchange streams into BigQuery, where the curated marts live and where BigQuery ML can train. The national guidelines go to Cloud Storage as a versioned corpus and into RAG Engine, which gives us page-level citations without building a vector pipeline. Vertex AI pipelines train the risk model on BigQuery data, register it, and serve it on an online endpoint for point-of-care scoring, with batch prediction for the nightly cohort.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>Serving. Clinicians and directors come in through the Nabd app on Cloud Run, with Speech-to-Text and Text-to-Speech for Arabic and English. The agent runtime is the same ADK graph on Gemini. It calls four families of tools: Google's MCP Toolbox for BigQuery and FHIR, our population-health MCP server, the Vertex endpoint for scores and drivers, and RAG Engine for cited passages. Actions go to the approval queue, and a signed action goes back to the EHR as a FHIR Task through the Healthcare API.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>Underneath all of it: PHI at rest in me-central1 under an Assured Workloads Qatar data boundary, VPC Service Controls, customer-managed keys, least-privilege service accounts.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>Two Doha-specific decisions I want to name now, so they do not look like accidents later. First, Gemini is served from the global endpoint. That is acceptable because the agent only ever sees pseudonymised identifiers and aggregates; re-identification is a join inside the perimeter. Second, the agent runtime is Cloud Run in Doha, not Agent Engine, because Agent Engine is not yet available in me-central1 and the session state carries clinical context. It becomes a deploy-target change the day Agent Engine lands in Qatar.</div></div>
+<h3 id='b8'><span class='clock'>9:30</span><span class='h3t'>Slide 8 — Phased delivery and the demo agenda</span><span class='dur'>30 seconds</span></h3>
+<div class='blk screen'><span class='lbl'>On screen</span><div class='body'>three phases, three acts.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>Three phases. Phase one is what runs today. Phase two, eight to twelve weeks, is the same container on Cloud Run in Doha, the exchange in BigQuery, Gemini through Vertex AI with service-account auth, and the risk model on a Vertex endpoint. Phase three is national scale: FHIR streaming from every facility, HL7 v2 bridges for the legacy sites, Looker for governed KPIs, MedGemma for clinical notes.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>The next twenty minutes: a clinician's morning, the ministry's view, and under the hood. One rule for everything you are about to see. Every number is computed live by a tool. Nothing is a slide.</div></div>
+<div class='blk do'><span class='lbl'>Do</span><div class='body'>Switch to the browser. Tab 1, landing page.</div></div>
+</section><section id='s6'><h2><span class='num'>5</span>The demo (10:00 to 29:00)</h2>
+<h3 id='b9'><span class='clock'>10:00</span><span class='h3t'>Landing page</span><span class='dur'>60 seconds</span></h3>
+<div class='blk screen'><span class='lbl'>On screen</span><div class='body'>the pulse line draws across, the counters finish: 4,000 patients, 193k observations, 80k encounters, QAR 62.4M a year. Badges: 753 HbA1c tests overdue, 7,699 open care gaps.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>Four thousand people with diabetes are in this registry. Seven hundred and fifty-three of them have not had an HbA1c test in six months. Nine hundred and ninety-nine have an HbA1c above eight on metformin alone and meet the criteria for treatment intensification. Nobody is looking for them, because the exchange can find a patient, but it cannot find those patients.</div></div>
+<div class='blk do'><span class='lbl'>Do</span><div class='body'>Click "Open the Assistant".</div></div>
+<h3 id='b10'><span class='clock'>11:00</span><span class='h3t'>Act I, beat 1 — Morning panel briefing</span><span class='dur'>90 seconds</span></h3>
+<div class='blk screen'><span class='lbl'>On screen</span><div class='body'>persona Dr. Amal Al-Mansoori, Consultant Endocrinologist. Scenario chips. Click "Morning panel briefing". The trace streams on the left: cohort agent, risk agent, population-health agent over MCP. Then a table of five patients at 98 to 99% and a chart of open care gaps by type.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'><span class='cue'>(while the trace streams)</span> Watch the left-hand side. The supervisor is calling the cohort agent for the registry KPIs, the risk agent to score everyone, and then the population-health agent over MCP for the care gaps. Every hop is on the record, with its arguments and its result.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'><span class='cue'>(when the answer lands)</span> Five patients the model wants her to review today, out of four thousand. Across the registry it expects about 418 deterioration events in the next twelve months. This briefing ran at six in the morning, not on her command.</div></div>
+<h3 id='b11'><span class='clock'>12:30</span><span class='h3t'>Act I, beat 2 — Patient review and draft prescription</span><span class='dur'>three minutes</span></h3>
+<div class='blk do'><span class='lbl'>Do</span><div class='body'>Click "Patient review + draft prescription".</div></div>
+<div class='blk screen'><span class='lbl'>On screen</span><div class='body'>Kamal Miah, QH-101795. Type 2 for 13.7 years, Al Rayyan Health Center. HbA1c 10.9%, up from 10.2%. A 36-month HbA1c chart. Model 33%, Very High; registry tier Moderate. Drivers: HbA1c, ED visits. A guideline citation. A draft of Empagliflozin 10 mg, pending approval.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>Kamal Miah, forty-eight, type 2 for fourteen years, seen at Al Rayyan Health Center. His HbA1c has gone from 10.2 to 10.9 in a year, on metformin alone. Adherence is fifty-nine percent of days covered. Blood pressure 143 over 93.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>Two things to notice. The registry's rule-based tier says Moderate. The model says thirty-three percent probability of a deterioration event in twelve months, which is its Very High band, and it tells you why: the HbA1c and the emergency visits carry it. This is the patient the registry does not flag and the model does.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>The guideline agent retrieved the page of the national guideline that recommends adding an SGLT2 inhibitor or a GLP-1 agonist at this point, and the action agent drafted empagliflozin 10 milligrams. Nothing is prescribed. It is waiting for Dr. Amal's signature.</div></div>
+<div class='blk do'><span class='lbl'>Do</span><div class='body'>Click the citation chip. The guideline passage opens with the page number and a link to the PDF.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>The agent does not memorise medicine. It retrieves the page at question time. Swap the PDF for next year's guideline and nothing is retrained.</div></div>
+<div class='blk do'><span class='lbl'>Do</span><div class='body'>Open the agent trace (the details view).</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>FHIR read, model score, guideline retrieval, draft. Four hops, four agents, auditable end to end.</div></div>
+<h3 id='b12'><span class='clock'>15:30</span><span class='h3t'>Act I, beat 3 — The queue</span><span class='dur'>45 seconds</span></h3>
+<div class='blk do'><span class='lbl'>Do</span><div class='body'>Click Queue. The Empagliflozin draft is there, unsigned. Approve it.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>The agent is an assistant, not an actor. She approves. That approval lands in the audit trail with her name on it, next to the model score and the guideline citation that led to it. If she rejects it, that is recorded too.</div></div>
+<h3 id='b13'><span class='clock'>16:15</span><span class='h3t'>Act I, beat 4 — Treatment intensification gap</span><span class='dur'>90 seconds</span></h3>
+<div class='blk note'><span class='lbl'>Note</span><div class='body'>This is the first beat to drop if you are behind.</div></div>
+<div class='blk do'><span class='lbl'>Do</span><div class='body'>Back to Assistant. Click "Treatment intensification gap".</div></div>
+<div class='blk screen'><span class='lbl'>On screen</span><div class='body'>999 type 2 patients with HbA1c ≥8 and obesity or kidney disease, not on an SGLT2 inhibitor or GLP-1 RA. Counterfactual over 24 months: 975 eligible re-scored, 9% relative risk reduction, about 46 events avoided, QAR 847k avoided against QAR 12.5M of therapy, net minus 11.6M. A chart by registry tier. A review list drafted.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>The same question at population scale. Nine hundred and ninety-nine patients meet the intensification criteria. The model re-scored all 975 eligible patients with the therapy applied: about forty-six deterioration events avoided over twenty-four months. And on cost alone it does not pay back: twelve and a half million riyals of therapy against under a million of avoided episodes.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>I want the model to say that, rather than a slide. The case for this programme is clinical, and now the ministry can see exactly what it is paying for and why.</div></div>
+<h3 id='b14'><span class='clock'>18:00</span><span class='h3t'>Risk simulator</span><span class='dur'>three minutes</span></h3>
+<div class='blk do'><span class='lbl'>Do</span><div class='body'>Click Simulator in the top navigation. Kamal is preselected. If any lever is gold, press Reset.</div></div>
+<div class='blk screen'><span class='lbl'>On screen</span><div class='body'>the levers on the left, the gauge at 33.4% Very High, baseline drivers on the right.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>This is the same deployed model, re-scored live as I move a lever. Nothing here is a canned number.</div></div>
+<div class='blk do'><span class='lbl'>Do</span><div class='body'>Drag HbA1c from 10.9 down to 8.0.</div></div>
+<div class='blk screen'><span class='lbl'>On screen</span><div class='body'>the gauge falls to 5.0%, Moderate band. The attribution chart shows HbA1c at about minus 27 points.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>Bring his HbA1c to eight and the estimate falls from thirty-three to five percent. The attribution shows HbA1c carrying almost all of it, which is what a clinician would expect and what a model has to be able to show.</div></div>
+<div class='blk do'><span class='lbl'>Do</span><div class='body'>Toggle "SGLT2 inhibitor / GLP-1 RA" on.</div></div>
+<div class='blk screen'><span class='lbl'>On screen</span><div class='body'>3.0%, Low band. The registry percentile drops from the 90th to the mid 50s. One care gap closed. Expected cost minus QAR 5,600 over twelve months.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>Add the drug the guideline asked for: three percent, the Low band, one care gap closed, about five and a half thousand riyals of expected episode cost avoided in a year.</div></div>
+<div class='blk do'><span class='lbl'>Do</span><div class='body'>Press "Explain with Gemini".</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'><span class='cue'>(while it streams)</span> Gemini is handed the before-and-after scores, the attribution and the gaps closed, and asked to narrate them for the clinician. It adds no numbers of its own; every figure in that paragraph is on this screen.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>One engineering detail I am proud of. The model is monotonic by construction. It cannot tell you that lowering blood pressure raises risk, or that better adherence makes things worse. That is a constraint applied at training time, not a filter on the output. When we retrained with those clinical priors the held-out accuracy went up, not down.</div></div>
+<div class='blk if'><span class='lbl'>If time</span><div class='body'>You are ahead of time, press "Left untreated". The gauge climbs to about 87%. Say: and this is the trajectory if nothing changes.</div></div>
+<h3 id='b15'><span class='clock'>21:00</span><span class='h3t'>Act II, beat 1 — The national picture</span><span class='dur'>90 seconds</span></h3>
+<div class='blk do'><span class='lbl'>Do</span><div class='body'>Switch persona to Dr. Khalid Al-Kuwari, Population Health Executive. Click Assistant, then "National picture".</div></div>
+<div class='blk screen'><span class='lbl'>On screen</span><div class='body'>mean HbA1c 7.52%, down 0.12 points year on year. 35.7% well-controlled, 15.2% poorly controlled. Facility spread from 18% (Rawdat Al Khail) to 54% (West Bay). Complication burden: 24.4% retinopathy, 19.2% neuropathy, 14.5% CKD. A map of facilities coloured by control.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>Same platform, different altitude. The national mean HbA1c is 7.52 and falling. But the spread between facilities runs from eighteen percent well-controlled to fifty-four. That is an operational lever, not a clinical mystery.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>And the map, drawn by the agent inside the answer: control is concentrated in Doha. The flagged facilities are in the north and around the Industrial Area, where the expatriate workforce lives. Distance from the capital and the access gradient follow the same line.</div></div>
+<h3 id='b16'><span class='clock'>22:30</span><span class='h3t'>Act II, beat 2 — Programme simulation</span><span class='dur'>two minutes</span></h3>
+<div class='blk do'><span class='lbl'>Do</span><div class='body'>Click "Programme simulation".</div></div>
+<div class='blk screen'><span class='lbl'>On screen</span><div class='body'>five programmes over 24 months. HbA1c recall: 723 eligible, 105 events avoided, net plus QAR 1.4M. Adherence support: 796 eligible, 180 events avoided, net plus 1.4M. Blood-pressure programme: net minus 0.9M. Renal protection: net minus 0.4M. Intensification: net minus 11.6M. All five combined: about 452 events avoided.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>Five candidate programmes. Every eligible patient is re-scored through the same model with the programme applied; these are computed, not assumed.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>The HbA1c recall programme and the pharmacist-led adherence programme pay for themselves within twenty-four months. They are cheap, and they reach the patients the model worries about. Drug intensification does not pay back on cost within the horizon. I would rather the model told the minister that than a slide did. Honest analytics is a feature, not a weakness.</div></div>
+<h3 id='b17'><span class='clock'>24:30</span><span class='h3t'>Act II, beat 3 — Equity</span><span class='dur'>60 seconds</span></h3>
+<div class='blk note'><span class='lbl'>Note</span><div class='body'>Second beat to drop if behind. If you drop it, go straight to Dashboards <span class='arr'>→</span> Registry for fifteen seconds and then Evaluation.</div></div>
+<div class='blk do'><span class='lbl'>Do</span><div class='body'>Click "Equity".</div></div>
+<div class='blk screen'><span class='lbl'>On screen</span><div class='body'>mean HbA1c by nationality, from 7.17% (Qatari) to 8.01% (Nepali).</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>Mean HbA1c runs from 7.2 for Qatari patients to 8.0 for Nepali patients, and the control rates follow the same gradient. That tracks access, not biology. Multilingual outreach is the cheapest lever on the board, and it is a pillar of the National Health Strategy.</div></div>
+<div class='blk do'><span class='lbl'>Do</span><div class='body'>Click Dashboards <span class='arr'>→</span> Registry. Fifteen seconds.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>Every number on these dashboards is the same query the assistant runs. The briefing and the conversation can never disagree, because there is one source of truth.</div></div>
+<h3 id='b18'><span class='clock'>26:00</span><span class='h3t'>Trust — the Evaluation tab</span><span class='dur'>three minutes</span></h3>
+<div class='blk do'><span class='lbl'>Do</span><div class='body'>Click Evaluation. The Risk model view.</div></div>
+<div class='blk screen'><span class='lbl'>On screen</span><div class='body'>AUC 0.854 against the legacy score's 0.809. Average precision 0.573 on a 10.7% event rate. Brier 0.067, thirty percent better than prevalence. Calibration slope 0.83. 1,000 held-out patients, 107 events. ROC, precision-recall and calibration charts. Threshold economics with a slider. Subgroup fairness tables.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>This tab answers "how do you know it works" before you ask. Everything on this page is computed from a thousand patients the model never saw. AUC 0.854 against the registry's rule-based score at 0.809. Calibration by decile. A Brier score thirty percent better than just predicting the prevalence.</div></div>
+<div class='blk do'><span class='lbl'>Do</span><div class='body'>Drag the operating-threshold slider. The confusion tiles and "reviews per event found" update.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>The model does not choose the threshold. The ministry does, and now they can see what each choice costs in nurse time and in missed events.</div></div>
+<div class='blk do'><span class='lbl'>Do</span><div class='body'>Point at the subgroup fairness table.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>True-positive and false-positive rates at the operating threshold by nationality group, gender and age. Small groups are shown but not judged. The age gap is prevalence, not bias, and the page says so.</div></div>
+<div class='blk do'><span class='lbl'>Do</span><div class='body'>Click Agent evalset, then Run evalset.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>Ten real questions go through the real supervisor graph and are scored on four things a clinician would demand. Did it call the right tools. Did every clinical claim carry a citation. Did nothing bypass the human queue. And does every number in the answer match a recomputation from the tables. A fluent wrong number is the classic language-model failure. This catches it.</div></div>
+<div class='blk do'><span class='lbl'>Do</span><div class='body'>Click LLM &amp; cost.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>Why Gemini 3.8 Flash: chosen on this evalset, not on a leaderboard. It is GA, agent-tuned, and a third of Pro's price. Pro is the judge in evaluation, never on the hot path. And the multi-agent question, measured: a single flat agent re-reads about two and a half thousand tokens of tool schema on every hop; the supervisor reads under seven hundred. Function declarations are billed as input tokens, so that gap is literally the invoice.</div></div>
+<div class='blk do'><span class='lbl'>Do</span><div class='body'>Click Governance. Ten seconds.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>Fifteen controls. Nine implemented today, six delivered by the platform in phase two. Zero autonomous writes.</div></div>
+<h3 id='b19'><span class='clock'>29:00</span><span class='h3t'>Close</span><span class='dur'>60 seconds</span></h3>
+<div class='blk do'><span class='lbl'>Do</span><div class='body'>Click Home.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>Phase one is what you just saw. Phase two is the same contracts on Google-native services. The cohort agent becomes BigQuery over a streamed Cloud Healthcare API FHIR store. The risk model moves to a Vertex endpoint. The forecast becomes AI.FORECAST in BigQuery. The guideline corpus becomes RAG Engine. The same ADK graph runs on Cloud Run in Doha, and on Agent Engine the day it reaches me-central1. PHI never leaves the Qatar data boundary, and the language model only ever sees pseudonymous data.</div></div>
+<div class='blk say'><span class='lbl'>Say</span><div class='body'>I built this in the shape of the job: understand the customer, build on the portfolio, find the gap, prototype the fix, and hand it to the team that ships it. That is my thirty minutes. Over to you.</div></div>
+<div class='blk note'><span class='lbl'>Note</span><div class='body'>Stop talking. Do not fill the silence.</div></div>
+</section><section id='s7'><h2><span class='num'>6</span>Q&amp;A bank</h2>
+<div class='blk note'><span class='lbl'>Note</span><div class='body'>Answer in three moves: the direct answer in one sentence, the evidence in one or two, and where it goes next in one. Then stop. If you do not know, say so and say how you would find out; a director is testing judgment, not recall.</div></div>
+<h3><span class='h3t'>The solution</span></h3>
+<div class='qa'><div class='q'>How do you stop it hallucinating clinical advice?</div>
+<div class='a'>Three walls and a test. Numbers come only from tools; the model narrates, it never invents a value. Clinical claims come only with a citation to a document and page. Actions go only through the approval queue. Then the evalset re-computes every headline number from the tables and fails the case if it does not match. In phase two the same set runs in Cloud Build on every change and on a sample of production weekly, and Model Armor sits on the runtime once it is in region.</div>
+</div>
+<div class='qa'><div class='q'>Why five agents instead of one? Isn't that just complexity?</div>
+<div class='a'>Three reasons, and one of them is measured. Least privilege: the guideline agent cannot draft a prescription because it does not have the tool. Independent evaluation: each specialist has its own test set. And cost: a flat agent re-reads about 2,500 tokens of tool schema on every hop, the supervisor reads under 700, and function declarations are billed as input tokens. At scale that is roughly thirty percent cheaper per question. The cost of the design is one extra hop of latency, which streaming hides.</div>
+</div>
+<div class='qa'><div class='q'>Why ADK and not LangGraph or CrewAI?</div>
+<div class='a'>Native Gemini function calling, a first-class MCP client in McpToolset, agent-to-agent protocol built in, and Agent Engine as the managed runtime, so the same graph deploys to phase two without a rewrite. For a Google Cloud customer the framework the platform evaluates, traces and hosts natively is the right default. LangGraph is a fine choice if the customer is multi-cloud; the tools and the MCP server would not change.</div>
+</div>
+<div class='qa'><div class='q'>Why MCP? Isn't that just function calling with extra steps?</div>
+<div class='a'>Function calling binds a tool to one agent in one framework. MCP makes the tool a service any client can use: our ADK agent, Gemini CLI, Gemini Enterprise, a partner's agent. The population-health server is the asset the ministry keeps if they change agent frameworks. And Google has committed to it: over fifty managed MCP servers, an MCP Toolbox with a Cloud Healthcare source for FHIR, and an MCP endpoint on the Agent Platform for calling models.</div>
+</div>
+<div class='qa'><div class='q'>What is the gap you found in Google's catalogue?</div>
+<div class='a'>Google's healthcare MCP tools read FHIR: one patient, one store. The Agent Platform MCP endpoint calls a model. Nothing in the catalogue lets an agent reason about a population: quality measures, care gaps, cohorts, model-backed stratification, counterfactual programme simulation, and a safe way to act. We built that server with seven tools. I would send that gap analysis to the Healthcare API product manager in my first month; feeding back to product is in the job description.</div>
+</div>
+<div class='qa'><div class='q'>Why Gemini 3.8 Flash and not Pro?</div>
+<div class='a'>It was chosen on our own evalset: trajectory recall, groundedness, faithfulness, latency and cost per question. Flash 3.8 is agent-tuned and matched Pro on tool-structured tasks at a third of the cost, with first-token latency under a second at low thinking. Pro 3.1 is the judge in evaluation and the model for long executive syntheses, never the hot path. And I avoided Gemini 2.5 Flash on purpose: it has a published retirement date, and you never build a clinical product on a model with a retirement date.</div>
+</div>
+<div class='qa'><div class='q'>Latency. Will a clinician actually wait?</div>
+<div class='a'>A typical clinician question is three tool hops, each a Flash call, so five to eight seconds to the full answer. The trace streams from the first hop, so the wait looks like work rather than a spinner. The two levers that matter are thinking level on routing turns and the number of synchronous hops; the evaluation tab measures both. The nightly briefing runs as a batch, so the morning panel is instant.</div>
+</div>
+<div class='qa'><div class='q'>Data residency. Gemini is not in Doha.</div>
+<div class='a'>We separate the identity zone from the reasoning zone. PHI at rest, the FHIR store, BigQuery, the session store, sits in me-central1 under an Assured Workloads Qatar data boundary with customer-managed keys and VPC Service Controls. The agents see the pseudonymised analytics zone; re-identification is an audited join inside the perimeter. That makes the language model's region a latency question, not a PHI question. The legal frame is Qatar's Personal Data Privacy Protection Law, and the ministry's DPO signs off the zoning.</div>
+</div>
+<div class='qa'><div class='q'>Why isn't the agent on Agent Engine?</div>
+<div class='a'>Agent Engine is the right managed runtime, but it is not available in me-central1 today, and the conversation state carries clinical context. So the same ADK graph runs on Cloud Run in Doha with sessions in AlloyDB. The day Agent Engine lands in Qatar it is a deploy-target change. Same story for Model Armor and Model Monitoring: in-region equivalents today, Sensitive Data Protection and BigQuery drift jobs, managed services when they arrive. I would rather name the limits of the region than pretend they are not there.</div>
+</div>
+<div class='qa'><div class='q'>What does it cost to run?</div>
+<div class='a'>Order of magnitude at list prices: around 1,600 dollars a month for a four-site pilot, and around 12,600 dollars a month at national scale with twenty thousand questions a day, roughly thirty percent of it Gemini tokens. One deterioration episode costs the system about 18,500 riyals, so the national platform costs the equivalent of two or three episodes a month. The programme simulation you saw is how the ministry would decide whether it is worth it.</div>
+</div>
+<div class='qa'><div class='q'>How did you evaluate it?</div>
+<div class='a'>Two layers. The model: a stratified 25% hold-out the model never saw, discrimination, calibration, threshold economics and subgroup fairness, all computed on the page, not pasted in. The agent: a golden evalset of ten questions run through the real graph, scored on tool trajectory, groundedness, safety and numeric faithfulness against a recomputation. Phase two adds the Gen AI Evaluation Service with Pro as an LLM judge, in CI and on a production sample.</div>
+</div>
+<div class='qa'><div class='q'>Is the model fair?</div>
+<div class='a'>We report true-positive and false-positive rates at the operating threshold by nationality group, gender and age band, and compute gaps only over groups with enough events. Small groups are shown but not judged. The age gap is a prevalence difference, and the page says so rather than hiding it. In phase two a monthly job re-runs that table and alerts on drift. Fairness is a monitoring discipline, not a one-time certificate.</div>
+</div>
+<div class='qa'><div class='q'>Why XGBoost? And why the monotonic constraints?</div>
+<div class='a'>Tabular clinical data at this scale, native per-feature contributions that a clinician can read, and BigQuery ML has the same estimator, so phase two is a CREATE MODEL statement. The monotonic constraints encode clinical priors: risk cannot fall as HbA1c rises or rise as adherence improves. Without them a tree model on four thousand patients learns local noise, and a slider would show blood pressure going down and risk going up. With them the held-out AUC went from 0.844 to 0.854. It is a governance control that also improved accuracy.</div>
+</div>
+<div class='qa'><div class='q'>Is the programme simulation causal?</div>
+<div class='a'>No, and I say that on the screen. It is a model-based what-if with stated assumptions: event cost per episode, therapy costs from the medication table, guideline-average effect sizes. It ranks levers; a trial or a stepped-wedge rollout confirms them. That is exactly how I would say it to a minister. The value is that the ranking is computed on their population, not borrowed from a paper.</div>
+</div>
+<div class='qa'><div class='q'>Is the data real?</div>
+<div class='a'>No. Four thousand synthetic patients, zero PHI. But the shape is real: eight relational tables, LOINC, ICD-10, SNOMED and ATC codes, thirty-six months longitudinal, a FHIR R4 export. Four thousand is big enough for the models to be honest on a thousand-patient hold-out and small enough to run on one container. BigQuery removes that ceiling in phase two, and the first real workstream is loading a de-identified extract from the exchange.</div>
+</div>
+<div class='qa'><div class='q'>Real-time or batch?</div>
+<div class='a'>Both, deliberately. Per-patient signals stream: a new HbA1c result re-scores that patient in seconds through the FHIR store, Pub/Sub and the endpoint. Population metrics batch nightly: stratification, care gaps, quality measures, equity. Streaming the aggregates would cost many times more for numbers that move over weeks.</div>
+</div>
+<div class='qa'><div class='q'>How does it integrate with the hospital EHRs?</div>
+<div class='a'>Through the exchange, not around it. The Healthcare API takes FHIR R4 natively and HL7 v2 through its own ingestion, so the legacy sites bridge rather than migrate. Write-back is a FHIR Task, which is how the EHRs already receive work items, so an approved recall or prescription draft appears in the clinician's normal worklist. We never write to a clinical record directly.</div>
+</div>
+<div class='qa'><div class='q'>How does this scale to a million patients?</div>
+<div class='a'>Compute is not the constraint anywhere in the design. Scoring is a millisecond per patient on a CPU endpoint; BigQuery is serverless; Cloud Run autoscales the app and the agent. The variables that actually move cost and latency are Gemini tokens per question and synchronous hops per question, and the evaluation tab measures both. Scale is a token-budget problem, not an infrastructure problem.</div>
+</div>
+<div class='qa'><div class='q'>Why build a custom agent instead of using Gemini Enterprise?</div>
+<div class='a'>Gemini Enterprise is the right front door for knowledge workers, and it speaks MCP, so the population-health server plugs into it in phase three. What it does not give you out of the box is the governed clinical action path: drafts, the approval queue, FHIR write-back, and evaluation on tool trajectories. So Gemini Enterprise at the front, the ADK agent as the clinical backend behind it.</div>
+</div>
+<div class='qa'><div class='q'>Why not just BigQuery, Looker and a chatbot?</div>
+<div class='a'>Looker answers the questions someone anticipated; the agent answers the one nobody did, and it can act. But Looker is in phase three for exactly the governed KPIs a ministry publishes, and the dashboards in the demo run the same queries the agent runs, so the two never disagree. It is not either-or. The chatbot without tools, citations and a queue is the thing I would refuse to ship.</div>
+</div>
+<div class='qa'><div class='q'>Where does SAS fit? Would you tell the ministry to leave SAS?</div>
+<div class='a'>Not on day one, and not as a rip-and-replace. SAS is where the pattern was proven and where the ministry's current models live; those models can be exposed as MCP tools and called by the same agent. The argument for Google is data gravity in the exchange, a sovereign region in Doha, a managed agent stack, and price at scale, not that SAS is bad. Over time BigQuery ML and Vertex reduce the licence footprint, and the customer decides the pace.</div>
+</div>
+<div class='qa'><div class='q'>What about MedGemma and clinical notes?</div>
+<div class='a'>Everything in the demo is structured data. Clinical notes are phase three, and MedGemma is the right model for them: open weights, so it can run in region, on the unstructured parts of the record. The pattern does not change; it is one more specialist with one more tool. I would not start there, because the structured registry already carries most of the signal for deterioration.</div>
+</div>
+<div class='qa'><div class='q'>Security. What about prompt injection through a guideline PDF or a record?</div>
+<div class='a'>The agent's tools are read-only against the data and draft-only against actions, so an injected instruction can at most produce a bad draft, which a human sees before anything happens. Tool inputs are validated schemas, not free text. Retrieved passages are quoted with their source so an odd instruction is visible. Phase two adds Model Armor on prompts and responses, and the evalset carries adversarial cases.</div>
+</div>
+<div class='qa'><div class='q'>Why did you put voice in?</div>
+<div class='a'>Because the customer asked for it in the original programme, and because a clinician between patients does not type. Arabic and English through the Web Speech API today, Chirp 3 through Speech-to-Text in phase two. It is a thirty-second beat in the demo and a real adoption lever in a clinic.</div>
+</div>
+<div class='qa'><div class='q'>What would you cut? What worries you?</div>
+<div class='a'>I would cut the demand forecast: the weakest model and the least surprising insight. I would trade it for a hypoglycaemia-risk loop on the insulin-treated cohort, which prevents admissions. What worries me is adoption, not accuracy. The queue exists so clinicians own the decision; the equity view exists so the ministry owns the gap. Tools do not change outcomes; workflows do.</div>
+</div>
+<h3><span class='h3t'>The customer engineer role</span></h3>
+<div class='qa'><div class='q'>How would you run this engagement from first meeting to a signed pilot?</div>
+<div class='a'>Discovery first: two weeks with the registry team, two clinicians and the DPO, to agree the one question the pilot must answer and the data it needs. Then a half-day architecture workshop that ends with the diagram you saw, signed off. A six-to-eight-week PoC on a de-identified extract, with success criteria written before the first commit. Then a pilot at four facilities with a clinical safety case. My job across all of it is to be the technical owner of the outcome and to keep the account team, the partner and product informed of what is blocking.</div>
+</div>
+<div class='qa'><div class='q'>What are the PoC success criteria?</div>
+<div class='a'>Written down before we start, in the customer's words. For the model: discrimination on their held-out data above the registry's current score, calibration within an agreed slope, fairness gaps reported by nationality. For the agent: the golden evalset at a pass rate they set, with faithfulness at one hundred percent because a wrong number is disqualifying. For adoption: a clinician panel uses it for two weeks and the queue shows approvals. For the platform: data never leaves the boundary, and the DPO signs the zoning. If any of those fail, the PoC failed, and we say so.</div>
+</div>
+<div class='qa'><div class='q'>The customer says their data is not ready.</div>
+<div class='a'>It never is, and the exchange is more ready than most. I would start with the narrowest extract that answers the pilot question, run the profiling in BigQuery in the first week so the gaps are numbers rather than fears, and put data quality on the dashboard as a measure like any other. The care-gap engine in the demo is partly a data-quality engine: an overdue HbA1c is either a clinical gap or a missing feed, and both are worth knowing.</div>
+</div>
+<div class='qa'><div class='q'>A senior clinician says they do not trust it.</div>
+<div class='a'>Good, that is the right starting position. I would sit with them and their own patients in the simulator, because trust comes from seeing the model agree with their judgment on cases they know, and disagree in ways they can check. I would show them the citation path and the queue, and I would ask them to write the first evalset questions. Clinicians who wrote the tests defend the system. Clinicians who were shown a demo do not.</div>
+</div>
+<div class='qa'><div class='q'>The customer wants to skip the approval queue to save time.</div>
+<div class='a'>I would say no, and explain why in their terms: the queue is what makes the system defensible to the regulator, the medical director and the patient. Then I would find where the time actually goes and remove that instead: batch the drafts, route by facility, let a nurse pre-review. Speed inside the guardrail, not by removing it. If they insist, that is an escalation to the account lead and to legal, not something a customer engineer decides alone.</div>
+</div>
+<div class='qa'><div class='q'>How do you work with the account team and partners?</div>
+<div class='a'>The account executive owns the relationship and the commercial; I own the technical outcome and the truth about what the product can and cannot do. Partners build and run; I make sure the reference architecture and the success criteria are clear enough that a partner can deliver them. And I feed product back what the customer needed and could not get, with evidence, which in this case is the population-health MCP gap.</div>
+</div>
+<div class='qa'><div class='q'>How do you keep current with Google's product changes?</div>
+<div class='a'>A weekly pass over the release notes for Vertex, BigQuery, the Healthcare API and the Gemini models, plus the region table for me-central1, because for Gulf customers the region is the first question. I keep a short list of deprecations, which is how I knew not to build on Gemini 2.5 Flash, MedLM or the Healthcare Natural Language API. And I build small things constantly; the simulator in this demo was two days ago.</div>
+</div>
+<div class='qa'><div class='q'>What would you do in your first ninety days?</div>
+<div class='a'>Learn the territory's top ten accounts and the three deals that are actually moving. Shadow two customer engineers on real engagements before I lead one. Build one reference asset the whole team can reuse, which is what this demo is meant to become. And send product one well-evidenced gap memo. By day ninety I should be the technical owner on at least one opportunity and known internally as the person to ask about healthcare on Google Cloud in the region.</div>
+</div>
+<div class='qa'><div class='q'>Tell me about a time you were wrong with a customer.</div>
+<div class='a'>Use a real one. The shape that works: what you claimed, how you found out you were wrong, what you did within twenty-four hours, and what you changed in your process. The panel is testing whether you correct fast and in the open. Do not pick a story where you were secretly right.</div>
+</div>
+<h3><span class='h3t'>Curveballs</span></h3>
+<div class='qa'><div class='q'>Isn't this over-engineered for a proof of concept?</div>
+<div class='a'>The engineering is in the guardrails, and those are the parts a health ministry will ask for first. Strip them out and it is a chatbot over a database, which is a demo nobody deploys. Everything else is intentionally thin: one container, one region, four models, ten evalset questions. The reference architecture is a target, and the phases are how we get there without paying for all of it on day one.</div>
+</div>
+<div class='qa'><div class='q'>What if Gemini suggests the wrong dose?</div>
+<div class='a'>It cannot prescribe, so a wrong dose is a wrong draft, and the clinician sees the dose, the guideline page it came from and the model drivers before signing. The dose in the draft is taken from the retrieved guideline text, not generated. And the evalset carries the case: a draft with a dose outside the cited guideline range fails. If it ever reached a patient, that would be a process failure at the signature, and the audit trail would show exactly where.</div>
+</div>
+<div class='qa'><div class='q'>Who owns the model risk?</div>
+<div class='a'>The ministry owns it, because they own the clinical decisions and the population. Google provides the platform controls and their evidence. Whoever builds the model, us or a partner, owns the model card, the evaluation and the monitoring. I would write that into the pilot agreement as a RACI on the first page, because ambiguity there is how AI projects in healthcare die.</div>
+</div>
+<div class='qa'><div class='q'>Would this work for another disease or another country?</div>
+<div class='a'>The pattern transfers; the content does not. The agent graph, the MCP server contracts, the evaluation harness and the queue are disease-agnostic. What changes is the registry schema, the guideline corpus, the outcome label and the quality measures. Cardiovascular disease would be the natural second programme for Qatar. Another Gulf country would reuse the architecture and re-do the data residency work for its own regulator.</div>
+</div>
+<div class='qa'><div class='q'>How long did this take and how did you build it?</div>
+<div class='a'>About two weeks of evenings and weekends, in Python with FastAPI, the Agent Development Kit and the Gemini SDK, XGBoost for the models, React for the front end, deployed on Railway because it was the fastest path to a URL. I used an AI coding assistant as a pair programmer throughout, and I am happy to say so; the architecture, the clinical framing, the evaluation design and every decision in the deck are mine, and I can walk through any file. That is how I would expect a customer engineer to build in 2026.</div>
+</div>
+<div class='qa'><div class='q'>What do you need from Google to ship this?</div>
+<div class='a'>Three things. Agent Engine, Model Armor and Model Monitoring in me-central1, with a date I can give the customer. A population-health layer in the Healthcare API catalogue, or a partner programme that recognises one. And a reference architecture for sovereign healthcare AI in the Gulf that a customer engineer can hand over, because today each of us is drawing it from scratch.</div>
+</div>
+</section><section id='s8'><h2><span class='num'>7</span>Questions to ask them</h2>
+<ul>
+<li>How does the customer engineering team in the region divide healthcare and public sector between people, and where would this kind of asset live so others can reuse it?</li>
+<li>What is the blocker you hear most from Gulf customers right now: sovereignty, skills, or something else?</li>
+<li>How is a customer engineer's first year measured here, beyond the numbers?</li>
+<li>What did the strongest customer engineer you have worked with do differently?</li>
+</ul>
+</section><section id='s9'><h2><span class='num'>8</span>Failure playbook</h2>
+<div class='tbl'><table><thead><tr><th>If</th><th>Then</th></tr></thead><tbody>
+<tr><td>Gemini errors mid-scenario</td><td>Nothing to do. The backend falls back to the scripted engine automatically and says so in the trace. Keep talking.</td></tr>
+<tr><td>The header shows a key or capacity error</td><td>Every scenario chip still runs on live data. Only free-form questions need the key. Say: "the scripted engine is the same tools without the language model in the loop."</td></tr>
+<tr><td>A free-form question goes sideways</td><td>"Let me show you the trace of why." The details view turns a miss into a transparency beat. Then run a chip.</td></tr>
+<tr><td>The Explain button in the simulator returns the templated text</td><td>It is grounded in the same numbers. Say so and move on.</td></tr>
+<tr><td>Wi-Fi dies</td><td>Switch to the hotspot. The scripted engine needs no external call after the page has loaded.</td></tr>
+<tr><td>A number differs from this script</td><td>Read the screen. "The screen is the truth; that is the point of the product."</td></tr>
+<tr><td>They interrupt with a deep question</td><td>Answer it, then say "and that is exactly what the next click shows". Every act has a natural re-entry.</td></tr>
+<tr><td>You lose your place</td><td>The Simulator tab is a safe harbour from anywhere: Kamal, one slider, one explanation, one minute.</td></tr>
+</tbody></table></div>
+</section><section id='s10'><h2><span class='num'>9</span>Numbers to have in your head</h2>
+<div class='tbl'><table><thead><tr><th>Number</th><th>Where it comes from</th></tr></thead><tbody>
+<tr><td>4,000 patients · 193k observations · 80k encounters · 18 facilities</td><td>Landing page counters</td></tr>
+<tr><td>QAR 62.4M annual cost · top 10% of patients = 26% of spend</td><td>Landing, Cost &amp; Equity</td></tr>
+<tr><td>Mean HbA1c 7.52% · 35.7% well-controlled · 15.2% poorly controlled</td><td>KPI strip</td></tr>
+<tr><td>753 HbA1c tests overdue · 7,699 open care gaps · 1,203 retinal screening overdue</td><td>Landing badges, C4</td></tr>
+<tr><td>999 in the intensification gap · 975 re-scored · 46 events avoided · net −QAR 11.6M over 24 months</td><td>C3</td></tr>
+<tr><td>418 expected deterioration events in 12 months</td><td>C1</td></tr>
+<tr><td>Kamal Miah QH-101795: HbA1c 10.2 <span class='arr'>→</span> 10.9 · registry Moderate · model 33% Very High</td><td>C2, Simulator</td></tr>
+<tr><td>Simulator: HbA1c 8.0 <span class='arr'>→</span> 5.0% · plus SGLT2i <span class='arr'>→</span> 3.0% Low · guideline targets <span class='arr'>→</span> 0.9% · left untreated <span class='arr'>→</span> 87%</td><td>Simulator</td></tr>
+<tr><td>Facility control spread 18% (Rawdat Al Khail) to 54% (West Bay)</td><td>E1</td></tr>
+<tr><td>Equity: HbA1c 7.17% Qatari to 8.01% Nepali</td><td>E4</td></tr>
+<tr><td>Programmes: recall +1.4M · adherence +1.4M · BP −0.9M · renal −0.4M · intensification −11.6M · combined 452 events</td><td>E3</td></tr>
+<tr><td>Model: AUC 0.854 vs 0.809 · AP 0.573 · Brier 0.067 vs 0.096 · slope 0.83 · 1,000 held out, 107 events</td><td>Evaluation</td></tr>
+<tr><td>Gemini 3.8 Flash $0.75 / $3.75 per million tokens (intro) · Pro 3.1 judge · 2.5 Flash retiring Oct 2026</td><td>LLM &amp; cost</td></tr>
+<tr><td>Schema tokens per hop: flat agent ≈2,500 · supervisor ≈700</td><td>LLM &amp; cost</td></tr>
+<tr><td>Governance: 15 controls · 9 implemented · 6 phase two · 0 autonomous writes</td><td>Governance</td></tr>
+<tr><td>Run cost: ≈$1.6k/month pilot · ≈$12.6k/month national at 20k questions/day · QAR 18,500 per episode</td><td>Q&amp;A</td></tr>
+<tr><td>Phase two: 8–12 weeks · Cloud Run me-central1 · BigQuery · Vertex AI · RAG Engine</td><td>Slide 8</td></tr>
+</tbody></table></div></section>
+  </main>
+</div>
