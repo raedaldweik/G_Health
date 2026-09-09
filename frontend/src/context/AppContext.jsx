@@ -4,12 +4,12 @@ export const PERSONAS = {
   clinician: {
     id: 'clinician', name: 'Dr. Amal Al-Mansoori', sub: 'Consultant Endocrinologist',
     avatar: 'AM', color: 'bg-[#8A1538]',
-    welcome: "Good morning, Dr. Al-Mansoori. I watch your panel through the HIE — ask me about any patient, gap or guideline, or run a scenario. Everything I draft waits for your signature.",
+    welcome: "Good morning, Dr. Al-Mansoori. Ask about any patient on your panel, an open care gap or a guideline recommendation, or run one of the scenarios below. Every draft waits for your approval before anything is actioned.",
   },
   executive: {
     id: 'executive', name: 'Dr. Khalid Al-Kuwari', sub: 'Population Health Executive',
     avatar: 'KK', color: 'bg-[#8a6420]',
-    welcome: "Welcome. I sit on top of the national registry — ask about outcomes, cost, equity, demand, or run a policy what-if. Every number is computed live and every claim is cited.",
+    welcome: "Welcome, Dr. Al-Kuwari. Ask about registry outcomes, cost, equity or demand, or simulate a programme before committing budget. Every figure is computed from the exchange and every clinical statement is cited.",
   },
 };
 

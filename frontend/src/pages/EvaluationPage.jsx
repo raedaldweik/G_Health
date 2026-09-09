@@ -100,7 +100,7 @@ function ModelView() {
 
       <div className="grid grid-cols-12 gap-2.5" style={{ minHeight: 300 }}>
         <div className="col-span-5" style={{ height: 300 }}>
-          <Panel title="ROC — model vs the registry's legacy points score">
+          <Panel title="ROC — model vs the registry's rule-based tier">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={roc} margin={{ top: 8, right: 12, left: -18, bottom: 2 }}>
                 <CartesianGrid stroke="rgba(15,23,42,0.06)" />
@@ -250,7 +250,7 @@ function ModelView() {
       </div>
 
       <div className="glass-card px-4 py-2.5 text-[10.5px]" style={{ color: 'var(--text-md)' }}>
-        <b style={{ color: 'var(--text)' }}>Method.</b> {d.method} Legacy score = the registry's 6-rule points system (age, HbA1c, prior admission, CVD, BP) rescaled to [0,1].
+        <b style={{ color: 'var(--text)' }}>Method.</b> {d.method} Legacy score = the registry's rule-based points tier (age, HbA1c, prior admission, blood pressure) rescaled to [0,1].
         Feature importance and SHAP-style per-patient contributions live on the Risk &amp; Models dashboard.
       </div>
     </div>
@@ -499,7 +499,7 @@ function LlmView() {
               <Bar3D data={perAgent} ramp={0} maxBars={6} unit=" tok" />
             </Panel>
           </div>
-          <Panel title="“Did you just add many agents?” — no, and here is the arithmetic">
+          <Panel title="Why a supervisor with specialists rather than one agent — the token arithmetic">
             <div className="px-1 text-[10px]" style={{ color: 'var(--text-md)' }}>
               <p>A flat agent re-reads <b>{ac.flat_single_agent_schema_tokens.toLocaleString()}</b> schema tokens on each of ~{ac.typical_hops} tool rounds
                 (≈ {ac.flat_tokens_per_turn_est.toLocaleString()} / turn). The supervisor reads <b>{ac.hierarchical_supervisor_schema_tokens}</b> and hands off to specialists
@@ -593,10 +593,10 @@ function GovernanceView() {
 export default function EvaluationPage() {
   const [view, setView] = useState('model');
   const sub = useMemo(() => ({
-    model: 'The XGBoost complication-risk model, graded on 1,000 patients it never saw. Discrimination, calibration, threshold economics, fairness.',
-    agents: 'Ten questions a clinician and a ministry director actually ask, run through the real supervisor graph and scored against ground truth.',
-    llm: 'Why Gemini 3.8 Flash, why not Pro everywhere, and why five specialists cost less than one fat agent — in tokens and dollars.',
-    governance: 'The control list. What is implemented today in this PoC, what the platform provides in phase 2, and what is never allowed.',
+    model: 'The deterioration-risk model, evaluated on 1,000 held-out patients: discrimination, calibration, threshold trade-offs and subgroup fairness.',
+    agents: 'Ten representative clinician and ministry questions, run through the live agent graph and scored against ground truth.',
+    llm: 'Model selection rationale, cost per question, and the measured case for a supervisor with specialists over a single agent.',
+    governance: 'The control list: implemented in this proof of concept, delivered by the platform in phase 2, and never permitted.',
   })[view], [view]);
 
   return (
@@ -604,7 +604,7 @@ export default function EvaluationPage() {
       <div className="flex items-end justify-between px-1 mb-2.5">
         <div>
           <h1 className="text-[17px] font-extrabold tracking-tight leading-none" style={{ color: 'var(--text)' }}>
-            AI Evaluation — measured, not asserted
+            Evaluation — model and agent performance
           </h1>
           <p className="text-[10.5px] mt-1" style={{ color: 'var(--text-dim)' }}>{sub}</p>
         </div>

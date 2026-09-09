@@ -29,10 +29,10 @@ export default function DashboardRisk() {
       <div className="flex items-end justify-between shrink-0 px-1">
         <div>
           <h1 className="text-[17px] font-extrabold tracking-tight leading-none" style={{ color: 'var(--text)' }}>
-            Risk &amp; Models — the machine-learning layer
+            Deterioration Risk — the machine-learning layer
           </h1>
           <p className="text-[10.5px] mt-1" style={{ color: 'var(--text-dim)' }}>
-            Four deployed models with governance cards. Phase 2: BigQuery ML → Vertex Model Registry → online endpoint, scored through the official /mcp/predict toolset.
+            Who is likely to deteriorate in the next 12 months, why, and how the model compares with the registry's rule-based tier. Four deployed models with governance cards.
           </p>
         </div>
       </div>
@@ -40,7 +40,7 @@ export default function DashboardRisk() {
       <KpiStrip items={[
         { icon: 'gauge', tone: 'teal', label: `Model AUC (legacy ${d.legacy_auc})`, value: d.auc,
           trend: `+${((d.auc - d.legacy_auc) * 100).toFixed(0)}pts`, trendDir: 'up' },
-        { icon: 'alert', tone: 'red', label: 'Expected events · 12 mo',
+        { icon: 'alert', tone: 'red', label: 'Expected deterioration events · 12 mo',
           value: Math.round(d.expected_events_12m).toLocaleString() },
         ...bands.map((b, i) => ({
           icon: 'activity', tone: ['green', 'sand', 'amber', 'maroon'][i] || 'teal',
@@ -66,7 +66,42 @@ export default function DashboardRisk() {
             }} />
           </Panel>
         </div>
-        <div className="col-span-2 row-span-2">
+        <div className="col-span-2">
+          <Panel title="Who deteriorates — high-risk vs low-risk profile (top vs bottom decile)" pad={false}>
+            <div className="overflow-y-auto h-full px-3 pb-2">
+              <table className="data-table">
+                <thead><tr><th></th><th style={{ color: 'var(--red)' }}>High risk</th><th style={{ color: 'var(--green)' }}>Low risk</th></tr></thead>
+                <tbody>
+                  {[
+                    ['Model 12-mo risk', (x) => `${x.mean_risk_pct}%`],
+                    ['Mean age', (x) => x.mean_age],
+                    ['Mean HbA1c', (x) => `${x.mean_hba1c}%`],
+                    ['Years since diagnosis', (x) => x.mean_years_since_dx],
+                    ['Mean BMI', (x) => x.mean_bmi],
+                    ['Mean eGFR', (x) => x.mean_egfr],
+                    ['Retinopathy', (x) => `${x.pct_retinopathy}%`],
+                    ['Neuropathy', (x) => `${x.pct_neuropathy}%`],
+                    ['Chronic kidney disease', (x) => `${x.pct_ckd}%`],
+                    ['On insulin', (x) => `${x.pct_on_insulin}%`],
+                    ['On SGLT2i / GLP-1 RA', (x) => `${x.pct_on_sglt2_glp1}%`],
+                    ['Adherence (PDC)', (x) => `${Math.round(x.mean_adherence_pdc * 100)}%`],
+                    ['HbA1c overdue', (x) => `${x.pct_hba1c_overdue}%`],
+                    ['Admissions / 12 mo', (x) => x.mean_admissions_12mo],
+                    ['Annual cost', (x) => `QAR ${x.mean_cost_qar.toLocaleString()}`],
+                    ['Top nationalities', (x) => x.top_nationalities.map((n) => n.nationality).join(', ')],
+                  ].map(([k, f]) => (
+                    <tr key={k}>
+                      <td className="font-semibold" style={{ color: 'var(--text-md)' }}>{k}</td>
+                      <td className="font-bold" style={{ color: 'var(--text)' }}>{f(d.risk_profiles.high_risk)}</td>
+                      <td style={{ color: 'var(--text-md)' }}>{f(d.risk_profiles.low_risk)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Panel>
+        </div>
+        <div className="col-span-2">
           <Panel title="Model registry — governance cards" pad={false}>
             <div className="overflow-y-auto h-full px-3 pb-3 space-y-2">
               {d.model_cards.map((c) => (

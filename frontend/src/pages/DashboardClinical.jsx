@@ -19,10 +19,10 @@ export default function DashboardClinical() {
     <div className="h-full p-3 overflow-hidden flex flex-col gap-2.5">
       <div className="shrink-0 px-1">
         <h1 className="text-[17px] font-extrabold tracking-tight leading-none" style={{ color: 'var(--text)' }}>
-          Clinical Quality — where care falls short
+          Clinical Quality — diabetes measures against national targets
         </h1>
         <p className="text-[10.5px] mt-1" style={{ color: 'var(--text-dim)' }}>
-          HEDIS-style measures computed live from the HIE by the population-health MCP server. Every ❌ is a work list, not a statistic.
+          Diabetes quality measures computed live from the exchange by the population-health MCP server. Each unmet measure is available as a patient-level work list.
         </p>
       </div>
 
@@ -79,7 +79,7 @@ export default function DashboardClinical() {
               data={[{ label: 'Controlled', value: bp.controlled, ramp: 3 },
                      { label: 'Uncontrolled', value: bp.uncontrolled, ramp: 6 }]}
               centerValue={`${((bp.controlled / bpTotal) * 100).toFixed(0)}%`}
-              centerLabel="controlled <140/90"
+              centerLabel="BP controlled"
               valueFormatter={(v) => v.toLocaleString()} showLegend={true} />
           </Panel>
         </div>

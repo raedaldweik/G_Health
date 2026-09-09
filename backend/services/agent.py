@@ -297,7 +297,7 @@ def groupby_aggregate(group_by: str, metric: str = "", func: str = "mean",
 
 def top_n(sort_by: str, n: int = 10, ascending: bool = False,
           filters_json: str = "", select_columns_json: str = "") -> dict:
-    """Top/bottom N patients by a column (e.g. annual_cost_qar, ascvd_10yr_pct)."""
+    """Top/bottom N patients by a column (e.g. annual_cost_qar, hba1c_latest, adherence_pdc)."""
     return hie.top_n(sort_by, n, ascending,
                      json.loads(filters_json) if filters_json else None,
                      json.loads(select_columns_json) if select_columns_json else None)
@@ -360,8 +360,9 @@ def similar_patients(patient_id: str, k: int = 6) -> dict:
 
 def simulate_policy(intervention: str, horizon_months: int = 12) -> dict:
     """Counterfactual policy what-if by re-scoring the eligible cohort through the risk
-    model with the treatment applied. intervention: close_statin_gap |
-    close_glp1_sglt2_gap | close_af_anticoag_gap | bp_control_program | combined."""
+    model with the programme applied. intervention: sglt2_glp1_intensification |
+    hba1c_recall_program | adherence_support_program | bp_control_program |
+    renal_protection_program | combined."""
     res = ml.simulate_policy(intervention, horizon_months)
     audit.log("ML·SIMULATE", "risk_agent",
               f"Counterfactual simulation: {intervention} over {horizon_months}m")
@@ -397,7 +398,7 @@ def render_chart(spec_json: str) -> dict:
 def render_map(metric: str = "pct_controlled", facility_names_json: str = "",
                title: str = "", highlight_json: str = "") -> dict:
     """Emit a colour-coded FACILITY MAP of Qatar for the UI. metric: pct_controlled |
-    gaps_per_100 | statin_gap | mean_risk_pct | mean_cost | mean_hba1c.
+    gaps_per_100 | hba1c_overdue | mean_risk_pct | mean_cost | mean_hba1c.
     facility_names_json: optional JSON list of facility names to include (empty = all 18).
     highlight_json: optional JSON list of facility names to ring-highlight.
     Use whenever the user asks about facilities, regions, geography, or 'where'."""
@@ -443,7 +444,7 @@ def draft_referral(patient_id: str, specialty: str, rationale: str) -> dict:
 
 # ─────────────────────────── agent graph ───────────────────────────
 
-SUPERVISOR_INSTRUCTION = """You are Nabd (نبض) — the national population-health AI assistant operating on top of the Health Information Exchange for a 4,000-patient cardiometabolic registry (diabetes-led, with the full cardiovascular picture).
+SUPERVISOR_INSTRUCTION = """You are Nabd (نبض) — the national population-health AI assistant operating on top of the Health Information Exchange for the national diabetes registry: 4,000 people living with type 1 or type 2 diabetes, their complications (retinopathy, neuropathy, kidney disease), therapy, adherence and utilisation.
 
 You serve two personas (the user message states which):
 - CLINICIAN: point-of-care decision support. Be clinically precise and concise.

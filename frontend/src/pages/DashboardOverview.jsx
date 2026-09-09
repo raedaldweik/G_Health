@@ -7,8 +7,8 @@ const KPI_META = [
   { icon: 'users', tone: 'sand' },
   { icon: 'droplet', tone: 'rose', trend: '0.3pp YoY', trendDir: 'up' },
   { icon: 'check', tone: 'green' },
-  { icon: 'heart', tone: 'maroon' },
-  { icon: 'alert', tone: 'red' },
+  { icon: 'alert', tone: 'maroon' },
+  { icon: 'droplet', tone: 'red' },
   { icon: 'coins', tone: 'gold' },
 ];
 
@@ -37,13 +37,13 @@ export default function DashboardOverview() {
       <div className="flex items-end justify-between shrink-0 px-1">
         <div>
           <h1 className="text-[17px] font-extrabold tracking-tight leading-none" style={{ color: 'var(--text)' }}>
-            National Overview — the nation's pulse
+            Registry Overview — the national diabetes population
           </h1>
           <p className="text-[10.5px] mt-1" style={{ color: 'var(--text-dim)' }}>
-            One source of truth: every figure here is the same query the assistant runs in chat.
+            Every figure on this page is the same query the assistant runs in conversation.
           </p>
         </div>
-        <p className="text-[10px]" style={{ color: 'var(--text-faint)' }}>Synthetic QHIE cohort · me-central1 (Doha) target region</p>
+        <p className="text-[10px]" style={{ color: 'var(--text-faint)' }}>Synthetic QHIE diabetes cohort · 4,000 patients · 36 months</p>
       </div>
 
       <KpiStrip items={d.kpis.map((k, i) => ({ ...k, ...KPI_META[i] }))} />
@@ -76,7 +76,7 @@ export default function DashboardOverview() {
           </Panel>
         </div>
         <div className="col-span-2">
-          <Panel title="Cardiovascular risk pyramid">
+          <Panel title="Registry risk tiers (rule-based, today)">
             <DynamicChart bare spec={{
               type: 'bar', xKey: 'band',
               data: d.risk_distribution.map((r) => ({ band: r.band, patients: r.patients })),
@@ -85,12 +85,12 @@ export default function DashboardOverview() {
           </Panel>
         </div>
         <div className="col-span-1">
-          <Panel title="CVD prevalence">
+          <Panel title="Complications & comorbidities">
             <div className="overflow-y-auto h-full px-1">
-              {d.cvd_prevalence.map((c, i) => (
+              {d.complication_prevalence.map((c, i) => (
                 <div key={i} className="flex items-center justify-between py-1.5 border-b border-[rgba(15,23,42,0.05)] last:border-0">
                   <span className="text-[10px] font-semibold leading-tight pr-1" style={{ color: 'var(--text-md)' }}>
-                    {c.condition.replace('Established CVD (any)', 'Established CVD')}
+                    {c.condition}
                   </span>
                   <span className="text-[10.5px] font-extrabold shrink-0" style={{ color: 'var(--text)' }}>
                     {c.prevalence_pct}%

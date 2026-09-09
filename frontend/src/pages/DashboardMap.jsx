@@ -31,7 +31,7 @@ export default function DashboardMap() {
   const ranked = [...d.facilities].sort((a, b) => meta.worse_is_high ? b[metric] - a[metric] : a[metric] - b[metric]);
   const flagged = d.facilities.filter((f) => f.status === 'flagged');
   const regions = d.regions;
-  const outsideDoha = regions.filter((r) => r.region !== 'Doha').reduce((s, r) => s + r.statin_gap, 0);
+  const outsideDoha = regions.filter((r) => r.region !== 'Doha').reduce((s, r) => s + r.hba1c_overdue, 0);
   const sel = d.facilities.find((f) => f.facility_id === selected);
   const fmt = (v) => metric === 'mean_cost' ? `QAR ${Math.round(v).toLocaleString()}`
     : (metric === 'pct_controlled' || metric === 'mean_risk_pct') ? `${v}%` : v;
@@ -41,10 +41,10 @@ export default function DashboardMap() {
       <div className="flex items-end justify-between shrink-0 px-1">
         <div>
           <h1 className="text-[17px] font-extrabold tracking-tight leading-none" style={{ color: 'var(--text)' }}>
-            Geography — control is a Doha phenomenon
+            Geography — glycaemic control by facility
           </h1>
           <p className="text-[10.5px] mt-1" style={{ color: 'var(--text-dim)' }}>
-            The further from the capital — and the closer to the Industrial Area — the worse the control. Distance and the equity gradient are the same line.
+            Control is concentrated in Doha. Facilities in the north and around the Industrial Area carry more open gaps and worse control; distance from the capital and the access gradient follow the same line.
           </p>
         </div>
         <p className="text-[10px]" style={{ color: 'var(--text-faint)' }}>18 facilities · HMC hospitals + PHCC health centres · gold ring = flagged</p>
@@ -55,7 +55,7 @@ export default function DashboardMap() {
         { icon: 'activity', tone: 'maroon', label: `Heaviest gap load — ${regions[0].region}`, value: regions[0].gaps_per_100, suffix: '/100 pts' },
         { icon: 'check', tone: 'green', label: `Best control — ${[...regions].sort((a, b) => b.pct_controlled - a.pct_controlled)[0].region}`,
           value: [...regions].sort((a, b) => b.pct_controlled - a.pct_controlled)[0].pct_controlled, suffix: '%' },
-        { icon: 'heart', tone: 'gold', label: 'Statin-gap patients outside Doha', value: outsideDoha },
+        { icon: 'droplet', tone: 'gold', label: 'HbA1c-overdue patients outside Doha', value: outsideDoha },
       ]} />
 
       <div className="flex-1 grid grid-cols-6 grid-rows-2 gap-2.5 min-h-0">
@@ -74,7 +74,7 @@ export default function DashboardMap() {
                   <button key={k} onClick={() => setMetric(k)}
                     className={`seg-pill ${metric === k ? 'active' : ''}`}
                     style={{ fontSize: 10, padding: '4px 9px' }}>
-                    {label.split(' (')[0].replace('Open care gaps per 100 patients', 'Gaps / 100').replace('Mean 12-mo event risk', 'Model risk').replace('Mean annual cost per patient', 'Cost / patient').replace('% well-controlled', 'Controlled').replace('Statin-gap patients', 'Statin gap')}
+                    {label.split(' (')[0].replace('Open care gaps per 100 patients', 'Gaps / 100').replace('Mean 12-mo event risk', 'Model risk').replace('Mean annual cost per patient', 'Cost / patient').replace('% well-controlled', 'Controlled').replace('HbA1c-overdue patients', 'HbA1c overdue')}
                   </button>
                 ))}
               </div>
@@ -115,7 +115,7 @@ export default function DashboardMap() {
               <div className="h-full px-2 py-1 grid grid-cols-2 gap-x-3 gap-y-2 content-start">
                 {[['Patients', sel.patients], ['Region', sel.region], ['Type', sel.type],
                   ['Controlled', `${sel.pct_controlled}%`], ['Mean HbA1c', `${sel.mean_hba1c}%`],
-                  ['Gaps / 100', sel.gaps_per_100], ['Statin gap', sel.statin_gap],
+                  ['Gaps / 100', sel.gaps_per_100], ['HbA1c overdue', sel.hba1c_overdue],
                   ['Model risk', `${sel.mean_risk_pct}%`], ['Cost / patient', `QAR ${sel.mean_cost.toLocaleString()}`],
                   ['Expat share', `${sel.expat_share_pct}%`], ['Admissions 12m', sel.admissions_12mo]].map(([k, v]) => (
                   <div key={k}>

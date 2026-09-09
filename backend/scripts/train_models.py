@@ -40,17 +40,17 @@ DATA = HERE / "data" / "hie"
 OUT = HERE / "models"
 
 RISK_FEATURES = [
-    "age", "is_male", "bmi", "years_since_diagnosis", "smoker",
-    "hba1c_latest", "sbp_latest", "dbp_latest", "ldl_latest", "egfr_latest",
-    "established_cvd", "cad", "hf", "af", "stroke", "retinopathy", "neuropathy",
-    "on_statin", "on_sglt2_glp1", "on_raas_inhibitor", "on_anticoagulant",
-    "admissions_12mo", "ed_visits_12mo", "medication_count", "care_gap_count",
+    "age", "is_male", "bmi", "bmi_change_12m", "years_since_diagnosis", "smoker",
+    "hba1c_latest", "hba1c_12m_ago", "hba1c_days_since_test", "sbp_latest", "dbp_latest",
+    "egfr_latest", "acr_latest", "albuminuria", "retinopathy", "neuropathy", "foot_ulcer_history", "htn",
+    "on_metformin", "on_sglt2_glp1", "on_insulin", "on_raas_inhibitor", "adherence_pdc",
+    "admissions_12mo", "ed_visits_12mo", "diabetes_medication_count", "care_gap_count",
 ]
-# Treatment flags the counterfactual simulator may flip
-INTERVENABLE = ["on_statin", "on_sglt2_glp1", "on_anticoagulant", "on_raas_inhibitor"]
+# Treatment / programme levers the counterfactual simulator may change
+INTERVENABLE = ["on_sglt2_glp1", "on_raas_inhibitor", "adherence_pdc", "hba1c_days_since_test", "sbp_latest"]
 
-SIM_FEATURES = ["age", "bmi", "hba1c_latest", "sbp_latest", "ldl_latest", "egfr_latest",
-                "established_cvd", "hf", "af", "admissions_12mo", "annual_cost_qar"]
+SIM_FEATURES = ["age", "bmi", "hba1c_latest", "years_since_diagnosis", "sbp_latest", "egfr_latest",
+                "acr_latest", "retinopathy", "neuropathy", "adherence_pdc", "admissions_12mo", "annual_cost_qar"]
 
 
 def load_features() -> pd.DataFrame:
@@ -61,7 +61,7 @@ def load_features() -> pd.DataFrame:
 
 def train_risk_model(s: pd.DataFrame) -> dict:
     X = s[RISK_FEATURES].copy()
-    y = s["event_next_12m"]
+    y = s["deterioration_next_12m"]
     X_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=0.25, random_state=7, stratify=y)
 
     model = XGBClassifier(
@@ -96,7 +96,7 @@ def train_risk_model(s: pd.DataFrame) -> dict:
     # Persist held-out predictions so the AI Evaluation tab computes ROC, calibration,
     # threshold sweeps and subgroup fairness from real test data (never training data).
     ev = s.loc[X_te.index, ["patient_id", "nationality", "gender", "age", "primary_facility_id",
-                            "cv_risk_band", "legacy_risk_score"]].copy()
+                            "registry_risk_tier", "legacy_risk_score"]].copy()
     ev["y_true"] = y_te.values
     ev["p"] = p_te
     ev.to_csv(OUT / "eval_predictions.csv.gz", index=False, compression="gzip")
@@ -216,13 +216,13 @@ def main():
 
     today = date.today().isoformat()
     cards = [
-        {"model_id": "complication_risk", "name": "Cardiometabolic Complication Risk",
-         "version": "1.2.0", "trained": today, "framework": "XGBoost (gradient-boosted trees)",
-         "task": "Binary classification — P(cardiometabolic event within 12 months)",
+        {"model_id": "complication_risk", "name": "Diabetes Deterioration Risk",
+         "version": "2.0.0", "trained": today, "framework": "XGBoost (gradient-boosted trees)",
+         "task": "Binary classification — P(diabetes deterioration event within 12 months: admission for hypo/hyperglycaemia, DKA/HHS, foot infection or AKI, or progression to HbA1c ≥ 10%)",
          "training_data": f"{risk_metrics['train_rows']} patients (held-out test: {risk_metrics['test_rows']}), synthetic QHIE cohort",
          "features": RISK_FEATURES, "metrics": risk_metrics,
-         "intended_use": "Panel prioritisation, care-gap targeting, counterfactual policy simulation. Decision support only — never autonomous treatment decisions.",
-         "limitations": "Trained on synthetic data; requires clinical validation and bias audit before any production use. Treatment-flag counterfactuals assume guideline-average effect sizes.",
+         "intended_use": "Panel prioritisation for the diabetes programme, care-gap targeting, counterfactual programme simulation. Decision support only — never autonomous treatment decisions.",
+         "limitations": "Trained on synthetic data; requires clinical validation and bias audit before any production use. Programme counterfactuals assume guideline-average effect sizes.",
          "phase2": "Retrain as BigQuery ML BOOSTED_TREE_CLASSIFIER, register to Vertex AI Model Registry, serve on an online endpoint, score via the official Agent Platform /mcp/predict toolset."},
         {"model_id": "cohort_segments", "name": "Population Segmentation",
          "version": "1.0.1", "trained": today, "framework": "scikit-learn KMeans (k=4)",
@@ -234,7 +234,7 @@ def main():
          "phase2": "BigQuery ML KMEANS in SQL over the streamed FHIR export."},
         {"model_id": "patient_similarity", "name": "Patient Similarity Index",
          "version": "1.0.0", "trained": today, "framework": "scikit-learn NearestNeighbors",
-         "task": "Find clinically similar patients (standardised feature space)",
+         "task": "Find clinically similar diabetes patients (standardised feature space)",
          "training_data": "4,000 patients", "features": SIM_FEATURES, "metrics": sim_metrics,
          "intended_use": "'Patients like this one' clinical context and cohort matching.",
          "limitations": "Feature-space similarity, not outcome-matched controls.",

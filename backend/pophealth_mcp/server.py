@@ -81,8 +81,8 @@ def find_care_gaps(gap_key: str = "", facility: str = "", limit: int = 12) -> st
 
     Args:
         gap_key: optional filter — one of hba1c_overdue, retinal_screening_overdue,
-            foot_exam_overdue, acr_screening_missing, statin_gap, bp_uncontrolled,
-            glp1_sglt2_gap, hf_gdmt_gap, af_anticoagulation_gap. Empty = summary of all.
+            foot_exam_overdue, acr_screening_missing, bp_uncontrolled, glp1_sglt2_gap,
+            therapy_inertia, low_adherence, renal_protection_gap. Empty = summary of all.
         facility: optional facility name filter (substring match).
         limit: max example patients to list for a specific gap.
     """
@@ -92,7 +92,7 @@ def find_care_gaps(gap_key: str = "", facility: str = "", limit: int = 12) -> st
     sub = s[s["open_care_gaps"].str.contains(gap_key, na=False)]
     if facility:
         sub = sub[sub["facility_name"].str.contains(facility, case=False, na=False)]
-    cols = ["patient_id", "full_name", "age", "facility_name", "cv_risk_band",
+    cols = ["patient_id", "full_name", "age", "facility_name", "registry_risk_tier",
             "hba1c_latest", "care_gap_count"]
     return _j({"gap_key": gap_key, "gap_label": hie.GAP_LABELS.get(gap_key, gap_key),
                "patients_with_gap": int(len(sub)),
@@ -107,10 +107,11 @@ def compute_quality_measure(measure_id: str = "") -> str:
     """Compute HEDIS-style clinical quality measures live from the HIE.
 
     Args:
-        measure_id: one of NABD-DM-01 (HbA1c testing), NABD-DM-02 (glycaemic control),
-            NABD-DM-03 (ACR screening), NABD-CV-01 (statin therapy in high risk),
-            NABD-CV-02 (BP control), NABD-CV-03 (LDL at target),
-            NABD-CV-04 (AF anticoagulation), NABD-CV-05 (HFrEF GDMT).
+        measure_id: one of NABD-DM-01 (HbA1c testing), NABD-DM-02 (HbA1c <8%),
+            NABD-DM-03 (HbA1c >9%, lower is better), NABD-DM-04 (retinal screening),
+            NABD-DM-05 (foot exam), NABD-DM-06 (ACR screening), NABD-DM-07 (BP control),
+            NABD-DM-08 (SGLT2i/GLP-1 in eligible T2DM), NABD-DM-09 (RAAS in CKD/albuminuria),
+            NABD-DM-10 (adherence ≥80%).
             Empty = the full measure set with met/not-met vs targets.
     """
     measures = hie.quality_measures()
@@ -142,7 +143,7 @@ def simulate_policy(intervention: str, horizon_months: int = 12) -> str:
     avoided, cost avoided, programme cost and net benefit. Not a canned number.
 
     Args:
-        intervention: close_statin_gap | close_glp1_sglt2_gap | close_af_anticoag_gap |
+        intervention: sglt2_glp1_intensification | hba1c_recall_program | adherence_support_program | renal_protection_program |
             bp_control_program | combined.
         horizon_months: projection horizon (12 or 24).
     """

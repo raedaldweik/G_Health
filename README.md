@@ -6,7 +6,7 @@ orchestration, grounded RAG with citations, four real ML models, a counterfactua
 policy simulator, human-in-the-loop safety — and the ★ **first population-health MCP
 server on Google Cloud's healthcare stack**.
 
-All patient data is synthetic (4,000-patient cardiometabolic registry, 36 months of
+All patient data is synthetic (a 4,000-patient national diabetes registry, 36 months of
 longitudinal coded records). Built as a Google Cloud AI Customer Engineer demo;
 Phase 2 moves the same contracts onto Cloud Healthcare API FHIR (me-central1, Doha),
 BigQuery (ML + AI.FORECAST/TimesFM + VECTOR_SEARCH) and Agent Engine.

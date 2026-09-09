@@ -26,7 +26,7 @@ FACILITY_COORDS = {
 METRICS = {
     "pct_controlled": {"label": "% well-controlled (diabetes)", "worse_is_high": False, "fmt": "pct"},
     "gaps_per_100":   {"label": "Open care gaps per 100 patients", "worse_is_high": True, "fmt": "num"},
-    "statin_gap":     {"label": "Statin-gap patients", "worse_is_high": True, "fmt": "int"},
+    "hba1c_overdue":  {"label": "HbA1c-overdue patients", "worse_is_high": True, "fmt": "int"},
     "mean_risk_pct":  {"label": "Mean 12-mo event risk (model)", "worse_is_high": True, "fmt": "pct"},
     "mean_cost":      {"label": "Mean annual cost per patient (QAR)", "worse_is_high": True, "fmt": "qar"},
     "mean_hba1c":     {"label": "Mean HbA1c", "worse_is_high": True, "fmt": "num"},
@@ -51,7 +51,7 @@ def facility_metrics() -> list[dict]:
             "pct_controlled": round(float((dm["glycaemic_control"] == "well_controlled").mean()) * 100, 1) if len(dm) else 0.0,
             "mean_hba1c": round(float(dm["hba1c_latest"].mean()), 2) if len(dm) else None,
             "gaps_per_100": round(float(g["care_gap_count"].sum()) / max(len(g), 1) * 100, 1),
-            "statin_gap": int(g["open_care_gaps"].str.contains("statin_gap", na=False).sum()),
+            "hba1c_overdue": int(g["open_care_gaps"].str.contains("hba1c_overdue", na=False).sum()),
             "mean_risk_pct": round(float(g["risk_prob"].mean()) * 100, 1),
             "mean_cost": int(g["annual_cost_qar"].mean()),
             "admissions_12mo": int(g["admissions_12mo"].sum()),
@@ -69,10 +69,10 @@ def region_rollup() -> list[dict]:
     regions = {}
     for o in fm:
         r = regions.setdefault(o["region"], {"region": o["region"], "patients": 0, "gaps": 0.0,
-                                            "statin_gap": 0, "ctrl_w": 0.0, "risk_w": 0.0})
+                                            "hba1c_overdue": 0, "ctrl_w": 0.0, "risk_w": 0.0})
         r["patients"] += o["patients"]
         r["gaps"] += o["gaps_per_100"] * o["patients"] / 100
-        r["statin_gap"] += o["statin_gap"]
+        r["hba1c_overdue"] += o["hba1c_overdue"]
         r["ctrl_w"] += o["pct_controlled"] * o["patients"]
         r["risk_w"] += o["mean_risk_pct"] * o["patients"]
     rows = []
@@ -80,7 +80,7 @@ def region_rollup() -> list[dict]:
         n = max(r["patients"], 1)
         rows.append({"region": r["region"], "patients": r["patients"],
                      "gaps_per_100": round(r["gaps"] / n * 100, 1),
-                     "statin_gap": r["statin_gap"],
+                     "hba1c_overdue": r["hba1c_overdue"],
                      "pct_controlled": round(r["ctrl_w"] / n, 1),
                      "mean_risk_pct": round(r["risk_w"] / n, 1)})
     return sorted(rows, key=lambda x: -x["gaps_per_100"])
@@ -112,7 +112,7 @@ def map_spec(facility_names: list[str] | None = None, metric: str = "pct_control
         "facilities": [{"name": f["name"], "facility_id": f["facility_id"], "lat": f["lat"], "lon": f["lon"],
                         "region": f["region"], "type": f["type"], "patients": f["patients"],
                         "value": f[metric], "pct_controlled": f["pct_controlled"],
-                        "gaps_per_100": f["gaps_per_100"], "statin_gap": f["statin_gap"],
+                        "gaps_per_100": f["gaps_per_100"], "hba1c_overdue": f["hba1c_overdue"],
                         "mean_risk_pct": f["mean_risk_pct"]} for f in subset],
         "highlight": highlight or [],
     }

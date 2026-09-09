@@ -26,12 +26,13 @@ GAP_LABELS = {
     "retinal_screening_overdue": "Retinal screening overdue (>12 months)",
     "foot_exam_overdue": "Diabetic foot exam overdue (>12 months)",
     "acr_screening_missing": "Urine ACR screening missing (12 months)",
-    "statin_gap": "High CV risk with no statin therapy",
-    "bp_uncontrolled": "Hypertension uncontrolled (≥140/90)",
-    "glp1_sglt2_gap": "T2DM with obesity/CVD not on SGLT2i/GLP-1 RA",
-    "hf_gdmt_gap": "HFrEF missing GDMT pillar(s)",
-    "af_anticoagulation_gap": "Atrial fibrillation without anticoagulation",
+    "bp_uncontrolled": "Blood pressure uncontrolled (≥140/90)",
+    "glp1_sglt2_gap": "T2DM ≥8% with obesity/CKD not on SGLT2i or GLP-1 RA",
+    "therapy_inertia": "HbA1c ≥9% with no treatment intensification",
+    "low_adherence": "Medication adherence below 60% (PDC)",
+    "renal_protection_gap": "CKD or albuminuria without RAAS inhibitor",
 }
+TIER_ORDER = ["Low", "Moderate", "High", "Very High"]
 
 _OPS = {
     "==": lambda s, v: s == v, "!=": lambda s, v: s != v,
@@ -102,7 +103,8 @@ def describe_dataset() -> dict:
                           "columns": list(df.columns)} for name, df in t.items()},
         "note": ("patient_summary is the wide analytical table — use it for cohort filters, "
                  "group-bys and rankings. observations holds the longitudinal labs/vitals "
-                 "(obs_key ∈ hba1c,fpg,sbp,dbp,ldl,hdl,tg,egfr,acr,bmi,ef)."),
+                 "(obs_key ∈ hba1c,fpg,sbp,dbp,ldl,hdl,tg,egfr,acr,bmi). Every patient in the "
+                 "registry has diabetes (diabetes_type = type1 | type2)."),
     }
 
 
@@ -255,17 +257,29 @@ def histogram(column: str, bins: int = 10, filters: list[dict] | None = None) ->
 
 def cohort_stats() -> dict:
     s = summary()
-    dm = s[s["diabetes_type"] != "none"]
+    dm = s
+    gc = lambda k: int(s["open_care_gaps"].str.contains(k, na=False).sum())
     return {
         "patients": len(s), "with_diabetes": len(dm),
+        "pct_type1": round(float((s["diabetes_type"] == "type1").mean()) * 100, 1),
         "mean_hba1c": round(float(dm["hba1c_latest"].mean()), 2),
         "pct_well_controlled": round(float((dm["glycaemic_control"] == "well_controlled").mean()) * 100, 1),
-        "pct_uncontrolled": round(float((dm["glycaemic_control"] == "uncontrolled").mean()) * 100, 1),
-        "pct_established_cvd": round(float(s["established_cvd"].mean()) * 100, 1),
-        "mean_ascvd_10yr_pct": round(float(s["ascvd_10yr_pct"].mean()), 1),
-        "statin_gap_patients": int(s["open_care_gaps"].str.contains("statin_gap", na=False).sum()),
-        "bp_uncontrolled_patients": int(s["open_care_gaps"].str.contains("bp_uncontrolled", na=False).sum()),
-        "af_anticoag_gap_patients": int(s["open_care_gaps"].str.contains("af_anticoagulation_gap", na=False).sum()),
+        "pct_uncontrolled": round(float(dm["glycaemic_control"].isin(["uncontrolled", "poorly_controlled"]).mean()) * 100, 1),
+        "pct_poorly_controlled": round(float((dm["hba1c_latest"] >= 9).mean()) * 100, 1),
+        "pct_retinopathy": round(float(s["retinopathy"].mean()) * 100, 1),
+        "pct_neuropathy": round(float(s["neuropathy"].mean()) * 100, 1),
+        "pct_ckd": round(float(s["ckd"].mean()) * 100, 1),
+        "pct_on_sglt2_glp1": round(float(s["on_sglt2_glp1"].mean()) * 100, 1),
+        "pct_on_insulin": round(float(s["on_insulin"].mean()) * 100, 1),
+        "mean_adherence_pdc": round(float(s["adherence_pdc"].mean()), 2),
+        "hba1c_overdue_patients": gc("hba1c_overdue"),
+        "retinal_overdue_patients": gc("retinal_screening_overdue"),
+        "foot_exam_overdue_patients": gc("foot_exam_overdue"),
+        "intensification_gap_patients": gc("glp1_sglt2_gap"),
+        "therapy_inertia_patients": gc("therapy_inertia"),
+        "low_adherence_patients": gc("low_adherence"),
+        "renal_protection_gap_patients": gc("renal_protection_gap"),
+        "bp_uncontrolled_patients": gc("bp_uncontrolled"),
         "total_open_care_gaps": int(s["care_gap_count"].sum()),
         "total_annual_cost_qar": int(s["annual_cost_qar"].sum()),
         "admissions_12mo": int(s["admissions_12mo"].sum()),
@@ -313,20 +327,52 @@ def equity_breakdown() -> list[dict]:
     return g.to_dict("records")
 
 
-def cvd_risk_distribution() -> list[dict]:
-    g = summary()["cv_risk_band"].value_counts()
-    order = ["Low", "Moderate", "High", "Very High"]
-    return [{"band": b, "patients": int(g.get(b, 0))} for b in order]
+def risk_tier_distribution() -> list[dict]:
+    """The registry's rule-based tiers (what clinicians see today, before the model)."""
+    g = summary()["registry_risk_tier"].value_counts()
+    return [{"band": b, "patients": int(g.get(b, 0))} for b in TIER_ORDER]
 
 
-def cvd_prevalence() -> list[dict]:
+def complication_prevalence() -> list[dict]:
     s = summary()
-    conds = [("Hypertension", "htn"), ("Dyslipidaemia", "dyslipidemia"),
-             ("Coronary artery disease", "cad"), ("Heart failure", "hf"),
-             ("Prior stroke/TIA", "stroke"), ("Peripheral arterial disease", "pad"),
-             ("Atrial fibrillation", "af"), ("Established CVD (any)", "established_cvd")]
-    return [{"condition": label, "patients": int(s[c].sum()),
-             "prevalence_pct": round(float(s[c].mean()) * 100, 1)} for label, c in conds]
+    conds = [("Hypertension", s["htn"] == 1), ("Dyslipidaemia", s["dyslipidemia"] == 1),
+             ("Obesity (BMI ≥30)", s["bmi"] >= 30), ("Diabetic retinopathy", s["retinopathy"] == 1),
+             ("Diabetic neuropathy", s["neuropathy"] == 1), ("Chronic kidney disease", s["ckd"] == 1),
+             ("Albuminuria", s["albuminuria"] == 1), ("Foot ulcer history", s["foot_ulcer_history"] == 1)]
+    return [{"condition": label, "patients": int(m.sum()),
+             "prevalence_pct": round(float(m.mean()) * 100, 1)} for label, m in conds]
+
+
+def risk_profiles() -> dict:
+    """High-risk vs low-risk patient profile (top vs bottom model-risk decile) — the
+    diabetes programme's 'who deteriorates' view, computed from the exchange."""
+    from services import ml
+    s = summary()
+    s = s[s["consent_status"] != "restricted"].copy()
+    s["risk_prob"] = ml._score(ml._feature_frame(s))
+    hi = s[s["risk_prob"] >= s["risk_prob"].quantile(0.90)]
+    lo = s[s["risk_prob"] <= s["risk_prob"].quantile(0.10)]
+
+    def prof(g):
+        nat = g["nationality"].value_counts(normalize=True).head(3)
+        return {"patients": int(len(g)), "mean_risk_pct": round(float(g["risk_prob"].mean()) * 100, 1),
+                "mean_age": round(float(g["age"].mean()), 0), "pct_male": round(float((g["gender"] == "male").mean()) * 100, 0),
+                "mean_hba1c": round(float(g["hba1c_latest"].mean()), 1),
+                "mean_years_since_dx": round(float(g["years_since_diagnosis"].mean()), 1),
+                "mean_bmi": round(float(g["bmi"].mean()), 1),
+                "mean_egfr": round(float(g["egfr_latest"].mean()), 0),
+                "pct_retinopathy": round(float(g["retinopathy"].mean()) * 100, 0),
+                "pct_neuropathy": round(float(g["neuropathy"].mean()) * 100, 0),
+                "pct_ckd": round(float(g["ckd"].mean()) * 100, 0),
+                "pct_on_insulin": round(float(g["on_insulin"].mean()) * 100, 0),
+                "pct_on_sglt2_glp1": round(float(g["on_sglt2_glp1"].mean()) * 100, 0),
+                "mean_adherence_pdc": round(float(g["adherence_pdc"].mean()), 2),
+                "pct_hba1c_overdue": round(float((g["hba1c_days_since_test"].fillna(9999) > 183).mean()) * 100, 0),
+                "mean_admissions_12mo": round(float(g["admissions_12mo"].mean()), 2),
+                "mean_cost_qar": int(g["annual_cost_qar"].mean()),
+                "top_nationalities": [{"nationality": k, "share_pct": round(float(v) * 100, 0)} for k, v in nat.items()]}
+    return {"high_risk": prof(hi), "low_risk": prof(lo),
+            "method": "Top vs bottom decile of the deterioration model's 12-month probability, consent-restricted patients excluded."}
 
 
 def care_gap_summary() -> list[dict]:
@@ -335,15 +381,16 @@ def care_gap_summary() -> list[dict]:
     return [{"gap_key": k[0], "gap_label": k[1], "patients": int(v)} for k, v in g.items()]
 
 
-def statin_gap_panel(limit: int = 15) -> dict:
+def gap_panel(gap_key: str = "glp1_sglt2_gap", limit: int = 15) -> dict:
+    """Work list for one care gap, worst HbA1c first, with the registry-tier split."""
     s = summary()
-    gap = s[s["open_care_gaps"].str.contains("statin_gap", na=False)]
-    cols = ["patient_id", "full_name", "age", "cv_risk_band", "ascvd_10yr_pct",
-            "ldl_latest", "established_cvd", "facility_name"]
-    return {"total": int(len(gap)),
-            "by_band": groupby_aggregate("cv_risk_band",
-                                         filters=[{"column": "open_care_gaps", "op": "contains", "value": "statin_gap"}])["rows"],
-            "patients": gap.sort_values("ascvd_10yr_pct", ascending=False)
+    gap = s[s["open_care_gaps"].str.contains(gap_key, na=False)]
+    cols = ["patient_id", "full_name", "age", "registry_risk_tier", "hba1c_latest",
+            "hba1c_days_since_test", "bmi", "egfr_latest", "on_sglt2_glp1", "facility_name"]
+    return {"gap_key": gap_key, "gap_label": GAP_LABELS.get(gap_key, gap_key), "total": int(len(gap)),
+            "by_tier": groupby_aggregate("registry_risk_tier",
+                                         filters=[{"column": "open_care_gaps", "op": "contains", "value": gap_key}])["rows"],
+            "patients": gap.sort_values("hba1c_latest", ascending=False)
                            .head(limit)[cols].replace({np.nan: None}).to_dict("records")}
 
 
@@ -372,11 +419,11 @@ def cost_concentration() -> dict:
 def quality_measures() -> list[dict]:
     """HEDIS-style quality measures computed live from the HIE. Shared with the MCP server."""
     s = summary()
-    dm = s[s["diabetes_type"] != "none"]
-    hr = s[s["cv_risk_band"].isin(["High", "Very High"])]
+    dm = s
     htn = s[s["htn"] == 1]
-    af = s[s["af"] == 1]
-    hfr = s[(s["hf"] == 1) & (s["ef_latest"].notna()) & (s["ef_latest"] < 40)]
+    t2_elig = s[(s["diabetes_type"] == "type2") & (s["hba1c_latest"] >= 8)
+                & ((s["bmi"] >= 30) | (s["ckd"] == 1) | (s["albuminuria"] == 1))]
+    renal = s[(s["ckd"] == 1) | (s["albuminuria"] == 1)]
 
     def m(mid, name, num, den, target, higher_is_better=True):
         num, den = int(num), int(den)
@@ -387,20 +434,24 @@ def quality_measures() -> list[dict]:
                 "gap_patients": (den - num) if higher_is_better else num}
 
     return [
-        m("NABD-DM-01", "HbA1c testing in last 6 months (diabetes)",
+        m("NABD-DM-01", "HbA1c tested in the last 6 months",
           (dm["hba1c_days_since_test"] <= 183).sum(), len(dm), 90),
-        m("NABD-DM-02", "Glycaemic control HbA1c <8% (diabetes)",
+        m("NABD-DM-02", "Glycaemic control — HbA1c <8%",
           (dm["hba1c_latest"] < 8).sum(), len(dm), 70),
-        m("NABD-DM-03", "Urine ACR screening in last 12 months (diabetes)",
+        m("NABD-DM-03", "Poor control — HbA1c >9% (lower is better)",
+          (dm["hba1c_latest"] > 9).sum(), len(dm), 15, higher_is_better=False),
+        m("NABD-DM-04", "Retinal screening in the last 12 months",
+          (dm["retinal_screening_overdue"] == 0).sum(), len(dm), 80),
+        m("NABD-DM-05", "Diabetic foot exam in the last 12 months",
+          (dm["foot_exam_overdue"] == 0).sum(), len(dm), 80),
+        m("NABD-DM-06", "Urine ACR screening in the last 12 months",
           dm["acr_latest"].notna().sum(), len(dm), 80),
-        m("NABD-CV-01", "Statin therapy — high/very-high CV risk",
-          (hr["on_statin"] == 1).sum(), len(hr), 85),
-        m("NABD-CV-02", "BP controlled <140/90 (hypertension)",
+        m("NABD-DM-07", "BP controlled <140/90 (diabetes with hypertension)",
           (htn["bp_controlled"] == 1).sum(), len(htn), 65),
-        m("NABD-CV-03", "LDL at guideline target",
-          (s["ldl_at_target"] == 1).sum(), s["ldl_at_target"].notna().sum(), 60),
-        m("NABD-CV-04", "Anticoagulation in atrial fibrillation",
-          (af["on_anticoagulant"] == 1).sum(), len(af), 90),
-        m("NABD-CV-05", "HFrEF on beta-blocker + RAAS inhibitor",
-          ((hfr["on_beta_blocker"] == 1) & (hfr["on_raas_inhibitor"] == 1)).sum(), len(hfr), 80),
+        m("NABD-DM-08", "SGLT2i / GLP-1 RA in eligible uncontrolled T2DM",
+          (t2_elig["on_sglt2_glp1"] == 1).sum(), len(t2_elig), 60),
+        m("NABD-DM-09", "RAAS inhibitor in CKD or albuminuria",
+          (renal["on_raas_inhibitor"] == 1).sum(), len(renal), 80),
+        m("NABD-DM-10", "Medication adherence ≥80% (PDC)",
+          (dm["adherence_pdc"] >= 0.8).sum(), len(dm), 70),
     ]

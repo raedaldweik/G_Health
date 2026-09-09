@@ -1,10 +1,10 @@
 {
   "facilities": "One row per healthcare facility: facility_id, name, type (Hospital/Primary Care), region, quality factor.",
-  "patients": "Registry of 4,000 cardiometabolic patients: demographics, nationality, district, insurance, primary facility, diabetes type, consent status.",
-  "conditions": "Active problem list per patient with ICD-10-CM and SNOMED CT codes and onset dates (diabetes, hypertension, dyslipidaemia, CAD, heart failure, stroke, PAD, AF, CKD, obesity, retinopathy, neuropathy).",
-  "observations": "Longitudinal LOINC-coded labs and vitals over 36 months: HbA1c, fasting glucose, SBP/DBP, LDL/HDL/TG, eGFR, ACR, BMI, ejection fraction. Columns: patient_id, obs_key, loinc_code, effective_date, value, unit.",
-  "medications": "ATC-coded medication orders with drug class, start date, status (active/stopped) and annual cost: metformin, SGLT2i, GLP-1 RA, insulin, statins, RAAS inhibitors, beta blockers, MRA, ARNI, antiplatelets, anticoagulants.",
-  "encounters": "All visits over 36 months: outpatient, telehealth, emergency, inpatient (with length of stay and admission reason), facility, date.",
-  "care_gaps": "Open guideline-derived care gaps per patient: HbA1c overdue, retinal/foot/ACR screening, statin gap, BP uncontrolled, GLP-1/SGLT2 gap, HF GDMT gap, AF anticoagulation gap.",
-  "patient_summary": "Wide per-patient analytical table: latest labs, therapy flags (on_statin, on_sglt2_glp1, on_anticoagulant, ...), CV risk band, ASCVD 10-yr %, care gaps, 12-month utilisation, annual cost (QAR), and the event_next_12m outcome label used to train the risk model."
+  "patients": "National diabetes registry of 4,000 people living with diabetes: demographics, nationality, district, insurance, primary facility, diabetes type (type1/type2), years since diagnosis, consent status.",
+  "conditions": "Active problem list per patient with ICD-10-CM and SNOMED CT codes and onset dates: type 1/2 diabetes, hypertension, dyslipidaemia, diabetic kidney disease, obesity, retinopathy, neuropathy, foot ulcer history.",
+  "observations": "Longitudinal LOINC-coded labs and vitals over 36 months: HbA1c, fasting glucose, SBP/DBP, LDL/HDL/TG, eGFR, urine ACR, BMI. Columns: patient_id, obs_key, loinc_code, effective_date, value, unit.",
+  "medications": "ATC-coded medication orders with drug class, start date, status (active/stopped) and annual cost: metformin, SGLT2i, GLP-1 RA, sulfonylurea, DPP-4i, basal and rapid insulin, RAAS inhibitors, calcium-channel blockers, thiazide-like diuretics. Stopped orders reflect adherence.",
+  "encounters": "All visits over 36 months: outpatient diabetes follow-up, telehealth, emergency, inpatient (with length of stay and admission reason: hypoglycaemia, DKA/HHS, hyperglycaemia, foot infection, AKI, infection, elective).",
+  "care_gaps": "Open guideline-derived diabetes care gaps per patient: HbA1c overdue, retinal / foot / ACR screening, BP uncontrolled, SGLT2i/GLP-1 intensification gap, therapy inertia at HbA1c \u22659%, low adherence, renal protection gap.",
+  "patient_summary": "Wide per-patient analytical table: latest labs (hba1c_latest, hba1c_12m_ago, sbp_latest, egfr_latest, acr_latest, bmi, bmi_change_12m), complications (retinopathy, neuropathy, foot_ulcer_history, ckd, albuminuria), therapy flags (on_metformin, on_sglt2_glp1, on_insulin, on_raas_inhibitor), adherence_pdc, care gaps, 12-month utilisation, annual cost (QAR), the registry's rule-based legacy_risk_score / registry_risk_tier, and the deterioration_next_12m outcome label used to train the risk model."
 }

@@ -45,18 +45,24 @@ def _trace(events: list[dict]) -> list[dict]:
 # ─────────────────────────── clinician scenarios ───────────────────────────
 
 def _pick_deepdive_patient() -> str:
+    """A type 2 patient in the intensification gap whose HbA1c is rising — the case the
+    registry tier does not flag but the model does."""
     s = hie.summary()
-    cand = s[(s["open_care_gaps"].str.contains("statin_gap", na=False))
+    cand = s[(s["open_care_gaps"].str.contains("glp1_sglt2_gap", na=False))
              & (s["hba1c_latest"] >= 8.6) & (s["consent_status"] == "general")
-             & (s["established_cvd"] == 1)]
+             & (s["diabetes_type"] == "type2") & (s["on_metformin"] == 1)
+             & (s["hba1c_12m_ago"].notna()) & (s["hba1c_latest"] > s["hba1c_12m_ago"] + 0.4)
+             & (s["registry_risk_tier"].isin(["Low", "Moderate"]))]
+    if cand.empty:
+        cand = s[(s["open_care_gaps"].str.contains("glp1_sglt2_gap", na=False)) & (s["consent_status"] == "general")]
     if cand.empty:
         cand = s[s["consent_status"] == "general"]
     # Compelling but believable: prefer a model risk in the 25–60% range
-    for _, row in cand.sort_values("ascvd_10yr_pct", ascending=False).head(25).iterrows():
+    for _, row in cand.sort_values("hba1c_latest", ascending=False).head(40).iterrows():
         prob = ml.score_patient(row["patient_id"]).get("event_probability_12m", 0)
         if 0.25 <= prob <= 0.60:
             return row["patient_id"]
-    return cand.sort_values("ascvd_10yr_pct", ascending=False).iloc[0]["patient_id"]
+    return cand.sort_values("hba1c_latest", ascending=False).iloc[0]["patient_id"]
 
 
 async def sc_morning_briefing(persona: str):
@@ -67,7 +73,7 @@ async def sc_morning_briefing(persona: str):
         {"agent": "cohort_agent", "tool": "cohort_kpis",
          "args_summary": "registry-wide KPIs", "result_summary": f"{kpi['patients']} patients scanned"},
         {"agent": "risk_agent", "tool": "stratify_cohort_risk",
-         "args_summary": "whole registry through complication_risk v1.2.0",
+         "args_summary": "whole registry through deterioration_risk v2.0.0",
          "result_summary": f"expected 12-mo events: {strat['expected_events_12m']}"},
         {"agent": "pophealth_agent", "tool": "find_care_gaps",
          "args_summary": "all open gaps", "result_summary": f"{kpi['total_open_care_gaps']} open gaps"},
@@ -76,22 +82,21 @@ async def sc_morning_briefing(persona: str):
         yield e
     top = strat["highest_risk_patients"]
     top_lines = "\n".join(
-        f"| {p['patient_id']} | {p['age']} | {p['hba1c_latest'] or '—'} | {p['cv_risk_band']} "
+        f"| {p['patient_id']} | {p['age']} | {p['hba1c_latest'] or '—'} | {p['registry_risk_tier']} "
         f"| **{p['risk_prob']*100:.0f}%** | {p['care_gap_count']} |" for p in top)
     gap_rows = [{"gap": g["gap_label"].split(" (")[0][:26], "patients": g["patients"]}
                 for g in gaps[:6]]
-    af_gap = kpi["af_anticoag_gap_patients"]
-    answer = f"""**Overnight panel scan complete** — the model reviewed all **{kpi['patients']:,} patients** while you slept.
+    answer = f"""**Panel review complete.** The deterioration model scored all **{kpi['patients']:,} patients** in the registry overnight.
 
-**Where the risk is concentrated this morning:**
+**Patients with the highest 12-month deterioration risk:**
 
-| Patient | Age | HbA1c | CV band | 12-mo event risk | Open gaps |
+| Patient | Age | HbA1c | Registry tier | 12-mo deterioration risk | Open gaps |
 |---|---|---|---|---|---|
 {top_lines}
 
-**Registry pulse:** mean HbA1c **{kpi['mean_hba1c']}%**, {kpi['pct_well_controlled']}% well-controlled; **{kpi['statin_gap_patients']} patients** sit in the statin gap and **{af_gap}** untreated AF patients carry avoidable stroke risk.
+**Registry summary:** mean HbA1c **{kpi['mean_hba1c']}%**; **{kpi['pct_well_controlled']}%** well-controlled (<7%) and **{kpi['pct_poorly_controlled']}%** poorly controlled (≥9%). **{kpi['hba1c_overdue_patients']} patients** are overdue for an HbA1c test, **{kpi['intensification_gap_patients']}** meet the criteria for treatment intensification, and **{kpi['low_adherence_patients']}** have adherence below 60%.
 
-The model expects **≈{strat['expected_events_12m']:.0f} cardiometabolic events** across the registry in the next 12 months — the five patients above are your highest-yield reviews today. Ask me to deep-dive any of them.
+The model expects **≈{strat['expected_events_12m']:.0f} deterioration events** across the registry in the next 12 months. The five patients above are the highest-yield reviews today; ask for a deep-dive on any of them.
 """
     yield {"type": "final", "answer": answer, "trace": _trace(ev),
            "charts": [{"type": "bar", "title": "Open care gaps by type",
@@ -106,43 +111,48 @@ async def sc_patient_deepdive(persona: str):
     rec = hie.get_patient(pid)
     score = ml.score_patient(pid)
     tl = hie.patient_timeline(pid, ["hba1c"])
-    hits = rag.search("statin high intensity therapy very high cardiovascular risk LDL target", 3)
+    hits = rag.search("type 2 diabetes HbA1c above target add SGLT2 inhibitor GLP-1 receptor agonist obesity chronic kidney disease", 3)
     p = rec["patient"]
     drivers = ", ".join(f"{d['feature']} ({'+' if d['contribution']>0 else ''}{d['contribution']:.2f})"
                         for d in score["top_drivers"][:4])
+    renal = (p.get("ckd") == 1) or (p.get("albuminuria") == 1)
+    drug = "Empagliflozin 10mg daily" if (renal or (p.get("egfr_latest") or 100) >= 30) else "Semaglutide 0.25mg weekly"
+    why = ("CKD/albuminuria — renal and glycaemic benefit" if renal else "obesity with HbA1c above target")
     item = queue_service.add_draft(
-        "prescription", "Atorvastatin 40mg daily",
-        f"High-intensity statin initiation — {p['cv_risk_band']} CV risk "
-        f"(ASCVD {p['ascvd_10yr_pct']}%), LDL {p['ldl_latest']} mmol/L, no current statin. "
-        f"Model 12-mo event risk {score['event_probability_12m']*100:.0f}%.",
+        "prescription", drug,
+        f"Treatment intensification — type 2 diabetes, HbA1c {p['hba1c_latest']}% "
+        f"(from {p.get('hba1c_12m_ago') or '—'}% a year ago) on metformin without an SGLT2i/GLP-1 RA; {why}. "
+        f"BMI {p['bmi']}, eGFR {p['egfr_latest']}. Model 12-month deterioration risk {score['event_probability_12m']*100:.0f}%.",
         patient_id=pid, citation=f"{hits[0]['doc']}, p.{hits[0]['page']}" if hits else "")
     audit_svc.log("HITL·DRAFT", "action_agent",
-                  f"Prescription draft Atorvastatin 40mg for {pid} → approval queue", pid, "action")
+                  f"Prescription draft {drug} for {pid} → approval queue", pid, "action")
     ev = [
         {"agent": "cohort_agent", "tool": "get_patient", "args_summary": pid,
          "result_summary": "record + conditions + meds + encounters retrieved"},
         {"agent": "risk_agent", "tool": "score_patient_risk", "args_summary": pid,
-         "result_summary": f"event risk {score['event_probability_12m']*100:.0f}% ({score['risk_band_model']})"},
+         "result_summary": f"deterioration risk {score['event_probability_12m']*100:.0f}% ({score['risk_band_model']})"},
         {"agent": "guideline_agent", "tool": "search_guidelines",
-         "args_summary": "statin thresholds, very-high CV risk",
+         "args_summary": "intensification: SGLT2i / GLP-1 RA when HbA1c above target",
          "result_summary": f"{len(hits)} guideline passages"},
         {"agent": "action_agent", "tool": "draft_prescription",
-         "args_summary": f"Atorvastatin 40mg for {pid}",
+         "args_summary": f"{drug} for {pid}",
          "result_summary": f"draft {item['id']} → pending human approval"},
     ]
     async for e in _steps(ev):
         yield e
     meds = ", ".join(m["medication"] for m in rec["active_medications"][:6]) or "none recorded"
     conds = ", ".join(c["condition"] for c in rec["conditions"][:6])
-    answer = f"""**{p['full_name']}** ({pid}) — {p['age']}y {p['gender']}, {p['nationality']}, {p['facility_name']}.
+    traj = (f"HbA1c **{p['hba1c_latest']}%**, up from {p['hba1c_12m_ago']}% twelve months ago"
+            if p.get("hba1c_12m_ago") else f"HbA1c **{p['hba1c_latest']}%**")
+    answer = f"""**{p['full_name']}** ({pid}) — {p['age']}y {p['gender']}, {p['nationality']}, {p['facility_name']}. Type 2 diabetes for {p['years_since_diagnosis']} years.
 
-**One-minute picture:** {conds}. HbA1c **{p['hba1c_latest']}%** ({p['glycaemic_control'].replace('_',' ')}), LDL **{p['ldl_latest']} mmol/L**, eGFR {p['egfr_latest']} ({p['ckd_stage']}), BP {p['sbp_latest']:.0f}/{p['dbp_latest']:.0f}. Current therapy: {meds}.
+**Clinical picture:** {conds}. {traj} ({p['glycaemic_control'].replace('_',' ')}); BMI **{p['bmi']}**; eGFR {p['egfr_latest']} ({p['ckd_stage']}); BP {p['sbp_latest']:.0f}/{p['dbp_latest']:.0f}; medication adherence {p['adherence_pdc']*100:.0f}% of days covered. Current therapy: {meds}.
 
-**Model risk:** the deployed XGBoost model puts the 12-month cardiometabolic event probability at **{score['event_probability_12m']*100:.0f}%** ({score['risk_band_model']}). Main drivers: {drivers}.
+**Model assessment:** the deterioration model puts the 12-month probability of a deterioration event at **{score['event_probability_12m']*100:.0f}%** ({score['risk_band_model']}); the registry's rule-based tier is **{p['registry_risk_tier']}**. Main drivers: {drivers}.
 
-**The actionable gap:** {p['cv_risk_band']} cardiovascular risk (ASCVD {p['ascvd_10yr_pct']}%) with **no statin on board** — the guideline calls for high-intensity statin at this risk level (see citation).
+**The actionable gap:** HbA1c above target on metformin without an SGLT2 inhibitor or GLP-1 receptor agonist, with {why}. The national guideline recommends adding one of these agents at this point (see citation).
 
-**I have drafted Atorvastatin 40mg daily to your approval queue** (draft `{item['id']}`). Nothing is prescribed until you sign it.
+**Drafted for your approval:** {drug} (draft `{item['id']}`). Nothing is prescribed until you approve it.
 """
     chart = None
     if tl["series"].get("hba1c"):
@@ -160,26 +170,26 @@ async def sc_patient_deepdive(persona: str):
            "usage": None, "model": "scripted·live-data"}
 
 
-async def sc_statin_gap(persona: str):
-    panel = hie.statin_gap_panel(limit=8)
-    sim = ml.simulate_policy("close_statin_gap", 24)
-    hits = rag.search("statin therapy high very high risk secondary prevention", 2)
+async def sc_intensification_gap(persona: str):
+    panel = hie.gap_panel("glp1_sglt2_gap", limit=8)
+    sim = ml.simulate_policy("sglt2_glp1_intensification", 24)
+    hits = rag.search("SGLT2 inhibitor GLP-1 receptor agonist type 2 diabetes HbA1c above target obesity kidney", 2)
     pids = [p["patient_id"] for p in panel["patients"]]
     item = queue_service.add_draft(
-        "recall_campaign", f"Statin-gap recall — {panel['total']} high-risk patients",
-        "Structured recall for statin initiation review in high/very-high CV-risk patients "
-        "with no active statin, prioritised by ASCVD risk.", patient_ids=pids,
+        "recall_campaign", f"Treatment-intensification review — {panel['total']} patients",
+        "Structured review for SGLT2i / GLP-1 RA initiation in type 2 patients with HbA1c ≥8% and "
+        "obesity or kidney disease who are not yet on either agent, prioritised by HbA1c.", patient_ids=pids,
         citation=f"{hits[0]['doc']}, p.{hits[0]['page']}" if hits else "")
     audit_svc.log("HITL·DRAFT", "action_agent",
-                  f"Statin-gap recall drafted for {panel['total']} patients", severity="action")
+                  f"Intensification review drafted for {panel['total']} patients", severity="action")
     ev = [
-        {"agent": "pophealth_agent", "tool": "find_care_gaps", "args_summary": "gap_key=statin_gap",
-         "result_summary": f"{panel['total']} patients in the statin gap"},
+        {"agent": "pophealth_agent", "tool": "find_care_gaps", "args_summary": "gap_key=glp1_sglt2_gap",
+         "result_summary": f"{panel['total']} patients meet intensification criteria"},
         {"agent": "risk_agent", "tool": "simulate_policy",
-         "args_summary": "close_statin_gap, 24 months",
+         "args_summary": "sglt2_glp1_intensification, 24 months",
          "result_summary": f"{sim['expected_events_avoided']:.0f} events avoided, net {_fmt_qar(sim['net_benefit_qar'])}"},
         {"agent": "guideline_agent", "tool": "search_guidelines",
-         "args_summary": "statin secondary prevention",
+         "args_summary": "SGLT2i / GLP-1 RA intensification",
          "result_summary": f"{len(hits)} passages"},
         {"agent": "action_agent", "tool": "draft_recall",
          "args_summary": f"{panel['total']} patients, priority-ordered",
@@ -187,18 +197,19 @@ async def sc_statin_gap(persona: str):
     ]
     async for e in _steps(ev):
         yield e
-    band_rows = [{"band": r["group"], "patients": r["value"]} for r in panel["by_band"]]
-    answer = f"""**{panel['total']} patients** are at high or very-high cardiovascular risk with **no statin on board** — the single highest-yield prevention gap in the registry.
+    tier_rows = [{"tier": r["group"], "patients": r["value"]} for r in panel["by_tier"]]
+    net_word = "positive" if sim["net_benefit_qar"] > 0 else "negative"
+    answer = f"""**{panel['total']} type 2 patients** have an HbA1c of 8% or more with obesity or kidney disease and are **not on an SGLT2 inhibitor or GLP-1 receptor agonist** — the largest treatment gap in the registry.
 
-**What closing it is worth (counterfactual, 24 months):** the risk model re-scored all {sim['eligible_patients']} eligible patients with statin therapy applied — **{sim['relative_risk_reduction_pct']}% relative risk reduction**, ≈**{sim['expected_events_avoided']:.0f} events avoided**, {_fmt_qar(sim['event_cost_avoided_qar'])} of event cost avoided against {_fmt_qar(sim['programme_cost_qar'])} of therapy cost → **net {_fmt_qar(sim['net_benefit_qar'])}**.
+**What closing it is worth (counterfactual, 24 months):** the deterioration model re-scored all {sim['eligible_patients']} eligible patients with therapy applied — **{sim['relative_risk_reduction_pct']}% relative risk reduction**, ≈**{sim['expected_events_avoided']:.0f} deterioration events avoided**, {_fmt_qar(sim['event_cost_avoided_qar'])} of episode cost avoided against {_fmt_qar(sim['programme_cost_qar'])} of therapy cost → **net {_fmt_qar(sim['net_benefit_qar'])}** ({net_word} on cost alone; the clinical benefit is the case).
 
-The guideline is unambiguous at this risk level — high-intensity statin (see citation).
+The national guideline recommends adding one of these agents when HbA1c remains above target on metformin, with preference for an SGLT2 inhibitor in kidney disease (see citation).
 
-**Drafted:** a priority-ordered recall campaign for the full gap list is in your approval queue (`{item['id']}`).
+**Drafted for approval:** a priority-ordered review list for the full gap cohort is in the queue (`{item['id']}`).
 """
     yield {"type": "final", "answer": answer, "trace": _trace(ev),
-           "charts": [{"type": "bar", "title": "Statin gap by CV risk band",
-                       "data": band_rows, "xKey": "band",
+           "charts": [{"type": "bar", "title": "Intensification gap by registry risk tier",
+                       "data": tier_rows, "xKey": "tier",
                        "yKeys": [{"key": "patients", "label": "Patients"}]}],
            "citations": [{"doc": h["doc"], "file": h["file"], "page": h["page"],
                           "snippet": h["snippet"]} for h in hits],
@@ -207,40 +218,58 @@ The guideline is unambiguous at this risk level — high-intensity statin (see c
            "usage": None, "model": "scripted·live-data"}
 
 
-async def sc_af_gap(persona: str):
-    s = hie.summary()
-    af = s[s["af"] == 1]
-    gap = af[af["on_anticoagulant"] == 0]
-    hits = rag.search("atrial fibrillation anticoagulation stroke prevention DOAC", 2)
-    sim = ml.simulate_policy("close_af_anticoag_gap", 12)
+async def sc_screening_recall(persona: str):
+    s_ = hie.summary()
+    overdue = s_[s_["retinal_screening_overdue"] == 1]
+    by_fac = (overdue.groupby("facility_name").size().sort_values(ascending=False))
+    hits = rag.search("annual dilated retinal examination diabetic retinopathy screening interval", 2)
+    worst_fac = by_fac.index[0]
+    pids = overdue[overdue["facility_name"] == worst_fac].sort_values("hba1c_latest", ascending=False)["patient_id"].head(40).tolist()
+    item = queue_service.add_draft(
+        "recall_campaign", f"Retinal screening recall — {worst_fac} ({len(pids)} patients)",
+        f"Recall for annual dilated retinal examination; {int(by_fac.iloc[0])} patients at {worst_fac} are overdue. "
+        "Highest HbA1c first; combine with the foot exam where also overdue.", patient_ids=pids,
+        citation=f"{hits[0]['doc']}, p.{hits[0]['page']}" if hits else "")
+    audit_svc.log("HITL·DRAFT", "action_agent",
+                  f"Retinal screening recall drafted for {worst_fac}", severity="action")
     ev = [
-        {"agent": "cohort_agent", "tool": "filter_cohort", "args_summary": "af==1, on_anticoagulant==0",
-         "result_summary": f"{len(gap)} of {len(af)} AF patients unprotected"},
+        {"agent": "pophealth_agent", "tool": "find_care_gaps", "args_summary": "gap_key=retinal_screening_overdue",
+         "result_summary": f"{len(overdue)} patients overdue"},
+        {"agent": "cohort_agent", "tool": "groupby_aggregate", "args_summary": "overdue by facility",
+         "result_summary": f"{len(by_fac)} facilities; worst {worst_fac}"},
         {"agent": "guideline_agent", "tool": "search_guidelines",
-         "args_summary": "AF anticoagulation", "result_summary": f"{len(hits)} passages"},
-        {"agent": "risk_agent", "tool": "simulate_policy",
-         "args_summary": "close_af_anticoag_gap",
-         "result_summary": f"{sim['expected_events_avoided']:.1f} events avoided/yr"},
+         "args_summary": "retinal screening interval", "result_summary": f"{len(hits)} passages"},
+        {"agent": "action_agent", "tool": "draft_recall",
+         "args_summary": f"{len(pids)} patients at {worst_fac}",
+         "result_summary": f"draft {item['id']} → pending approval"},
     ]
     async for e in _steps(ev):
         yield e
-    worst = gap.sort_values("ascvd_10yr_pct", ascending=False).head(5)
-    rows = "\n".join(f"| {r.patient_id} | {r.age} | {r.cv_risk_band} | {r.facility_name} |"
-                     for r in worst.itertuples())
-    answer = f"""**{len(gap)} of {len(af)} atrial fibrillation patients ({len(gap)/len(af)*100:.0f}%) have no anticoagulation** — an avoidable stroke-prevention gap.
+    both = int(((s_["retinal_screening_overdue"] == 1) & (s_["foot_exam_overdue"] == 1)).sum())
+    rows = "\n".join(f"| {fac.replace(' Health Center', ' HC')} | {n} | {overdue[overdue['facility_name']==fac]['hba1c_latest'].mean():.1f}% |"
+                     for fac, n in by_fac.head(5).items())
+    answer = f"""**{len(overdue):,} of {len(s_):,} patients ({len(overdue)/len(s_)*100:.0f}%) are overdue for retinal screening**, and {both} of them are also overdue for a foot examination.
 
-| Patient | Age | CV band | Facility |
-|---|---|---|---|
+**Where the backlog sits:**
+
+| Facility | Overdue | Mean HbA1c of the overdue |
+|---|---|---|
 {rows}
 
-Guideline: direct oral anticoagulation is first-line for stroke prevention in AF unless contraindicated (see citation). The counterfactual model projects **{sim['expected_events_avoided']:.1f} events avoided per year** if the gap is closed (net {_fmt_qar(sim['net_benefit_qar'])}).
+The national guideline calls for a dilated retinal examination at diagnosis and at least annually thereafter, more often when retinopathy is present (see citation).
 
-Say the word and I'll draft the anticoagulation reviews to your queue — every one requires your signature.
+**Drafted for approval:** a recall campaign for the {len(pids)} highest-HbA1c overdue patients at {worst_fac} is in the queue (`{item['id']}`). The remaining facilities can be drafted on request.
 """
-    yield {"type": "final", "answer": answer, "trace": _trace(ev), "charts": [],
+    yield {"type": "final", "answer": answer, "trace": _trace(ev),
+           "charts": [{"type": "bar", "title": "Retinal screening overdue — by facility",
+                       "data": [{"facility": f.replace(" Health Center", "").replace(" Hospital", " H."), "patients": int(n)}
+                                for f, n in by_fac.head(10).items()],
+                       "xKey": "facility", "yKeys": [{"key": "patients", "label": "Patients overdue"}]}],
            "citations": [{"doc": h["doc"], "file": h["file"], "page": h["page"],
                           "snippet": h["snippet"]} for h in hits],
-           "actions": [], "usage": None, "model": "scripted·live-data"}
+           "actions": [{"draft_id": item["id"], "tool": "draft_recall",
+                        "status": "pending_human_approval"}],
+           "usage": None, "model": "scripted·live-data"}
 
 
 # ─────────────────────────── executive scenarios ───────────────────────────
@@ -265,15 +294,15 @@ async def sc_national_picture(persona: str):
     flagged = [f for f in fac if f["status"] == "flagged"]
     fac_map = geo.map_spec(None, "pct_controlled", "Where control is won and lost — % well-controlled by facility",
                            highlight=[f["facility_name"] for f in flagged])
-    answer = f"""**National glycaemic picture** — {kpi['patients']:,} patients on the exchange.
+    answer = f"""**National glycaemic picture** — {kpi['patients']:,} patients in the diabetes registry ({kpi['pct_type1']}% type 1).
 
-Mean HbA1c is **{kpi['mean_hba1c']}%** ({'down' if yoy<0 else 'up'} {abs(yoy):.2f}pp year-on-year); **{kpi['pct_well_controlled']}%** of the diabetes cohort is well-controlled and **{kpi['pct_uncontrolled']}%** remains uncontrolled.
+Mean HbA1c is **{kpi['mean_hba1c']}%** ({'down' if yoy<0 else 'up'} {abs(yoy):.2f} percentage points year-on-year). **{kpi['pct_well_controlled']}%** of patients are well-controlled (<7%) and **{kpi['pct_poorly_controlled']}%** are poorly controlled (≥9%).
 
-**Facility spread is the real story:** control ranges from **{fac[-1]['pct_controlled']:.0f}%** ({fac[-1]['facility_name']}) to **{fac[0]['pct_controlled']:.0f}%** ({fac[0]['facility_name']}). {len(flagged)} facilities sit below the flag line — {', '.join(f['facility_name'] for f in flagged[:3])} — that spread is an operational lever, not a clinical mystery.
+**Facility spread:** control ranges from **{fac[-1]['pct_controlled']:.0f}%** ({fac[-1]['facility_name']}) to **{fac[0]['pct_controlled']:.0f}%** ({fac[0]['facility_name']}). {len(flagged)} facilities are below the flag line — {', '.join(f['facility_name'] for f in flagged[:3])}. That spread is an operational lever.
 
-One in three patients (**{kpi['pct_established_cvd']}%**) already has established cardiovascular disease — this is a cardiometabolic programme, not a glucose programme.
+**Complication burden:** {kpi['pct_retinopathy']}% of patients have retinopathy, {kpi['pct_neuropathy']}% neuropathy and {kpi['pct_ckd']}% chronic kidney disease; {kpi['pct_on_sglt2_glp1']}% are on an SGLT2 inhibitor or GLP-1 receptor agonist.
 
-**And it has a geography.** The map shows it: control is a Doha phenomenon — the flagged facilities sit in the north (Al Shamal, Al Khor) and in the Industrial Area (Hazm Mebaireek), where the expatriate workforce lives. Distance from the capital and the equity gradient are the same line.
+**Geography:** the map shows control concentrated in Doha. The flagged facilities are in the north (Al Shamal, Al Khor) and around the Industrial Area (Hazm Mebaireek), where the expatriate workforce lives — distance from the capital and the access gradient follow the same line.
 """
     yield {"type": "final", "answer": answer, "trace": _trace(ev),
            "charts": [
@@ -329,8 +358,7 @@ The '{segs[0]['segment']}' segment is where case-management pays for itself; the
 
 
 async def sc_policy_sim(persona: str):
-    sims = [ml.simulate_policy(k, 24) for k in
-            ["close_statin_gap", "close_glp1_sglt2_gap", "close_af_anticoag_gap", "bp_control_program"]]
+    sims = [ml.simulate_policy(k, 24) for k in ml.INTERVENTIONS]
     comb = ml.simulate_policy("combined", 24)
     ev = [
         {"agent": "pophealth_agent", "tool": "simulate_policy",
@@ -345,20 +373,22 @@ async def sc_policy_sim(persona: str):
         f"| {s['label'][:48]} | {s['eligible_patients']:,} | {s['relative_risk_reduction_pct']}% "
         f"| {s['expected_events_avoided']:.0f} | {_fmt_qar(s['programme_cost_qar'])} | **{_fmt_qar(s['net_benefit_qar'])}** |"
         for s in sims)
-    answer = f"""**Policy simulation — four interventions, 24-month horizon.** This is a true counterfactual: every eligible patient is re-scored through the deployed risk model with the therapy applied; nothing here is a canned number.
+    best = max(sims, key=lambda x: x["net_benefit_qar"]); worst = min(sims, key=lambda x: x["net_benefit_qar"])
+    most_events = max(sims, key=lambda x: x["expected_events_avoided"])
+    answer = f"""**Programme simulation — five candidate programmes, 24-month horizon.** Every eligible patient is re-scored through the deployed deterioration model with the programme applied; the figures are computed, not assumed.
 
-| Intervention | Eligible | RRR | Events avoided | Programme cost | Net benefit |
+| Programme | Eligible | Relative risk reduction | Events avoided | Programme cost | Net benefit |
 |---|---|---|---|---|---|
 {rows}
 
-**All four combined: ≈{comb['expected_events_avoided']:.0f} events avoided and a net {_fmt_qar(comb['net_benefit_qar'])}** over 24 months (event episodes costed at QAR 32k).
+**All five combined: ≈{comb['expected_events_avoided']:.0f} deterioration events avoided and a net {_fmt_qar(comb['net_benefit_qar'])}** over 24 months (episodes costed at QAR {ml.EVENT_COST_QAR:,}).
 
-The statin-gap closure is the highest-yield-per-riyal lever; the SGLT2/GLP-1 programme costs more but compounds through glycaemic control. Phase 2 runs this same simulation as BigQuery `ML.PREDICT` over the counterfactual cohort — identical logic, warehouse scale.
+**Reading the table:** {best['label'].split(':')[0]} delivers the largest net benefit; {most_events['label'].split(':')[0].lower()} avoids the most events. {worst['label'].split(':')[0]} does not pay back within 24 months on cost alone — its case rests on clinical outcomes, which this model does not price. Phase 2 runs the same simulation as BigQuery `ML.PREDICT` over the counterfactual cohort.
 """
     yield {"type": "final", "answer": answer, "trace": _trace(ev),
            "charts": [{"type": "bar",
-                       "title": "Net benefit by intervention (24 months)",
-                       "data": [{"intervention": s["intervention"].replace("close_", "").replace("_", " "),
+                       "title": "Net benefit by programme (24 months)",
+                       "data": [{"intervention": s["intervention"].replace("_program", "").replace("_", " "),
                                  "net_qar_m": round(s["net_benefit_qar"] / 1e6, 2)} for s in sims],
                        "xKey": "intervention",
                        "yKeys": [{"key": "net_qar_m", "label": "Net benefit (QAR M)"}]}],
@@ -421,17 +451,21 @@ async def sc_quality(persona: str):
     async for e in _steps(ev):
         yield e
     def status_cell(m):
-        return "✅ met" if m["met"] else f"❌ {m['gap_patients']} patients short"
+        return "met" if m["met"] else f"not met — {m['gap_patients']} patients"
     rows = "\n".join(
         f"| {m['measure_id']} | {m['name'][:44]} | **{m['rate_pct']}%** | {m['target_pct']}% "
         f"| {status_cell(m)} |" for m in measures)
-    answer = f"""**Clinical quality scorecard** — every measure computed live from the HIE by the population-health MCP server:
+    short = sorted([m for m in measures if not m["met"]],
+                   key=lambda m: -(abs(m["rate_pct"] - m["target_pct"])))[:2]
+    focus = " and ".join(f"{m['name'].split(' (')[0].lower()} ({m['rate_pct']}% vs a {m['target_pct']}% target)" for m in short)
+    n_pat = hie.cohort_stats()["patients"]
+    answer = f"""**Diabetes quality scorecard** — {len(measures)} measures computed live for {n_pat:,} patients by the population-health MCP server:
 
 | Measure | Description | Rate | Target | Status |
 |---|---|---|---|---|
 {rows}
 
-The two furthest from target — statin therapy in high-risk patients and HFrEF guideline-directed therapy — are exactly the gaps with the strongest evidence base. That is where the next riyal goes.
+The measures furthest from target are {focus}. Each unmet measure is available as a patient-level work list.
 """
     yield {"type": "final", "answer": answer, "trace": _trace(ev),
            "charts": [{"type": "bar", "title": "Quality measures — rate vs target",
@@ -446,17 +480,17 @@ The two furthest from target — statin therapy in high-risk patients and HFrEF 
 SCENARIOS = {
     "clinician": [
         {"id": "c_briefing", "tag": "C1", "label": "Morning panel briefing",
-         "question": "Give me my morning briefing — scan the panel and tell me who needs attention today.",
+         "question": "Give me my morning briefing — review the panel and tell me who needs attention today.",
          "runner": sc_morning_briefing},
-        {"id": "c_deepdive", "tag": "C2", "label": "Patient deep-dive + draft Rx",
-         "question": "Deep-dive my highest-risk statin-gap patient: summarise, score their risk, check the guideline, and draft what's needed.",
+        {"id": "c_deepdive", "tag": "C2", "label": "Patient review + draft prescription",
+         "question": "Review my highest-risk patient whose HbA1c is rising on metformin alone: summarise, score the risk, check the guideline, and draft what is needed.",
          "runner": sc_patient_deepdive},
-        {"id": "c_statin", "tag": "C3", "label": "Statin gap panel",
-         "question": "How many high-risk patients aren't on a statin, what is closing that gap worth, and draft the recall.",
-         "runner": sc_statin_gap},
-        {"id": "c_af", "tag": "C4", "label": "AF anticoagulation gap",
-         "question": "Which atrial fibrillation patients have no anticoagulation, and what does the guideline say?",
-         "runner": sc_af_gap},
+        {"id": "c_intensify", "tag": "C3", "label": "Treatment intensification gap",
+         "question": "How many type 2 patients with HbA1c above 8% are not on an SGLT2 inhibitor or GLP-1 agonist, what is closing that gap worth, and draft the review list.",
+         "runner": sc_intensification_gap},
+        {"id": "c_screening", "tag": "C4", "label": "Retinal screening recall",
+         "question": "Which patients are overdue for retinal screening, where is the backlog, and draft the recall.",
+         "runner": sc_screening_recall},
     ],
     "executive": [
         {"id": "e_national", "tag": "E1", "label": "National glycaemic picture",
@@ -465,8 +499,8 @@ SCENARIOS = {
         {"id": "e_cost", "tag": "E2", "label": "Cost concentration & segments",
          "question": "Where is our spend concentrated, and what do the population segments look like?",
          "runner": sc_cost},
-        {"id": "e_sim", "tag": "E3", "label": "Policy simulation (ML)",
-         "question": "Simulate our four candidate interventions over 24 months and rank them by net benefit.",
+        {"id": "e_sim", "tag": "E3", "label": "Programme simulation (ML)",
+         "question": "Simulate our five candidate programmes over 24 months and rank them by net benefit.",
          "runner": sc_policy_sim},
         {"id": "e_equity", "tag": "E4", "label": "Equity analysis",
          "question": "Show me the equity picture — outcomes by nationality.",
@@ -474,7 +508,7 @@ SCENARIOS = {
         {"id": "e_forecast", "tag": "E5", "label": "Demand forecast",
          "question": "Forecast outpatient demand for the next 12 months.",
          "runner": sc_forecast},
-        {"id": "e_quality", "tag": "E6", "label": "Quality scorecard (MCP)",
+        {"id": "e_quality", "tag": "E6", "label": "Diabetes quality scorecard (MCP)",
          "question": "Compute the clinical quality scorecard against our targets.",
          "runner": sc_quality},
     ],

@@ -119,7 +119,7 @@ export default function LandingPage({ go }) {
   const enc = rows('encounters');
   const gaps = rows('care_gaps');
   const costM = ov ? parseFloat(kpi[5]?.value) : null;
-  const statinGap = ov ? kpi[4]?.value : null;
+  const overdue = ov ? kpi[4]?.value : null;
   const auc = risk?.auc, legacy = risk?.legacy_auc;
   const p = hero?.patient;
 
@@ -131,31 +131,31 @@ export default function LandingPage({ go }) {
         <section className="hero">
           <img src="/google-g.svg" alt="" className="hero-g" />
           <div className="relative z-[1]">
-            <div className="section-eyebrow reveal d1">A Tuesday morning in Doha · one question, six agents</div>
+            <div className="section-eyebrow reveal d1">National diabetes registry · Qatar Health Information Exchange</div>
             <h1 className="hero-title reveal d2">
-              The nation's pulse,<br />
-              <span className="hero-grad">made intelligible.</span>
+              Diabetes population health,<br />
+              <span className="hero-grad">answered from the exchange.</span>
             </h1>
             <p className="hero-lede mt-5 reveal d3">
-              Nabd sits on top of Qatar's Health Information Exchange and lets a clinician — or a minister —
-              simply <b>ask</b>. A Gemini supervisor routes the question to five specialist agents that query
-              the exchange, cite the national guidelines, score four real machine-learning models, simulate
-              policy, and draft actions a human signs. Every answer is traceable to the row and the page.
+              Nabd sits on Qatar's Health Information Exchange. Clinicians and ministry leaders ask questions in
+              plain language; a Gemini supervisor routes each question to specialist agents that query the exchange,
+              cite the national diabetes guidelines, run the deterioration-risk model and draft actions for a clinician
+              to approve. Every answer is traceable to the data row and the guideline page.
             </p>
             <div className="flex items-center gap-3 mt-7 reveal d4">
-              <button className="btn-primary" onClick={() => go('assistant')}>Open the Assistant →</button>
-              <button className="btn-secondary" onClick={() => go('overview')}>See the dashboards</button>
+              <button className="btn-primary" onClick={() => go('assistant')}>Open the Assistant</button>
+              <button className="btn-secondary" onClick={() => go('overview')}>Registry dashboards</button>
             </div>
             <p className="text-[11px] mt-5 reveal d5" style={{ color: 'var(--text-faint)' }}>
-              Gemini · Agent Development Kit · Model Context Protocol · gemini-embedding · Phase 2 on Cloud Healthcare API + BigQuery + Agent Engine, me-central1
+              Gemini · Agent Development Kit · Model Context Protocol · gemini-embedding-001 · Phase 2: Cloud Healthcare API, BigQuery and Vertex AI in me-central1 (Doha)
             </p>
           </div>
 
           <div className="relative z-[1] reveal d3">
             <div className="glass-card p-5">
               <div className="flex items-center justify-between mb-2">
-                <span className="ecg-live">Live · national pulse</span>
-                <span className="text-[10px] font-bold" style={{ color: 'var(--text-faint)' }}>36 months · 8 tables · FHIR R4-ready</span>
+                <span className="ecg-live">Live · registry summary</span>
+                <span className="text-[10px] font-bold" style={{ color: 'var(--text-faint)' }}>36 months · 8 tables · FHIR R4 export</span>
               </div>
               <div className="ecg-wrap">
                 <svg viewBox="0 0 640 160" style={{ width: '100%', height: '100%' }} preserveAspectRatio="none">
@@ -176,34 +176,35 @@ export default function LandingPage({ go }) {
               </div>
             </div>
             <div className="flex items-center gap-2 mt-3 justify-end">
-              <span className="badge badge-red">{statinGap ?? '—'} in the statin gap</span>
+              <span className="badge badge-red">{overdue ?? '—'} HbA1c tests overdue</span>
               <span className="badge badge-amber">{gaps?.toLocaleString() ?? '—'} open care gaps</span>
-              <span className="badge badge-green">100% synthetic · zero PHI</span>
+              <span className="badge badge-green">Synthetic data · no PHI</span>
             </div>
           </div>
         </section>
 
         {ov && <KpiStrip items={kpi.map((k, i) => ({
-          ...k, icon: ['users', 'droplet', 'check', 'heart', 'alert', 'coins'][i],
+          ...k, icon: ['users', 'droplet', 'check', 'alert', 'activity', 'coins'][i],
           tone: ['sand', 'rose', 'green', 'maroon', 'red', 'gold'][i],
         }))} />}
 
         {/* ── AGENTS ── */}
         <section className="landing-section grid grid-cols-2 gap-10 items-center">
           <div>
-            <div className="section-eyebrow">Multi-agent · Google Agent Development Kit</div>
-            <h2 className="section-title">Six agents. One question.<br />Every hop on the record.</h2>
+            <div className="section-eyebrow">Multi-agent system · Google Agent Development Kit</div>
+            <h2 className="section-title">A supervisor and five specialists,<br />with a complete audit trail.</h2>
             <p className="section-sub mt-3">
-              The supervisor never guesses. It delegates: the cohort agent queries the exchange, the guideline
-              agent retrieves and cites, the risk agent scores the deployed models, the population-health agent
-              speaks to our MCP server, and the action agent drafts — into a queue a clinician must sign.
+              The supervisor plans and composes; it does not invent figures. The data specialist queries the exchange,
+              the guideline specialist retrieves and cites, the risk specialist runs the deployed models, the
+              population-health specialist works through the MCP server, and the action specialist drafts into a queue
+              that a clinician must approve.
             </p>
             <div className="mt-5 space-y-3">
               {[
-                ['You ask', 'in English or Arabic, typed or spoken.'],
-                ['Gemini plans', 'and routes to the specialists it needs — you watch it happen live.'],
-                ['Tools do the work', 'HIE queries, guideline retrieval, model scoring, an MCP hop, a draft.'],
-                ['You get a cited answer', 'with charts, guideline pages, and an action waiting for your signature.'],
+                ['The question', 'is asked in English or Arabic, typed or spoken.'],
+                ['The supervisor plans', 'and routes to the specialists it needs; each step is shown as it happens.'],
+                ['Tools do the work', 'exchange queries, guideline retrieval, model scoring, an MCP call, a draft.'],
+                ['The answer is cited', 'with charts, guideline pages, and any action waiting for approval.'],
               ].map(([t, d], i) => (
                 <div key={i} className="flex items-start gap-3">
                   <span className="step-num">{i + 1}</span>
@@ -220,7 +221,7 @@ export default function LandingPage({ go }) {
           <div className="glass-card p-6">
             <Constellation />
             <p className="text-[10.5px] text-center mt-2" style={{ color: 'var(--text-faint)' }}>
-              ★ The population-health agent connects over MCP — the first population-health MCP server on Google Cloud's healthcare stack.
+              The population-health specialist connects over the Model Context Protocol to a server built for this programme: care gaps, quality measures, stratification and simulation.
             </p>
           </div>
         </section>
@@ -228,19 +229,20 @@ export default function LandingPage({ go }) {
         {/* ── MODELS ── */}
         <section className="landing-section grid grid-cols-2 gap-10 items-center">
           <div className="glass-card p-5" style={{ height: 330 }}>
-            <p className="panel-title mb-2">Complication-risk model · held-out AUC</p>
+            <p className="panel-title mb-2">Deterioration-risk model · held-out AUC</p>
             {auc && (
-              <Bar3D data={[{ label: 'Legacy registry score', value: +(legacy * 100).toFixed(1) },
+              <Bar3D data={[{ label: 'Registry rule-based tier', value: +(legacy * 100).toFixed(1) },
                             { label: 'Nabd XGBoost', value: +(auc * 100).toFixed(1) }]} unit="%" />
             )}
           </div>
           <div>
-            <div className="section-eyebrow">Real machine learning · no mocked numbers</div>
-            <h2 className="section-title">Four models, trained on the exchange.<br />One of them beats the registry by {auc && legacy ? `${((auc - legacy) * 100).toFixed(0)} points` : '…'}.</h2>
+            <div className="section-eyebrow">Machine learning · evaluated on held-out patients</div>
+            <h2 className="section-title">Four models trained on the exchange.<br />The deterioration model outperforms the registry tier by {auc && legacy ? `${((auc - legacy) * 100).toFixed(1)} points` : '…'}.</h2>
             <p className="section-sub mt-3">
-              The complication-risk model learns what the rules-based registry score ignores — renal function,
-              lipids, smoking, treatment status — and explains every score with SHAP drivers. The same model powers
-              the counterfactual policy simulator: flip the therapy, re-score the cohort, cost the difference.
+              The deterioration-risk model learns what the rule-based registry tier cannot see: kidney function, the
+              HbA1c trajectory, adherence, missed monitoring and complication status. Every score is explained with
+              feature contributions. The same model drives the programme simulator: apply the intervention to the
+              eligible cohort, re-score, and cost the difference.
             </p>
             <div className="grid grid-cols-2 gap-2.5 mt-5">
               {(risk?.model_cards || []).map((c) => (
@@ -256,8 +258,8 @@ export default function LandingPage({ go }) {
 
         {/* ── THE STORY ── */}
         <section className="landing-section">
-          <div className="section-eyebrow">The story we follow</div>
-          <h2 className="section-title">Meet {p ? p.full_name.split(' ')[0] : 'the patient'}. She is why this exists.</h2>
+          <div className="section-eyebrow">The patient the demonstration follows</div>
+          <h2 className="section-title">{p ? p.full_name : 'A patient'} — flagged by the model, not by the registry tier.</h2>
           <div className="grid grid-cols-[1.2fr_1fr] gap-6 mt-5 items-stretch">
             <div className="glass-card p-5 flex gap-5 items-center">
               <div className="w-16 h-16 rounded-2xl shrink-0 flex items-center justify-center text-white text-[18px] font-extrabold"
@@ -272,8 +274,8 @@ export default function LandingPage({ go }) {
                   {(hero?.conditions || []).slice(0, 6).map((c) => <span key={c.condition} className="chip-cond">{c.condition}</span>)}
                 </div>
                 <div className="grid grid-cols-4 gap-3 mt-3">
-                  {[['HbA1c', p ? `${p.hba1c_latest}%` : '—'], ['LDL', p ? `${p.ldl_latest} mmol/L` : '—'],
-                    ['BP', p ? `${Math.round(p.sbp_latest)}/${Math.round(p.dbp_latest)}` : '—'], ['ASCVD 10y', p ? `${p.ascvd_10yr_pct}%` : '—']].map(([k, v]) => (
+                  {[['HbA1c', p ? `${p.hba1c_latest}%` : '—'], ['HbA1c 12 mo ago', p ? `${p.hba1c_12m_ago ?? '—'}%` : '—'],
+                    ['BMI · eGFR', p ? `${p.bmi} · ${Math.round(p.egfr_latest)}` : '—'], ['Registry tier', p ? p.registry_risk_tier : '—']].map(([k, v]) => (
                     <div key={k}>
                       <p className="text-[9px] font-bold tracking-widest uppercase" style={{ color: 'var(--text-faint)' }}>{k}</p>
                       <p className="text-[14px] font-extrabold" style={{ color: 'var(--text)' }}>{v}</p>
@@ -288,20 +290,22 @@ export default function LandingPage({ go }) {
               </div>
               <div className="text-center shrink-0">
                 <RiskRing pct={hero?.risk?.event_probability_12m ?? 0} />
-                <p className="text-[9px] font-bold tracking-widest uppercase" style={{ color: 'var(--text-faint)' }}>12-mo event risk</p>
+                <p className="text-[9px] font-bold tracking-widest uppercase" style={{ color: 'var(--text-faint)' }}>12-mo deterioration risk</p>
               </div>
             </div>
             <div className="glass-card p-5 flex flex-col justify-between">
               <div>
                 <p className="text-[12.5px] leading-relaxed" style={{ color: 'var(--text-md)' }}>
                   {p ? (
-                    <>She has had a stroke, her LDL is <b>{p.ldl_latest}</b>, her blood pressure is <b>{Math.round(p.sbp_latest)}/{Math.round(p.dbp_latest)}</b> — and she is on <b>aspirin alone</b>.
-                    The registry never flagged her. The model puts her 12-month event risk at <b>{Math.round((hero?.risk?.event_probability_12m ?? 0) * 100)}%</b>, and
-                    the guideline is unambiguous. Nabd finds her at 6am, cites the page, and drafts the statin — for Dr. Al-Mansoori to sign.</>
-                  ) : 'Loading her story…'}
+                    <>HbA1c has risen from <b>{p.hba1c_12m_ago ?? '—'}%</b> to <b>{p.hba1c_latest}%</b> in twelve months on <b>metformin alone</b>
+                    {p.ckd || p.albuminuria ? <>, with early kidney involvement (eGFR {Math.round(p.egfr_latest)})</> : <>, with a BMI of {p.bmi}</>}.
+                    The registry's rule-based tier lists {p.gender === 'female' ? 'her' : 'him'} as <b>{p.registry_risk_tier}</b>. The deterioration model puts the 12-month
+                    risk at <b>{Math.round((hero?.risk?.event_probability_12m ?? 0) * 100)}%</b>, and the national guideline recommends adding an SGLT2 inhibitor or
+                    GLP-1 receptor agonist at this point. Nabd surfaces the case, cites the guideline page, and drafts the prescription for Dr. Al-Mansoori to approve.</>
+                  ) : 'Loading the case…'}
                 </p>
               </div>
-              <button className="btn-primary mt-4 self-start" onClick={() => go('assistant')}>Open her case in the Assistant →</button>
+              <button className="btn-primary mt-4 self-start" onClick={() => go('assistant')}>Open the case in the Assistant</button>
             </div>
           </div>
         </section>
@@ -309,19 +313,19 @@ export default function LandingPage({ go }) {
         {/* ── BUILT ON GOOGLE ── */}
         <section className="landing-section pb-8">
           <div className="section-eyebrow">Built on Google Cloud</div>
-          <h2 className="section-title">Phase 1 runs today. Phase 2 is the same contracts, Google-native.</h2>
+          <h2 className="section-title">Phase 1 runs today. Phase 2 moves the same contracts to Google Cloud in Doha.</h2>
           <div className="flex flex-wrap gap-2 mt-4">
             {[['Gemini 3', '#8A1538'], ['Agent Development Kit', '#8A1538'], ['Model Context Protocol', '#b8862e'],
               ['gemini-embedding-001', '#8A1538'], ['Web Speech · EN/AR', '#8a6a4e']].map(([n, c]) => (
               <span key={n} className="gcloud-chip"><span className="dot" style={{ background: c }} />{n}</span>
             ))}
-            {['Cloud Healthcare API · FHIR R4', 'BigQuery ML · TimesFM', 'Vertex AI endpoint · /mcp/predict',
-              'RAG Engine', 'Agent Engine · A2A', 'Cloud Run', 'me-central1 · Doha'].map((n) => (
+            {['Cloud Healthcare API · FHIR R4', 'BigQuery · BigQuery ML', 'Vertex AI endpoint',
+              'RAG Engine', 'Cloud Run · me-central1', 'Assured Workloads · Qatar Data Boundary'].map((n) => (
               <span key={n} className="gcloud-chip phase2"><span className="dot" style={{ background: '#94a3b8' }} />{n} · phase 2</span>
             ))}
           </div>
           <p className="text-[10.5px] mt-6" style={{ color: 'var(--text-faint)' }}>
-            Signed in as {personaInfo.name} — switch persona top-right. All patient data is synthetic; not for clinical use.
+            Signed in as {personaInfo.name}. Switch persona at the top right. All patient data is synthetic and not for clinical use.
           </p>
         </section>
       </div>

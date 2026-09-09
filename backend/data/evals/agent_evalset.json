@@ -2,56 +2,192 @@
   "version": "1.0",
   "description": "Golden evaluation set for the Nabd agent. Each case runs through the agent (live Gemini) or the scripted engine and is scored on tool trajectory, groundedness (citations present when clinical), action safety (drafts go to the queue), numeric faithfulness (the answer quotes the true registry numbers) and latency/cost.",
   "cases": [
-    {"id": "c_briefing", "persona": "clinician", "scenario_id": "c_briefing",
-     "question": "Give me my morning briefing — scan the panel and tell me who needs attention today.",
-     "expected_tools": ["cohort_kpis", "stratify_cohort_risk", "find_care_gaps"],
-     "expected_agents": ["cohort_agent", "risk_agent", "pophealth_agent"],
-     "requires_citation": false, "requires_action": false,
-     "fact_checks": ["patients", "statin_gap_patients"]},
-    {"id": "c_deepdive", "persona": "clinician", "scenario_id": "c_deepdive",
-     "question": "Deep-dive my highest-risk statin-gap patient: summarise, score their risk, check the guideline, and draft what's needed.",
-     "expected_tools": ["get_patient", "score_patient_risk", "search_guidelines", "draft_prescription"],
-     "expected_agents": ["cohort_agent", "risk_agent", "guideline_agent", "action_agent"],
-     "requires_citation": true, "requires_action": true, "fact_checks": []},
-    {"id": "c_statin", "persona": "clinician", "scenario_id": "c_statin",
-     "question": "How many high-risk patients aren't on a statin, what is closing that gap worth, and draft the recall.",
-     "expected_tools": ["find_care_gaps", "simulate_policy", "search_guidelines", "draft_recall"],
-     "expected_agents": ["pophealth_agent", "risk_agent", "guideline_agent", "action_agent"],
-     "requires_citation": true, "requires_action": true, "fact_checks": ["statin_gap_patients"]},
-    {"id": "c_af", "persona": "clinician", "scenario_id": "c_af",
-     "question": "Which atrial fibrillation patients have no anticoagulation, and what does the guideline say?",
-     "expected_tools": ["filter_cohort", "search_guidelines"],
-     "expected_agents": ["cohort_agent", "guideline_agent"],
-     "requires_citation": true, "requires_action": false, "fact_checks": ["af_anticoag_gap_patients"]},
-    {"id": "e_national", "persona": "executive", "scenario_id": "e_national",
-     "question": "Give me the national glycaemic picture — trend, control rates, and facility spread.",
-     "expected_tools": ["cohort_kpis", "facility_benchmark"],
-     "expected_agents": ["cohort_agent"],
-     "requires_citation": false, "requires_action": false, "fact_checks": ["mean_hba1c", "pct_well_controlled"]},
-    {"id": "e_cost", "persona": "executive", "scenario_id": "e_cost",
-     "question": "Where is our spend concentrated, and what do the population segments look like?",
-     "expected_tools": ["cost_concentration", "segment_summary"],
-     "expected_agents": ["cohort_agent", "risk_agent"],
-     "requires_citation": false, "requires_action": false, "fact_checks": ["total_annual_cost_qar_m"]},
-    {"id": "e_sim", "persona": "executive", "scenario_id": "e_sim",
-     "question": "Simulate our four candidate interventions over 24 months and rank them by net benefit.",
-     "expected_tools": ["simulate_policy"],
-     "expected_agents": ["pophealth_agent", "risk_agent"],
-     "requires_citation": false, "requires_action": false, "fact_checks": []},
-    {"id": "e_equity", "persona": "executive", "scenario_id": "e_equity",
-     "question": "Show me the equity picture — outcomes by nationality.",
-     "expected_tools": ["equity_breakdown"],
-     "expected_agents": ["cohort_agent"],
-     "requires_citation": false, "requires_action": false, "fact_checks": []},
-    {"id": "e_forecast", "persona": "executive", "scenario_id": "e_forecast",
-     "question": "Forecast outpatient demand for the next 12 months.",
-     "expected_tools": ["visit_forecast"],
-     "expected_agents": ["risk_agent"],
-     "requires_citation": false, "requires_action": false, "fact_checks": []},
-    {"id": "e_quality", "persona": "executive", "scenario_id": "e_quality",
-     "question": "Compute the clinical quality scorecard against our targets.",
-     "expected_tools": ["compute_quality_measure"],
-     "expected_agents": ["pophealth_agent"],
-     "requires_citation": false, "requires_action": false, "fact_checks": ["statin_gap_patients"]}
+    {
+      "id": "c_briefing",
+      "persona": "clinician",
+      "scenario_id": "c_briefing",
+      "question": "Give me my morning briefing — review the panel and tell me who needs attention today.",
+      "expected_tools": [
+        "cohort_kpis",
+        "stratify_cohort_risk",
+        "find_care_gaps"
+      ],
+      "expected_agents": [
+        "cohort_agent",
+        "risk_agent",
+        "pophealth_agent"
+      ],
+      "requires_citation": false,
+      "requires_action": false,
+      "fact_checks": [
+        "patients",
+        "hba1c_overdue_patients"
+      ]
+    },
+    {
+      "id": "c_deepdive",
+      "persona": "clinician",
+      "scenario_id": "c_deepdive",
+      "question": "Review my highest-risk patient whose HbA1c is rising on metformin alone: summarise, score the risk, check the guideline, and draft what is needed.",
+      "expected_tools": [
+        "get_patient",
+        "score_patient_risk",
+        "search_guidelines",
+        "draft_prescription"
+      ],
+      "expected_agents": [
+        "cohort_agent",
+        "risk_agent",
+        "guideline_agent",
+        "action_agent"
+      ],
+      "requires_citation": true,
+      "requires_action": true,
+      "fact_checks": []
+    },
+    {
+      "id": "c_intensify",
+      "persona": "clinician",
+      "scenario_id": "c_intensify",
+      "question": "How many type 2 patients with HbA1c above 8% are not on an SGLT2 inhibitor or GLP-1 agonist, what is closing that gap worth, and draft the review list.",
+      "expected_tools": [
+        "find_care_gaps",
+        "simulate_policy",
+        "search_guidelines",
+        "draft_recall"
+      ],
+      "expected_agents": [
+        "pophealth_agent",
+        "risk_agent",
+        "guideline_agent",
+        "action_agent"
+      ],
+      "requires_citation": true,
+      "requires_action": true,
+      "fact_checks": [
+        "intensification_gap_patients"
+      ]
+    },
+    {
+      "id": "c_screening",
+      "persona": "clinician",
+      "scenario_id": "c_screening",
+      "question": "Which patients are overdue for retinal screening, where is the backlog, and draft the recall.",
+      "expected_tools": [
+        "find_care_gaps",
+        "search_guidelines",
+        "draft_recall"
+      ],
+      "expected_agents": [
+        "cohort_agent",
+        "guideline_agent"
+      ],
+      "requires_citation": true,
+      "requires_action": false,
+      "fact_checks": [
+        "retinal_overdue_patients"
+      ]
+    },
+    {
+      "id": "e_national",
+      "persona": "executive",
+      "scenario_id": "e_national",
+      "question": "Give me the national glycaemic picture — trend, control rates, and facility spread.",
+      "expected_tools": [
+        "cohort_kpis",
+        "facility_benchmark"
+      ],
+      "expected_agents": [
+        "cohort_agent"
+      ],
+      "requires_citation": false,
+      "requires_action": false,
+      "fact_checks": [
+        "mean_hba1c",
+        "pct_well_controlled"
+      ]
+    },
+    {
+      "id": "e_cost",
+      "persona": "executive",
+      "scenario_id": "e_cost",
+      "question": "Where is our spend concentrated, and what do the population segments look like?",
+      "expected_tools": [
+        "cost_concentration",
+        "segment_summary"
+      ],
+      "expected_agents": [
+        "cohort_agent",
+        "risk_agent"
+      ],
+      "requires_citation": false,
+      "requires_action": false,
+      "fact_checks": [
+        "total_annual_cost_qar_m"
+      ]
+    },
+    {
+      "id": "e_sim",
+      "persona": "executive",
+      "scenario_id": "e_sim",
+      "question": "Simulate our five candidate programmes over 24 months and rank them by net benefit.",
+      "expected_tools": [
+        "simulate_policy"
+      ],
+      "expected_agents": [
+        "pophealth_agent",
+        "risk_agent"
+      ],
+      "requires_citation": false,
+      "requires_action": false,
+      "fact_checks": []
+    },
+    {
+      "id": "e_equity",
+      "persona": "executive",
+      "scenario_id": "e_equity",
+      "question": "Show me the equity picture — outcomes by nationality.",
+      "expected_tools": [
+        "equity_breakdown"
+      ],
+      "expected_agents": [
+        "cohort_agent"
+      ],
+      "requires_citation": false,
+      "requires_action": false,
+      "fact_checks": []
+    },
+    {
+      "id": "e_forecast",
+      "persona": "executive",
+      "scenario_id": "e_forecast",
+      "question": "Forecast outpatient demand for the next 12 months.",
+      "expected_tools": [
+        "visit_forecast"
+      ],
+      "expected_agents": [
+        "risk_agent"
+      ],
+      "requires_citation": false,
+      "requires_action": false,
+      "fact_checks": []
+    },
+    {
+      "id": "e_quality",
+      "persona": "executive",
+      "scenario_id": "e_quality",
+      "question": "Compute the clinical quality scorecard against our targets.",
+      "expected_tools": [
+        "compute_quality_measure"
+      ],
+      "expected_agents": [
+        "pophealth_agent"
+      ],
+      "requires_citation": false,
+      "requires_action": false,
+      "fact_checks": [
+        "patients"
+      ]
+    }
   ]
 }

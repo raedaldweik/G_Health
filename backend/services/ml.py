@@ -31,12 +31,13 @@ from services import hie
 MODELS = Path(__file__).resolve().parent.parent / "models"
 
 # Cost assumptions for the simulator (documented, deliberately conservative)
-EVENT_COST_QAR = 32000          # average acute cardiometabolic event episode
-INTERVENTION_COSTS = {          # annual therapy cost per patient (from the HIE med table)
-    "close_statin_gap": 540,
-    "close_glp1_sglt2_gap": 6400,
-    "close_af_anticoag_gap": 4900,
-    "bp_control_program": 900,   # titration visits + one added agent
+EVENT_COST_QAR = 18500          # average diabetes deterioration episode (admission + follow-up)
+INTERVENTION_COSTS = {          # annual programme cost per patient (from the HIE med table + programme design)
+    "sglt2_glp1_intensification": 6400,   # blended SGLT2i / GLP-1 RA therapy cost
+    "hba1c_recall_program": 350,          # recall call + test + nurse review
+    "adherence_support_program": 1200,    # pharmacist-led adherence coaching
+    "bp_control_program": 900,            # titration visits + one added agent
+    "renal_protection_program": 480,      # RAAS inhibitor + monitoring
 }
 
 
@@ -95,8 +96,9 @@ def score_patient(patient_id: str) -> dict:
                                         (None if pd.isna(X.iloc[0].get(f)) else float(X.iloc[0].get(f)))),
                 "contribution": round(float(c), 4)}
                for f, c in pairs if f != "baseline"][:8]
-    return {"patient_id": patient_id, "model": "complication_risk v1.2.0",
+    return {"patient_id": patient_id, "model": "deterioration_risk v2.0.0",
             "event_probability_12m": round(prob, 4), "risk_band_model": _band(prob),
+            "registry_tier": row.iloc[0]["registry_risk_tier"],
             "top_drivers": drivers,
             "note": "SHAP-style contributions from XGBoost pred_contribs; positive pushes risk up."}
 
@@ -112,7 +114,7 @@ def stratify_cohort(filters: list[dict] | None = None, top_n: int = 10) -> dict:
             for b in ["Low", "Moderate", "High", "Very High"]}
     top = (df.sort_values("risk_prob", ascending=False)
            .head(top_n)[["patient_id", "full_name", "age", "facility_name",
-                         "hba1c_latest", "cv_risk_band", "care_gap_count", "risk_prob"]])
+                         "hba1c_latest", "registry_risk_tier", "care_gap_count", "risk_prob"]])
     top["risk_prob"] = top["risk_prob"].round(4)
     return {"matched": int(len(df)),
             "mean_event_probability": round(float(df["risk_prob"].mean()), 4),
@@ -139,8 +141,8 @@ def similar_patients(patient_id: str, k: int = 6) -> dict:
             continue
         out.append({"patient_id": pid, "distance": round(float(d), 2), "age": int(r["age"]),
                     "hba1c_latest": None if pd.isna(r["hba1c_latest"]) else float(r["hba1c_latest"]),
-                    "cv_risk_band": r["cv_risk_band"], "on_statin": int(r["on_statin"]),
-                    "on_sglt2_glp1": int(r["on_sglt2_glp1"]),
+                    "registry_risk_tier": r["registry_risk_tier"], "on_insulin": int(r["on_insulin"]),
+                    "on_sglt2_glp1": int(r["on_sglt2_glp1"]), "adherence_pdc": float(r["adherence_pdc"]),
                     "glycaemic_control": r["glycaemic_control"],
                     "annual_cost_qar": float(r["annual_cost_qar"])})
     return {"patient_id": patient_id, "similar": out,
@@ -175,27 +177,32 @@ def visit_forecast() -> dict:
 # ─────────────────────────── counterfactual policy simulator ───────────────────────────
 
 INTERVENTIONS = {
-    "close_statin_gap": {
-        "label": "Close the statin gap (high/very-high CV risk, no statin)",
-        "eligible": lambda s: (s["cv_risk_band"].isin(["High", "Very High"])) & (s["on_statin"] == 0),
-        "apply": {"on_statin": 1},
-    },
-    "close_glp1_sglt2_gap": {
-        "label": "Start SGLT2i/GLP-1 RA in uncontrolled T2DM with obesity/CVD",
+    "sglt2_glp1_intensification": {
+        "label": "Treatment intensification: SGLT2i / GLP-1 RA in uncontrolled T2DM with obesity or CKD",
         "eligible": lambda s: (s["diabetes_type"] == "type2") & (s["on_sglt2_glp1"] == 0)
                               & (s["hba1c_latest"] >= 8)
-                              & ((s["bmi"] >= 30) | (s["established_cvd"] == 1)),
+                              & ((s["bmi"] >= 30) | (s["ckd"] == 1) | (s["albuminuria"] == 1)),
         "apply": {"on_sglt2_glp1": 1},
     },
-    "close_af_anticoag_gap": {
-        "label": "Anticoagulate untreated atrial fibrillation",
-        "eligible": lambda s: (s["af"] == 1) & (s["on_anticoagulant"] == 0),
-        "apply": {"on_anticoagulant": 1},
+    "hba1c_recall_program": {
+        "label": "HbA1c recall programme: bring every overdue patient back for testing and review",
+        "eligible": lambda s: s["hba1c_days_since_test"].fillna(9999) > 183,
+        "apply": {"hba1c_days_since_test": 60},
+    },
+    "adherence_support_program": {
+        "label": "Pharmacist-led adherence support for patients below 60% PDC",
+        "eligible": lambda s: s["adherence_pdc"] < 0.6,
+        "apply": {"adherence_pdc": 0.85},
     },
     "bp_control_program": {
-        "label": "Hypertension control programme (titrate uncontrolled BP)",
+        "label": "Blood-pressure control programme (titrate uncontrolled BP in diabetes)",
         "eligible": lambda s: (s["htn"] == 1) & (s["bp_controlled"] == 0),
         "apply": "bp",   # special: lower sbp/dbp to guideline-adjacent values
+    },
+    "renal_protection_program": {
+        "label": "Renal protection: RAAS inhibitor for CKD or albuminuria",
+        "eligible": lambda s: ((s["ckd"] == 1) | (s["albuminuria"] == 1)) & (s["on_raas_inhibitor"] == 0),
+        "apply": {"on_raas_inhibitor": 1},
     },
 }
 
@@ -205,7 +212,7 @@ def simulate_policy(intervention: str, horizon_months: int = 12) -> dict:
     every patient through the SAME risk model. No canned numbers."""
     if intervention == "combined":
         parts = [simulate_policy(k, horizon_months) for k in INTERVENTIONS]
-        return {"intervention": "combined", "label": "All four interventions combined",
+        return {"intervention": "combined", "label": "All five programmes combined",
                 "horizon_months": horizon_months,
                 "components": parts,
                 "eligible_patients": sum(p["eligible_patients"] for p in parts),
@@ -253,6 +260,6 @@ def simulate_policy(intervention: str, horizon_months: int = 12) -> dict:
         "programme_cost_qar": programme,
         "net_benefit_qar": avoided_cost - programme,
         "method": ("Counterfactual re-scoring: the eligible cohort is re-scored through the "
-                   "complication_risk XGBoost model with the treatment flag flipped; the "
-                   f"event delta is costed at QAR {EVENT_COST_QAR:,} per avoided event."),
+                   "deterioration-risk XGBoost model with the programme applied; the "
+                   f"event delta is costed at QAR {EVENT_COST_QAR:,} per avoided deterioration episode."),
     }

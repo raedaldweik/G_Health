@@ -102,7 +102,7 @@ export default function MapCard({ spec, height = 340, onSelect, selectedId, comp
           <div class="mc-pop-row"><span class="mc-k">${p.metric_label}</span><b>${p.value_fmt}</b></div>
           <div class="mc-pop-row"><span class="mc-k">Patients</span>${p.patients}</div>
           <div class="mc-pop-row"><span class="mc-k">Controlled</span>${p.pct_controlled}% · <span class="mc-k">Gaps/100</span>${p.gaps_per_100}</div>
-          <div class="mc-pop-row"><span class="mc-k">Statin gap</span>${p.statin_gap} · <span class="mc-k">Mean risk</span>${p.mean_risk_pct}%</div>
+          <div class="mc-pop-row"><span class="mc-k">HbA1c overdue</span>${p.hba1c_overdue} · <span class="mc-k">Mean risk</span>${p.mean_risk_pct}%</div>
           <div class="mc-pop-row"><span class="mc-k">${p.type}</span>${p.region}</div>`).addTo(map);
       });
       map.on('mouseleave', 'fac-dot', () => { map.getCanvas().style.cursor = ''; popup.remove(); });

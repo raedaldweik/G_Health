@@ -1,4 +1,6 @@
-# Nabd (نبض) — The Demo Storyline, v2
+# Nabd (نبض) — The Demo Storyline, v3 (diabetes programme)
+
+> Scope: type 1 and type 2 diabetes only. The deck (`deck/Nabd_MOPH_Google_Cloud.pptx`, 8 slides) is presented first; architecture lives in the slides, not in the app.
 
 > Google Cloud **AI Customer Engineer** final round · 45 minutes = 30 demo + 15 Q&A.
 > This is the choreography: what's on screen, what you say, and why each beat exists.
@@ -21,13 +23,16 @@ Everything else is supporting detail. If time collapses, protect these three.
 
 > *Don't introduce yourself first. Let the pulse line draw across the screen, then:*
 
-"It's a Tuesday morning in Doha. Four thousand people with diabetes and heart disease woke up in this registry.
-Six hundred and forty-two of them are at very high cardiovascular risk and are not on a statin.
-Fifty-eight have atrial fibrillation and no anticoagulant. Nobody is looking for them —
-because the Health Information Exchange can find *a* patient, but it can't find *those* patients.
+"Four thousand people with diabetes are in this registry. Seven hundred and fifty-three of them have not had an
+HbA1c test in six months. Nearly a thousand have an HbA1c above 8 on metformin alone and meet the criteria for
+treatment intensification. Nobody is looking for them, because the Health Information Exchange can find *a*
+patient but it cannot find *those* patients.
 
-I'm Raed. This is Nabd — the Arabic word for *pulse* — and it is what happens when you put Google's
-agentic stack on top of a national exchange and simply let a clinician **ask**."
+This is Nabd — the Arabic word for *pulse*. It puts Google's agentic stack on top of the exchange so that a
+clinician or a director can simply **ask**."
+
+*(You have already presented the 8-slide deck: problem, journey, solution, how it works, the two architectures,
+roadmap and demo agenda. The demo starts here.)*
 
 *(Point at the counters as they finish counting up. Then click **Open the Assistant**.)*
 
@@ -35,7 +40,7 @@ agentic stack on top of a national exchange and simply let a clinician **ask**."
 
 ## 2. The customer — 2 minutes, stay on the landing page
 
-- **Qatar**: ~17% adult diabetes prevalence; cardiometabolic disease dominates cost and mortality.
+- **Qatar**: among the five highest adult diabetes prevalences in the world (IDF); diabetes care cost projected to rise from QR 1.8bn to QR 5bn a year by 2035; half of all dialysis is diabetes-related.
   The **National Health Strategy 2024–2030** makes population health a pillar.
 - **QHIE already exists** — records are aggregated nationally. The data is not the problem.
 - **The gap is intelligence**: the exchange is a record locator, not a reasoning layer. Nobody can ask
@@ -77,20 +82,20 @@ Then click **Architecture** in the nav (30 seconds, no more — the tab is there
 
 ---
 
-## 4. Act I — Angelica (clinician persona, ~8 minutes)
+## 4. Act I — Kamal Miah (clinician persona, ~8 minutes)
 
 Persona: **Dr. Amal Al-Mansoori**, Consultant Endocrinologist. The audience follows one patient.
 
 | Click | What appears | What you say |
 |---|---|---|
 | **C1 Morning panel briefing** | Live trace: cohort → risk → pop-health MCP; a table of the five highest-risk patients; a 3D chart of open gaps | *"This ran at 6am, not on my command. Watch the agents — every hop is on the record."* Point at the trace. |
-| **C2 Patient deep-dive + draft Rx** | **Angelica Bautista**, 55, Filipino, Umm Ghuwailina HC. T1DM, prior stroke, PAD. HbA1c **8.7**, LDL **4.28**, BP **156/92**, ASCVD **51%** — on **aspirin alone**. Model risk **48%**, drivers: LDL, HbA1c, established CVD. Guideline citation. **Atorvastatin 40mg drafted.** Her 36-month HbA1c trajectory as a chart. | *"The registry never flagged her. The model did — and it tells me why: it's her LDL. The guideline page is right there. And nothing was prescribed: it's in my queue."* **This is the emotional centre of the demo. Slow down.** |
+| **C2 Patient review + draft prescription** | The hero patient (the landing page names them): type 2 diabetes, HbA1c risen from **10.2 to 10.9** in a year on **metformin alone**, early kidney involvement, adherence recorded. Registry tier **Moderate**; model deterioration risk **36%**, drivers: HbA1c, adherence, eGFR, insulin status. Guideline citation. **Empagliflozin 10mg drafted.** The 36-month HbA1c trajectory as a chart. | *"The registry tier says Moderate. The model says 36% and tells me why: the trajectory, the kidneys, the adherence. The guideline page is right there. And nothing was prescribed — it is in my queue."* **This is the centre of the demo. Slow down.** |
 | Click a **citation chip** | The retrieved guideline passage + link to the PDF page | *"The agent doesn't memorise medicine. It retrieves the page at query time. Swap the PDF, no retraining."* |
 | Open the **agent trace** | 4 steps · 4 agents, with args and results | *"FHIR read → model score → guideline retrieval → draft. Auditable end to end."* |
-| **C3 Statin gap panel** | 642 patients; counterfactual: re-score all 629 eligible with statins → **17.7% relative risk reduction, ≈57 events avoided over 24 months, net QAR 1.1M**; recall campaign drafted | *"This is not a canned number. The eligible cohort was re-scored through the same model with the therapy applied. That's what a what-if should mean."* |
-| **Queue tab** | Angelica's statin draft, unsigned. Approve it. | *"The agent is an assistant, not an actor. I sign."* The approval lands in the Audit trail — show it later. |
+| **C3 Treatment intensification gap** | 999 type 2 patients with HbA1c ≥8 and obesity or kidney disease not on an SGLT2i or GLP-1 RA; counterfactual: re-score all 975 eligible with therapy applied → events avoided over 24 months, therapy cost, and a **negative net on cost alone** — the case is clinical; review list drafted | *"This is not a canned number. The eligible cohort was re-scored through the same model with the therapy applied. And I want the model to tell the ministry honestly that this one does not pay back on cost — the case is outcomes."* |
+| **Queue tab** | The Empagliflozin draft, unsigned. Approve it. | *"The agent is an assistant, not an actor. The clinician approves."* The approval lands in the Audit trail — show it later. |
 
-Skip **C4 (AF gap)** unless you're ahead of time — it's a strong backup.
+Skip **C4 (retinal screening recall)** unless you are ahead of time — it is a strong backup: 1,203 patients overdue, the backlog by facility, a recall drafted for the worst one.
 
 ---
 
@@ -102,10 +107,10 @@ Switch persona to **Dr. Khalid Al-Kuwari**, Population Health Executive. Same pl
 |---|---|---|
 | **Dashboards → Overview** | KPI strip; HbA1c trend **falling 7.65 → 7.3 over 36 months**; demand forecast **+4.6%**; 3D facility benchmark; risk pyramid | *"Every number here is the same query the assistant runs. One source of truth — the briefing and the conversation can never disagree."* |
 | **E1 National picture** (chat) | Facility spread: Mesaimeer 52% controlled vs Hazm Mebaireek 28% | *"Twenty-four points between facilities. That's an operational lever, not a clinical mystery."* |
-| **E3 Policy simulation** | Four interventions, 24 months, ranked by net benefit; combined view | *"Statins and anticoagulation pay for themselves. The GLP-1 programme, at list price, does not within 24 months — and I'd rather the model tell the minister that than a slide."* **Honest analytics is a feature.** |
+| **E3 Programme simulation** | Five programmes, 24 months, ranked by net benefit; combined view | *"The HbA1c recall and the adherence programme pay for themselves — they are cheap and they reach the patients the model worries about. Drug intensification does not pay back on cost within 24 months, and I would rather the model tell the minister that than a slide."* **Honest analytics is a feature.** |
 | **E4 Equity** | Mean HbA1c by nationality — Bangladeshi 7.7% vs Qatari 7.1% | *"That gradient tracks access, not biology. Multilingual outreach is the cheapest lever on the board — and it's a National Health Strategy pillar."* |
-| **Dashboards → Geography** | The facility map: 18 facilities sized by patients, coloured sand→maroon, gold rings on the 8 flagged ones — **Al Shamal and Al Khor in the north, Hazm Mebaireek in the Industrial Area**. Toggle Qatar → Greater Doha. Click Hazm Mebaireek → its profile (26.8% controlled, highest expat share). | *"Control is a Doha phenomenon. The further from the capital — and the closer to the Industrial Area where the workforce lives — the worse it gets. Distance and the equity gradient are the same line. That's a bus route and a clinic-hours decision, not a drug."* **Then ask the assistant** *"Show me the statin gap on a map"* — the agent draws the same map inside the chat. |
-| **Dashboards → Risk & Models** | AUC 0.853 vs legacy 0.774; calibration curve; feature importance; governance cards | *"Four models, versioned, with cards. Click one — intended use, limitations, and what it becomes on Google Cloud."* |
+| **Dashboards → Geography** | The facility map: 18 facilities sized by patients, coloured sand→maroon, gold rings on the 8 flagged ones — **Al Shamal and Al Khor in the north, Hazm Mebaireek in the Industrial Area**. Toggle Qatar → Greater Doha. Click Hazm Mebaireek → its profile (26.8% controlled, highest expat share). | *"Control is concentrated in Doha. The further from the capital, and the closer to the Industrial Area where the workforce lives, the worse it gets. Distance and the access gradient follow the same line. That is a clinic-hours and outreach decision, not a drug."* **Then ask the assistant** *"Show me the HbA1c-overdue patients on a map"* — the agent draws the same map inside the chat. |
+| **Dashboards → Deterioration Risk** | AUC 0.844 vs the registry tier's 0.809; the high-risk vs low-risk profile table; calibration curve; feature importance; governance cards | *"Four models, versioned, with cards. Click one — intended use, limitations, and what it becomes on Google Cloud."* |
 
 Keep **E5 forecast / E6 quality scorecard** in reserve; the scorecard is the natural bridge to Act III.
 
@@ -133,9 +138,9 @@ back to Product and Engineering.** This gap analysis is a memo I'd send to the H
 
 ---
 
-## 7. Trust — the AI Evaluation tab (~3 minutes)
+## 7. Trust — the Evaluation tab (~3 minutes)
 
-Click **AI Evaluation**. This is where "is this AI garbage?" gets answered before anyone asks it.
+Click **Evaluation**. This is where the panel's "how do you know it works" is answered before it is asked.
 
 - **Risk model** (45 s): *"Everything on this page is computed from 1,000 patients the model never saw."*
   ROC: maroon line is ours (0.853), gold is the registry's legacy points score (0.774). Drag the
@@ -223,7 +228,7 @@ Stop talking. Let them ask.
 - *Sovereignty?* — PHI and the agent runtime in me-central1 under the Qatar Data Boundary; the LLM sees pseudonymous aggregates only; open-weight MedGemma can run in-region later for the clinical-language pieces. PDPPL (Law 13/2016) is the frame.
 
 **Judgment**
-- *What would you cut?* — The forecast. It's the weakest model and the least surprising insight. I'd trade it for the AF anticoagulation loop, which saves strokes.
+- *What would you cut?* — The forecast. It is the weakest model and the least surprising insight. I would trade it for a hypoglycaemia-risk loop on the insulin-treated cohort, which prevents admissions.
 - *What worries you?* — Adoption, not accuracy. The queue exists so clinicians own the decision; the equity view exists so the ministry owns the gap. Tools don't change outcomes; workflows do.
 
 ---
@@ -231,7 +236,7 @@ Stop talking. Let them ask.
 ## 10. Demo-day checklist
 
 - [ ] Railway deploy green; `/api/health` returns `mode: multi-agent` with a live model name.
-- [ ] Run **C2** once at home the morning-of: confirm Angelica is still the hero (`/api/story/hero`) and her numbers match this doc.
+- [ ] Run **C2** once at home the morning-of: confirm Kamal Miah is still the hero (`/api/story/hero`) and his numbers match this doc.
 - [ ] `FORCE_SCENARIOS=false`; keep the URL with `=true` in a second tab as the parachute.
 - [ ] Gemini CLI configured with the MCP server (`backend/pophealth_mcp/README.md`); test one call.
 - [ ] Clear the queue and audit trail (`backend/data/runtime/*.json`) so the panel sees only today's story — or leave Dr. Al-Mansoori's one approval for the audit beat.
@@ -253,14 +258,14 @@ Stop talking. Let them ask.
 
 1. The **pulse line and count-up** in the first 10 seconds.
 2. The **live agent trace** streaming while Gemini works — six agents visibly collaborating.
-3. **Angelica** — a named person, a real explanation, a real draft, a real signature.
+3. **One named patient** — a real trajectory, a real explanation, a real draft, a real approval.
 4. The **3D charts and the facility map** rendered *by the agent* inside a chat answer.
-5. **Counterfactual policy** that admits one intervention doesn't pay.
-6. **AUC 0.853 vs 0.774** with a calibration curve — real ML, defended.
+5. **Programme simulation** that admits drug intensification does not pay back on cost alone.
+6. **AUC 0.844 vs 0.809** with a calibration curve and a high-vs-low risk profile — real ML, defended.
 7. The **MCP reveal** with the exact inventory of what Google already ships.
 8. The **same MCP server answering Gemini CLI**.
 9. **Arabic voice input** — one click, one question, in the customer's language.
 10. The **audit trail** carrying the whole story you just told.
 11. **Run evalset** — ten real questions through the real graph, scored live, including "does every number match a recomputation".
 12. The **threshold slider** — the ministry choosing its own trade-off between nurse time and missed events.
-13. The **architecture that admits Doha's limits** — Agent Engine, Model Armor and Model Monitoring aren't in me-central1, and the design says what replaces them today.
+13. The **architecture slide that admits Doha's limits** — Agent Engine, Model Armor and Model Monitoring are not in me-central1, and the design names what replaces them today.
