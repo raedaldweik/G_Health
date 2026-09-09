@@ -26,3 +26,8 @@ frontend/dist/
 # Misc
 .DS_Store
 *.log
+
+# Deck build artefacts
+deck/node_modules/
+deck/*.pdf
+deck/slide-*.png
