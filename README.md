@@ -28,6 +28,8 @@ BigQuery (ML + AI.FORECAST/TimesFM + VECTOR_SEARCH) and Agent Engine.
 | Architecture | **Architecture tab** — interactive 6-lane target design with animated flows, click-through node rationale, real-time vs batch table, scale & inference model, 10 ADRs, phase map, Doha list-price run cost | The Terraform for it |
 | UI | React glass UI: assistant with live agent trace, 5 storytelling dashboards (incl. facility map), architecture, evaluation, queue, documents, HIE browser, audit | + Looker embeds |
 
+- **Risk simulator** — pick a patient, move HbA1c, blood pressure, adherence or therapy levers; the deployed XGBoost model (monotonic clinical constraints) re-scores live with per-feature attribution, care gaps closed and cost impact, and Gemini explains the change from the numbers on screen.
+
 ## Quickstart
 
 ```bash

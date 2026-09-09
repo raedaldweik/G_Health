@@ -96,7 +96,7 @@ def score_patient(patient_id: str) -> dict:
                                         (None if pd.isna(X.iloc[0].get(f)) else float(X.iloc[0].get(f)))),
                 "contribution": round(float(c), 4)}
                for f, c in pairs if f != "baseline"][:8]
-    return {"patient_id": patient_id, "model": "deterioration_risk v2.0.0",
+    return {"patient_id": patient_id, "model": "deterioration_risk v2.1.0",
             "event_probability_12m": round(prob, 4), "risk_band_model": _band(prob),
             "registry_tier": row.iloc[0]["registry_risk_tier"],
             "top_drivers": drivers,

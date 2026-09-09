@@ -13,6 +13,7 @@ import DocumentsPage from './pages/DocumentsPage';
 import DataPage from './pages/DataPage';
 import AuditPage from './pages/AuditPage';
 import EvaluationPage from './pages/EvaluationPage';
+import SimulatorPage from './pages/SimulatorPage';
 
 const DASH_TABS = [
   { id: 'overview', label: 'Registry' },
@@ -117,6 +118,7 @@ function Header({ tab, setTab }) {
     { id: 'landing', label: 'Home' },
     { id: 'assistant', label: 'Assistant' },
     { id: 'overview', label: 'Dashboards' },
+    { id: 'simulator', label: 'Simulator' },
     { id: 'evaluation', label: 'Evaluation' },
     { id: 'queue', label: 'Queue' },
     { id: 'documents', label: 'Documents' },
@@ -201,6 +203,7 @@ function Layout() {
       case 'risk': return <DashboardRisk />;
       case 'cost': return <DashboardCost />;
       case 'geography': return <DashboardMap />;
+      case 'simulator': return <SimulatorPage />;
       case 'evaluation': return <EvaluationPage />;
       case 'queue': return <QueuePage />;
       case 'documents': return <DocumentsPage />;

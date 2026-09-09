@@ -241,9 +241,11 @@ export default function LandingPage({ go }) {
             <p className="section-sub mt-3">
               The deterioration-risk model learns what the rule-based registry tier cannot see: kidney function, the
               HbA1c trajectory, adherence, missed monitoring and complication status. Every score is explained with
-              feature contributions. The same model drives the programme simulator: apply the intervention to the
-              eligible cohort, re-score, and cost the difference.
+              feature contributions, and monotonic clinical constraints keep those explanations plausible. The same
+              model drives two simulators: the programme simulator re-scores an eligible cohort with an intervention
+              applied, and the patient simulator lets a clinician move a lever and watch the estimate respond.
             </p>
+            <button className="btn-secondary mt-4" onClick={() => go('simulator')}>Open the risk simulator</button>
             <div className="grid grid-cols-2 gap-2.5 mt-5">
               {(risk?.model_cards || []).map((c) => (
                 <div key={c.model_id} className="model-card">

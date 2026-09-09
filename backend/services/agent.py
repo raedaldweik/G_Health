@@ -369,6 +369,18 @@ def simulate_policy(intervention: str, horizon_months: int = 12) -> dict:
     return res
 
 
+def simulate_patient_whatif(patient_id: str, overrides_json: str = "") -> dict:
+    """What-if for ONE patient: change levers and re-score through the deployed deterioration
+    model. overrides_json is a JSON object of lever -> value, e.g.
+    {"hba1c_latest": 8.0, "on_sglt2_glp1": 1, "adherence_pdc": 0.9, "sbp_latest": 130}.
+    Levers: hba1c_latest, hba1c_days_since_test, sbp_latest, egfr_latest, acr_latest,
+    adherence_pdc, bmi, smoker, on_metformin, on_sglt2_glp1, on_raas_inhibitor,
+    admissions_12mo, ed_visits_12mo. Returns baseline vs simulated probability, band,
+    registry percentile, per-feature attribution, care gaps closed and the expected cost delta."""
+    from services import whatif
+    return whatif.tool_simulate(patient_id, overrides_json)
+
+
 def visit_forecast() -> dict:
     """12-month ambulatory demand forecast (monthly, with 80% interval) from the
     seasonal model over 36 months of encounter history."""
@@ -514,9 +526,12 @@ def _build_tools_map(model_name: str | None = None):
         instruction=("You are the ML specialist. Use the models — never guess. When you score, "
                      "report the probability, the band, and the top drivers in plain clinical "
                      "language. For simulations report events avoided, costs and net benefit, "
-                     "and state the method in one line."),
+                     "and state the method in one line. For a single patient's what-if question "
+                     "('what if HbA1c came down to 8', 'if we start an SGLT2 inhibitor') use "
+                     "simulate_patient_whatif with the matching levers and report before/after risk, "
+                     "the attribution and the gaps closed."),
         tools=[score_patient_risk, stratify_cohort_risk, similar_patients,
-               simulate_policy, visit_forecast, model_cards])
+               simulate_policy, simulate_patient_whatif, visit_forecast, model_cards])
 
     pophealth_tools = McpToolset(
         connection_params=StdioConnectionParams(

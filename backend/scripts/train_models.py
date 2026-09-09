@@ -46,6 +46,19 @@ RISK_FEATURES = [
     "on_metformin", "on_sglt2_glp1", "on_insulin", "on_raas_inhibitor", "adherence_pdc",
     "admissions_12mo", "ed_visits_12mo", "diabetes_medication_count", "care_gap_count",
 ]
+# Clinical priors as XGBoost monotonic constraints (+1 risk rises with the feature,
+# -1 risk falls, 0 unconstrained). A slider in the what-if simulator must never show risk
+# falling as HbA1c rises or rising as adherence improves; the constraint makes that a
+# property of the model rather than a hope. Insulin stays unconstrained on purpose — in the
+# registry it is a marker of advanced disease, not a treatment effect.
+MONOTONE = {
+    "age": 1, "bmi": 1, "bmi_change_12m": 1, "years_since_diagnosis": 1, "smoker": 1,
+    "hba1c_latest": 1, "hba1c_days_since_test": 1, "sbp_latest": 1, "dbp_latest": 1,
+    "egfr_latest": -1, "acr_latest": 1, "albuminuria": 1, "retinopathy": 1, "neuropathy": 1,
+    "foot_ulcer_history": 1, "htn": 1, "on_metformin": -1, "on_sglt2_glp1": -1, "on_raas_inhibitor": -1,
+    "adherence_pdc": -1, "admissions_12mo": 1, "ed_visits_12mo": 1, "care_gap_count": 1,
+}
+MODEL_VERSION = "2.1.0"
 # Treatment / programme levers the counterfactual simulator may change
 INTERVENABLE = ["on_sglt2_glp1", "on_raas_inhibitor", "adherence_pdc", "hba1c_days_since_test", "sbp_latest"]
 
@@ -68,6 +81,7 @@ def train_risk_model(s: pd.DataFrame) -> dict:
         n_estimators=600, max_depth=3, learning_rate=0.035,
         subsample=0.85, colsample_bytree=0.8, min_child_weight=6,
         eval_metric="auc", random_state=7, n_jobs=2,
+        monotone_constraints=tuple(MONOTONE.get(f, 0) for f in RISK_FEATURES),
     )
     model.fit(X_tr, y_tr)
 
@@ -103,7 +117,8 @@ def train_risk_model(s: pd.DataFrame) -> dict:
 
     booster.save_model(OUT / "complication_risk.xgb.json")
     (OUT / "complication_risk.features.json").write_text(json.dumps({
-        "features": RISK_FEATURES, "intervenable": INTERVENABLE}))
+        "features": RISK_FEATURES, "intervenable": INTERVENABLE,
+        "monotone": {f: MONOTONE.get(f, 0) for f in RISK_FEATURES}, "version": MODEL_VERSION}))
     print(f"  complication_risk: AUC {auc:.3f} (legacy registry score {legacy_auc:.3f}), AP {ap:.3f}")
     return {"auc": round(auc, 3), "average_precision": round(ap, 3),
             "legacy_score_auc": round(legacy_auc, 3),
@@ -217,12 +232,13 @@ def main():
     today = date.today().isoformat()
     cards = [
         {"model_id": "complication_risk", "name": "Diabetes Deterioration Risk",
-         "version": "2.0.0", "trained": today, "framework": "XGBoost (gradient-boosted trees)",
+         "version": MODEL_VERSION, "trained": today, "framework": "XGBoost (gradient-boosted trees, monotonic constraints)",
          "task": "Binary classification — P(diabetes deterioration event within 12 months: admission for hypo/hyperglycaemia, DKA/HHS, foot infection or AKI, or progression to HbA1c ≥ 10%)",
          "training_data": f"{risk_metrics['train_rows']} patients (held-out test: {risk_metrics['test_rows']}), synthetic QHIE cohort",
          "features": RISK_FEATURES, "metrics": risk_metrics,
          "intended_use": "Panel prioritisation for the diabetes programme, care-gap targeting, counterfactual programme simulation. Decision support only — never autonomous treatment decisions.",
-         "limitations": "Trained on synthetic data; requires clinical validation and bias audit before any production use. Programme counterfactuals assume guideline-average effect sizes.",
+         "constraints": ("Monotonic constraints encode clinical priors: the estimate cannot fall as HbA1c, systolic BP, urine ACR, BMI, smoking, admissions, ED visits, monitoring delay or open care gaps rise, and cannot rise as eGFR, adherence, metformin, SGLT2i/GLP-1 RA or RAAS therapy improve. Insulin is deliberately unconstrained — in the registry it marks advanced disease rather than a treatment effect."),
+         "limitations": "Trained on synthetic data; requires clinical validation and bias audit before any production use. Programme counterfactuals assume guideline-average effect sizes. What-if estimates are associations, not causal treatment effects.",
          "phase2": "Retrain as BigQuery ML BOOSTED_TREE_CLASSIFIER, register to Vertex AI Model Registry, serve on an online endpoint, score via the official Agent Platform /mcp/predict toolset."},
         {"model_id": "cohort_segments", "name": "Population Segmentation",
          "version": "1.0.1", "trained": today, "framework": "scikit-learn KMeans (k=4)",

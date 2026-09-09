@@ -77,3 +77,37 @@ export const runAgentEval = (mode = 'auto') => fetch(`/api/evals/agent/run?mode=
 export const getAgentEvalStatus = () => fetch('/api/evals/agent/status').then(json);
 export const getLlmSelection = () => fetch('/api/evals/llm').then(json);
 export const getGovernance = () => fetch('/api/evals/governance').then(json).then((d) => d.controls);
+
+// ── What-if simulator ──
+export const getSimPatients = (q = '') => fetch(`/api/simulate/patients?q=${encodeURIComponent(q)}`).then(json);
+export const getSimBaseline = (id) => fetch(`/api/simulate/baseline/${encodeURIComponent(id)}`).then(json);
+export const getSimPreset = (id, preset) => fetch(`/api/simulate/preset/${encodeURIComponent(id)}/${preset}`).then(json);
+export const postSimulate = (patientId, overrides, signal) =>
+  fetch('/api/simulate', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ patient_id: patientId, overrides }), signal,
+  }).then(json);
+
+/** Stream the Gemini explanation of a what-if: NDJSON {type:meta|token|final}. */
+export async function streamExplain({ patientId, overrides, actor }, onEvent, signal) {
+  const res = await fetch('/api/simulate/explain', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ patient_id: patientId, overrides, actor: actor || 'clinician' }), signal,
+  });
+  if (!res.ok || !res.body) throw new Error(`explain failed: ${res.status}`);
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = '';
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const lines = buf.split('\n');
+    buf = lines.pop();
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      try { onEvent(JSON.parse(line)); } catch { /* partial line */ }
+    }
+  }
+  if (buf.trim()) { try { onEvent(JSON.parse(buf)); } catch { /* ignore */ } }
+}

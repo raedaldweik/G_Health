@@ -73,7 +73,7 @@ async def sc_morning_briefing(persona: str):
         {"agent": "cohort_agent", "tool": "cohort_kpis",
          "args_summary": "registry-wide KPIs", "result_summary": f"{kpi['patients']} patients scanned"},
         {"agent": "risk_agent", "tool": "stratify_cohort_risk",
-         "args_summary": "whole registry through deterioration_risk v2.0.0",
+         "args_summary": "whole registry through deterioration_risk v2.1.0",
          "result_summary": f"expected 12-mo events: {strat['expected_events_12m']}"},
         {"agent": "pophealth_agent", "tool": "find_care_gaps",
          "args_summary": "all open gaps", "result_summary": f"{kpi['total_open_care_gaps']} open gaps"},

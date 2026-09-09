@@ -18,7 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from routers import chat, dashboards, evals, ops
+from routers import chat, dashboards, evals, ops, simulate
 from services import agent, audit, hie, rag
 from services import llm_client as LC
 from services import platform as P
@@ -103,6 +103,7 @@ app.include_router(chat.router)
 app.include_router(dashboards.router)
 app.include_router(ops.router)
 app.include_router(evals.router)
+app.include_router(simulate.router)
 
 
 @app.get("/api/health")
