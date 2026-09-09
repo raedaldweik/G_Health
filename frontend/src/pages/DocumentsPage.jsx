@@ -28,14 +28,16 @@ export default function DocumentsPage() {
               style={{ background: d.status.semantic_index === 'ready' ? 'var(--green)'
                 : d.status.semantic_index === 'building' ? 'var(--amber)' : 'var(--red)' }} />
             {d.status.chunks} chunks · retrieval: {d.status.semantic_index === 'ready'
-              ? `hybrid — BM25 + ${d.status.embed_model} (${d.status.vectors} vectors × ${d.status.dims} dims)`
-              : d.status.semantic_index === 'building' ? `BM25 now · embedding ${d.status.chunks} chunks with ${d.status.embed_model}…`
-              : d.status.semantic_index === 'failed' ? `BM25 only — embeddings failed: ${d.status.error}`
-              : 'BM25 keyword only (no Gemini key)'}
+              ? `hybrid, BM25 + ${d.status.embed_model} (${d.status.vectors} vectors × ${d.status.dims} dims${d.status.source === 'cache' ? ', loaded from cache' : ''})`
+              : d.status.semantic_index === 'building' ? `BM25 now; embedding ${d.status.chunks} chunks with ${d.status.embed_model} once, then cached`
+              : d.status.semantic_index === 'failed' ? (d.status.reason === 'quota'
+                  ? `BM25 keyword retrieval; semantic index pending (embedding quota exhausted, retrying in the background)`
+                  : `BM25 keyword retrieval; semantic index unavailable`)
+              : 'BM25 keyword retrieval (no Gemini key)'}
           </span>
         </div>
         <p className="text-[11px] mb-5" style={{ color: 'var(--text-dim)' }}>
-          The agent never answers clinical questions from memory — it retrieves from these documents at
+          The agent never answers clinical questions from memory. It retrieves from these documents at
           query time and cites document + page. Drop a new PDF in and it's indexed on restart, no retraining.
           Phase 2: this layer becomes Vertex AI RAG Engine (managed corpus, gemini-embedding-001).
         </p>

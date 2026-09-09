@@ -60,7 +60,7 @@ export default function AssistantPage() {
         addMessage(chatId, { role: 'assistant', data: finalData, query: q });
         speaker.speak(finalData.answer);
       } else {
-        addMessage(chatId, { role: 'assistant', error: 'The stream ended without an answer — try again.' });
+        addMessage(chatId, { role: 'assistant', error: 'The stream ended without an answer. Try again.' });
       }
     } catch (e) {
       addMessage(chatId, { role: 'assistant', error: `Connection error: ${e.message}` });
@@ -79,7 +79,7 @@ export default function AssistantPage() {
   return (
     <div className="h-full flex gap-4 p-4 pt-3">
 
-      {/* Left rail — Recent conversations (Roads recipe) + agent system */}
+      {/* Left rail, Recent conversations (Roads recipe) + agent system */}
       <div className="w-[262px] shrink-0 flex flex-col gap-3 min-h-0">
         <div className="glass-card flex flex-col flex-1 min-h-0">
           <div className="p-4 border-b border-[rgba(15,23,42,0.07)]">
@@ -161,7 +161,7 @@ export default function AssistantPage() {
           <p className="text-[9.5px] mt-2 leading-snug" style={{ color: 'var(--text-faint)' }}>
             {llmInfo?.enabled
               ? <>Live multi-agent · <b style={{ color: 'var(--text-dim)' }}>{llmInfo.model}</b> · MCP over stdio</>
-              : <>Scripted engine on live data — set GEMINI_API_KEY for free-form chat</>}
+              : <>Scripted engine on live data. Set GEMINI_API_KEY for free-form chat</>}
           </p>
         </div>
       </div>
@@ -289,7 +289,7 @@ export default function AssistantPage() {
             <textarea ref={inputRef} rows="1" value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
-              placeholder={`Ask about the ${persona === 'clinician' ? 'panel' : 'population'} — data, guidelines, risk, what-ifs…`}
+              placeholder={`Ask about the ${persona === 'clinician' ? 'panel' : 'population'}: data, guidelines, risk, what-ifs`}
               className="flex-1 bg-transparent border-none outline-none text-[13px] py-2 px-2 resize-none leading-relaxed"
               style={{ fontFamily: 'Manrope, sans-serif', color: 'var(--text)' }} />
             <button onClick={() => send()}

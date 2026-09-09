@@ -35,6 +35,13 @@ const Ctx = createContext(null);
 export function AppProvider({ children }) {
   const stored = loadStored();
   const [persona, setPersona] = useState(stored?.persona || 'clinician');
+  // Dashboard cross-filter: {tier: 'High', facility: '...'}; shared by every dashboard tab.
+  const [dashFilter, setDashFilter] = useState({});
+  const toggleFilter = useCallback((key, value) => setDashFilter((f) => {
+    if (value == null || f[key] === value) { const { [key]: _drop, ...rest } = f; return rest; }
+    return { ...f, [key]: value };
+  }), []);
+  const clearFilter = useCallback(() => setDashFilter({}), []);
   const [chats, setChats] = useState(stored?.chats || [freshChat(stored?.persona || 'clinician')]);
   const [activeChatId, setActiveChatId] = useState(stored?.activeChatId || (stored?.chats?.[0]?.id) || null);
 
@@ -100,6 +107,7 @@ export function AppProvider({ children }) {
       persona, setPersona, personaInfo: PERSONAS[persona],
       chats: visibleChats, activeChat, activeChatId: activeChat?.id,
       setActiveChatId, createNewChat, addMessage, renameChat, deleteChat,
+      dashFilter, toggleFilter, clearFilter,
     }}>
       {children}
     </Ctx.Provider>

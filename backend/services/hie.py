@@ -1,9 +1,9 @@
 """
-Nabd — HIE query engine.
+Nabd, HIE query engine.
 
 Loads the synthetic Health Information Exchange (8 relational tables) once and
 exposes the structured query surface used by BOTH the agent tools and the
-dashboard APIs — one source of truth, so the chat and the dashboards can never
+dashboard APIs, one source of truth, so the chat and the dashboards can never
 disagree. Phase 2 swaps this module's internals for BigQuery SQL over the
 streamed FHIR export; the function contracts stay the same.
 """
@@ -60,7 +60,7 @@ def _load_raw() -> dict[str, pd.DataFrame]:
             return bq.load_tables()
         except Exception as e:               # dataset empty (first boot) or unreachable
             bq.STATUS["error"] = f"{type(e).__name__}: {str(e)[:300]}"
-            print(f"⚠ BigQuery unavailable ({bq.STATUS['error']}) — serving the local HIE files"
+            print(f"⚠ BigQuery unavailable ({bq.STATUS['error']}), serving the local HIE files"
                   + (" and provisioning BigQuery in the background" if P.BQ_AUTOLOAD and P.PROJECT else ""),
                   flush=True)
             if P.BQ_AUTOLOAD and P.PROJECT and isinstance(e, LookupError):
@@ -101,7 +101,7 @@ def describe_dataset() -> dict:
     return {
         "tables": {name: {"rows": len(df), "description": data_dictionary().get(name, ""),
                           "columns": list(df.columns)} for name, df in t.items()},
-        "note": ("patient_summary is the wide analytical table — use it for cohort filters, "
+        "note": ("patient_summary is the wide analytical table, use it for cohort filters, "
                  "group-bys and rankings. observations holds the longitudinal labs/vitals "
                  "(obs_key ∈ hba1c,fpg,sbp,dbp,ldl,hdl,tg,egfr,acr,bmi). Every patient in the "
                  "registry has diabetes (diabetes_type = type1 | type2)."),
@@ -141,7 +141,7 @@ def get_patient(patient_id: str) -> dict:
         # Consent enforcement: the agent may not read a restricted record.
         # (Phase 2: Cloud Healthcare API FHIR consent enforcement does this natively.)
         return {"found": True, "consent": "DENIED",
-                "message": ("Patient consent status is RESTRICTED — record access blocked "
+                "message": ("Patient consent status is RESTRICTED, record access blocked "
                             "by the HIE consent policy. This denial has been logged.")}
     conds = t["conditions"].query("patient_id == @patient_id")
     meds = t["medications"].query("patient_id == @patient_id and status == 'active'")
@@ -181,7 +181,7 @@ def _apply_filters(df: pd.DataFrame, filters: list[dict] | None) -> pd.DataFrame
     for f in filters:
         col, op, val = f.get("column"), f.get("op", "=="), f.get("value")
         if col not in df.columns:
-            raise ValueError(f"unknown column '{col}' — call describe_dataset for the schema")
+            raise ValueError(f"unknown column '{col}', call describe_dataset for the schema")
         if op not in _OPS:
             raise ValueError(f"unknown operator '{op}'")
         mask &= _OPS[op](df[col], val)
@@ -255,8 +255,72 @@ def histogram(column: str, bins: int = 10, filters: list[dict] | None = None) ->
 
 # ─────────────────────────── pre-built population views ───────────────────────────
 
-def cohort_stats() -> dict:
+# ── Dashboard cross-filtering ─────────────────────────────────────────────────────────
+HBA1C_BANDS = [("<7% (target)", 0, 7), ("7–8%", 7, 8), ("8–9%", 8, 9), (">9% (poor control)", 9, 100)]
+FILTER_LABELS = {"tier": "Registry tier", "facility": "Facility", "nationality": "Nationality",
+                 "diabetes_type": "Diabetes type", "hba1c_band": "HbA1c band", "gap": "Care gap",
+                 "condition": "Condition", "bp": "BP control", "segment": "Segment", "model_band": "Model band"}
+
+
+def _condition_masks(s: pd.DataFrame) -> dict:
+    return {"Hypertension": s["htn"] == 1, "Dyslipidaemia": s["dyslipidemia"] == 1,
+            "Obesity (BMI ≥30)": s["bmi"] >= 30, "Diabetic retinopathy": s["retinopathy"] == 1,
+            "Diabetic neuropathy": s["neuropathy"] == 1, "Chronic kidney disease": s["ckd"] == 1,
+            "Albuminuria": s["albuminuria"] == 1, "Foot ulcer history": s["foot_ulcer_history"] == 1}
+
+
+def filtered_summary(filters: dict | None) -> pd.DataFrame:
+    """Apply the dashboard cross-filter (clicked bars, chips) to the patient summary.
+    Every dashboard panel is then recomputed from the same filtered frame."""
     s = summary()
+    for k, v in (filters or {}).items():
+        if v in (None, "", []):
+            continue
+        if k == "tier":
+            s = s[s["registry_risk_tier"] == v]
+        elif k == "facility":
+            s = s[s["facility_name"] == v]
+        elif k == "nationality":
+            s = s[s["nationality"] == v]
+        elif k == "diabetes_type":
+            s = s[s["diabetes_type"] == v]
+        elif k == "hba1c_band":
+            band = next((b for b in HBA1C_BANDS if b[0] == v), None)
+            if band:
+                s = s[(s["hba1c_latest"] >= band[1]) & (s["hba1c_latest"] < band[2])]
+        elif k == "gap":
+            s = s[s["open_care_gaps"].str.contains(v, na=False)]
+        elif k == "condition":
+            m = _condition_masks(s).get(v)
+            if m is not None:
+                s = s[m]
+        elif k == "bp":
+            s = s[(s["htn"] == 1) & (s["bp_controlled"] == (1 if v == "Controlled" else 0))]
+        elif k == "segment":
+            from services import ml
+            s = s[ml.segment_labels(s) == v]
+        elif k == "model_band":
+            from services import ml
+            probs = ml._score(ml._feature_frame(s))
+            s = s[[ml._band(float(x)) == v for x in probs]]
+    return s
+
+
+def describe_filters(filters: dict | None) -> list[dict]:
+    return [{"key": k, "label": FILTER_LABELS.get(k, k), "value": v}
+            for k, v in (filters or {}).items() if v not in (None, "", [])]
+
+
+def cohort_stats(df: pd.DataFrame | None = None) -> dict:
+    s = summary() if df is None else df
+    if s.empty:
+        return {"patients": 0, "with_diabetes": 0, "pct_type1": 0.0, "mean_hba1c": 0.0, "pct_well_controlled": 0.0,
+                "pct_uncontrolled": 0.0, "pct_poorly_controlled": 0.0, "pct_retinopathy": 0.0, "pct_neuropathy": 0.0,
+                "pct_ckd": 0.0, "pct_on_sglt2_glp1": 0.0, "pct_on_insulin": 0.0, "mean_adherence_pdc": 0.0,
+                "hba1c_overdue_patients": 0, "retinal_overdue_patients": 0, "foot_exam_overdue_patients": 0,
+                "intensification_gap_patients": 0, "therapy_inertia_patients": 0, "low_adherence_patients": 0,
+                "renal_protection_gap_patients": 0, "bp_uncontrolled_patients": 0, "total_open_care_gaps": 0,
+                "total_annual_cost_qar": 0, "admissions_12mo": 0, "ed_visits_12mo": 0}
     dm = s
     gc = lambda k: int(s["open_care_gaps"].str.contains(k, na=False).sum())
     return {
@@ -287,18 +351,24 @@ def cohort_stats() -> dict:
     }
 
 
-def hba1c_trend_monthly() -> list[dict]:
+def hba1c_trend_monthly(df: pd.DataFrame | None = None) -> list[dict]:
     obs = tables()["observations"]
     h = obs[obs["obs_key"] == "hba1c"].copy()
+    min_n = 30
+    if df is not None:
+        h = h[h["patient_id"].isin(df["patient_id"])]
+        min_n = max(4, round(30 * len(df) / max(len(summary()), 1)))
     h["month"] = h["effective_date"].str[:7]
     g = h.groupby("month")["value"].agg(["mean", "count"])
-    g = g[g["count"] >= 30]
+    g = g[g["count"] >= min_n]
     return [{"month": m, "mean_hba1c": round(float(r["mean"]), 2), "tests": int(r["count"])}
             for m, r in g.iterrows()]
 
 
-def facility_benchmark() -> list[dict]:
-    s = summary()
+def facility_benchmark(df: pd.DataFrame | None = None) -> list[dict]:
+    s = summary() if df is None else df
+    if s.empty:
+        return []
     dm = s[s["diabetes_type"] != "none"]
     g = dm.groupby(["facility_name", "facility_type"]).agg(
         patients=("patient_id", "count"),
@@ -314,8 +384,10 @@ def facility_benchmark() -> list[dict]:
     return g.to_dict("records")
 
 
-def equity_breakdown() -> list[dict]:
-    s = summary()
+def equity_breakdown(df: pd.DataFrame | None = None) -> list[dict]:
+    s = summary() if df is None else df
+    if s.empty:
+        return []
     dm = s[s["diabetes_type"] != "none"]
     g = dm.groupby("nationality").agg(
         patients=("patient_id", "count"),
@@ -327,28 +399,27 @@ def equity_breakdown() -> list[dict]:
     return g.to_dict("records")
 
 
-def risk_tier_distribution() -> list[dict]:
+def risk_tier_distribution(df: pd.DataFrame | None = None) -> list[dict]:
     """The registry's rule-based tiers (what clinicians see today, before the model)."""
-    g = summary()["registry_risk_tier"].value_counts()
+    g = (summary() if df is None else df)["registry_risk_tier"].value_counts()
     return [{"band": b, "patients": int(g.get(b, 0))} for b in TIER_ORDER]
 
 
-def complication_prevalence() -> list[dict]:
-    s = summary()
-    conds = [("Hypertension", s["htn"] == 1), ("Dyslipidaemia", s["dyslipidemia"] == 1),
-             ("Obesity (BMI ≥30)", s["bmi"] >= 30), ("Diabetic retinopathy", s["retinopathy"] == 1),
-             ("Diabetic neuropathy", s["neuropathy"] == 1), ("Chronic kidney disease", s["ckd"] == 1),
-             ("Albuminuria", s["albuminuria"] == 1), ("Foot ulcer history", s["foot_ulcer_history"] == 1)]
+def complication_prevalence(df: pd.DataFrame | None = None) -> list[dict]:
+    s = summary() if df is None else df
     return [{"condition": label, "patients": int(m.sum()),
-             "prevalence_pct": round(float(m.mean()) * 100, 1)} for label, m in conds]
+             "prevalence_pct": round(float(m.mean()) * 100, 1) if len(s) else 0.0}
+            for label, m in _condition_masks(s).items()]
 
 
-def risk_profiles() -> dict:
-    """High-risk vs low-risk patient profile (top vs bottom model-risk decile) — the
+def risk_profiles(df: pd.DataFrame | None = None) -> dict:
+    """High-risk vs low-risk patient profile (top vs bottom model-risk decile): the
     diabetes programme's 'who deteriorates' view, computed from the exchange."""
     from services import ml
-    s = summary()
+    s = summary() if df is None else df
     s = s[s["consent_status"] != "restricted"].copy()
+    if len(s) < 20:
+        return {"high_risk": None, "low_risk": None, "method": "Too few patients in the current filter for a decile profile."}
     s["risk_prob"] = ml._score(ml._feature_frame(s))
     hi = s[s["risk_prob"] >= s["risk_prob"].quantile(0.90)]
     lo = s[s["risk_prob"] <= s["risk_prob"].quantile(0.10)]
@@ -375,8 +446,10 @@ def risk_profiles() -> dict:
             "method": "Top vs bottom decile of the deterioration model's 12-month probability, consent-restricted patients excluded."}
 
 
-def care_gap_summary() -> list[dict]:
+def care_gap_summary(df: pd.DataFrame | None = None) -> list[dict]:
     gaps = tables()["care_gaps"]
+    if df is not None:
+        gaps = gaps[gaps["patient_id"].isin(df["patient_id"])]
     g = gaps.groupby(["gap_key", "gap_label"]).size().sort_values(ascending=False)
     return [{"gap_key": k[0], "gap_label": k[1], "patients": int(v)} for k, v in g.items()]
 
@@ -402,23 +475,25 @@ def monthly_visits() -> list[dict]:
     return [{"month": m, "visits": int(v)} for m, v in g.items()][:-1]
 
 
-def cost_concentration() -> dict:
-    s = summary().sort_values("annual_cost_qar", ascending=False).reset_index(drop=True)
+def cost_concentration(df: pd.DataFrame | None = None) -> dict:
+    s = (summary() if df is None else df).sort_values("annual_cost_qar", ascending=False).reset_index(drop=True)
+    if s.empty:
+        return {"total_annual_cost_qar": 0, "top10pct_share_pct": 0.0, "deciles": []}
     total = s["annual_cost_qar"].sum()
     cum = s["annual_cost_qar"].cumsum() / total * 100
     deciles = []
     n = len(s)
     for d in range(1, 11):
-        idx = int(n * d / 10) - 1
+        idx = max(0, int(n * d / 10) - 1)
         deciles.append({"top_pct_patients": d * 10, "pct_of_spend": round(float(cum[idx]), 1)})
-    top10_share = round(float(cum[int(n * 0.1) - 1]), 1)
+    top10_share = round(float(cum[max(0, int(n * 0.1) - 1)]), 1)
     return {"total_annual_cost_qar": int(total), "top10pct_share_pct": top10_share,
             "deciles": deciles}
 
 
-def quality_measures() -> list[dict]:
+def quality_measures(df: pd.DataFrame | None = None) -> list[dict]:
     """HEDIS-style quality measures computed live from the HIE. Shared with the MCP server."""
-    s = summary()
+    s = summary() if df is None else df
     dm = s
     htn = s[s["htn"] == 1]
     t2_elig = s[(s["diabetes_type"] == "type2") & (s["hba1c_latest"] >= 8)
@@ -436,9 +511,9 @@ def quality_measures() -> list[dict]:
     return [
         m("NABD-DM-01", "HbA1c tested in the last 6 months",
           (dm["hba1c_days_since_test"] <= 183).sum(), len(dm), 90),
-        m("NABD-DM-02", "Glycaemic control — HbA1c <8%",
+        m("NABD-DM-02", "Glycaemic control, HbA1c <8%",
           (dm["hba1c_latest"] < 8).sum(), len(dm), 70),
-        m("NABD-DM-03", "Poor control — HbA1c >9% (lower is better)",
+        m("NABD-DM-03", "Poor control, HbA1c >9% (lower is better)",
           (dm["hba1c_latest"] > 9).sum(), len(dm), 15, higher_is_better=False),
         m("NABD-DM-04", "Retinal screening in the last 12 months",
           (dm["retinal_screening_overdue"] == 0).sum(), len(dm), 80),

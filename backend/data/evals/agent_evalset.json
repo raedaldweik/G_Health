@@ -6,7 +6,7 @@
       "id": "c_briefing",
       "persona": "clinician",
       "scenario_id": "c_briefing",
-      "question": "Give me my morning briefing — review the panel and tell me who needs attention today.",
+      "question": "Give me my morning briefing: review the panel and tell me who needs attention today.",
       "expected_tools": [
         "cohort_kpis",
         "stratify_cohort_risk",
@@ -92,7 +92,7 @@
       "id": "e_national",
       "persona": "executive",
       "scenario_id": "e_national",
-      "question": "Give me the national glycaemic picture — trend, control rates, and facility spread.",
+      "question": "Give me the national glycaemic picture: trend, control rates, and facility spread.",
       "expected_tools": [
         "cohort_kpis",
         "facility_benchmark"
@@ -146,7 +146,7 @@
       "id": "e_equity",
       "persona": "executive",
       "scenario_id": "e_equity",
-      "question": "Show me the equity picture — outcomes by nationality.",
+      "question": "Show me the equity picture: outcomes by nationality.",
       "expected_tools": [
         "equity_breakdown"
       ],

@@ -1,5 +1,5 @@
 """
-Nabd (نبض) — National Population Health Intelligence.
+Nabd (نبض), National Population Health Intelligence.
 
 FastAPI backend: multi-agent chat (Google ADK + Gemini), dashboards, HITL queue,
 audit trail, guideline documents, HIE data browser. Serves the built React
@@ -26,7 +26,7 @@ from services import platform as P
 FRONTEND_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 
 
-# Warm-up state — the agent graph and model resolution happen in the background so the
+# Warm-up state, the agent graph and model resolution happen in the background so the
 # process answers /api/health within seconds of boot (Railway's healthcheck must not wait on
 # the Gemini API). Chat requests that arrive before warm-up completes simply build the runner.
 WARM = {"ready": False, "error": None, "seconds": None, "self_test": None}
@@ -36,7 +36,7 @@ def _warm_up():
     t0 = time.time()
     try:
         model = agent.resolve_model()
-        print(f"· Model resolution: {model} — {agent.RESOLUTION['source']}"
+        print(f"· Model resolution: {model}, {agent.RESOLUTION['source']}"
               + (f" · error: {agent.RESOLUTION['error']}" if agent.RESOLUTION.get("error") else "")
               + (f" · visible: {', '.join(agent.RESOLUTION['visible'][:8])}" if agent.RESOLUTION.get("visible") else ""),
               flush=True)
@@ -58,7 +58,7 @@ def _record_self_test(test: dict, t0: float):
               f"{test['ms']} ms (ADK supervisor + 5 specialists + MCP)"
               + (f" · after falling back from {test['tried'][0]['model']}" if test.get("tried") else ""), flush=True)
     else:
-        print(f"✗ Gemini self-test FAILED for {test.get('model')}: {test.get('error') or test} — "
+        print(f"✗ Gemini self-test FAILED for {test.get('model')}: {test.get('error') or test}, "
               f"{'capacity error, will re-test every minute' if test.get('capacity') else 'check the key'}", flush=True)
 
 
@@ -84,17 +84,17 @@ async def lifespan(app: FastAPI):
     rag.ensure_loaded()
     print(f"✓ Guideline corpus: {rag.status()}", flush=True)
     if agent.llm_enabled():
-        print("✓ GEMINI_API_KEY present — warming the agent graph in the background", flush=True)
+        print("✓ GEMINI_API_KEY present, warming the agent graph in the background", flush=True)
         threading.Thread(target=_warm_up, name="nabd-warmup", daemon=True).start()
     else:
-        print("✓ Scripted mode: no GEMINI_API_KEY — scenario chips run on live data; free-form chat disabled", flush=True)
+        print("✓ Scripted mode: no GEMINI_API_KEY, scenario chips run on live data; free-form chat disabled", flush=True)
     audit.log("SYSTEM·START", "nabd",
-              f"Backend started — mode={'multi-agent' if agent.llm_enabled() else 'scripted'}")
+              f"Backend started, mode={'multi-agent' if agent.llm_enabled() else 'scripted'}")
     print(f"✓ Startup complete in {time.time() - t0:.1f}s · listening on port {os.getenv('PORT', '8000')}", flush=True)
     yield
 
 
-app = FastAPI(title="Nabd — Population Health Intelligence", lifespan=lifespan)
+app = FastAPI(title="Nabd: Population Health Intelligence", lifespan=lifespan)
 
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"],
                    allow_headers=["*"])

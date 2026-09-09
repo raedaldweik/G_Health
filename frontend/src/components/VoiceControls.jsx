@@ -16,7 +16,7 @@ export function VoiceInput({ onTranscript, disabled, lang }) {
     }
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) {
-      alert('Speech recognition is not supported in this browser — try Chrome.');
+      alert('Speech recognition is not supported in this browser. Try Chrome.');
       return;
     }
     const rec = new SR();

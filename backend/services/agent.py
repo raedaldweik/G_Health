@@ -1,5 +1,5 @@
 """
-Nabd — the multi-agent system (Google Agent Development Kit).
+Nabd, the multi-agent system (Google Agent Development Kit).
 
 A supervisor LlmAgent (Gemini) orchestrates five specialists, each wrapped as an
 AgentTool so every hop is visible in the event stream and rendered as a trace:
@@ -7,7 +7,7 @@ AgentTool so every hop is visible in the event stream and rendered as a trace:
   cohort_agent      structured queries over the HIE (the fhir/BigQuery stand-in)
   guideline_agent   grounded RAG over national clinical guidelines (with citations)
   risk_agent        the deployed ML models: scoring, explanation, similarity, forecast
-  pophealth_agent   ★ Google's missing piece — our population-health MCP server,
+  pophealth_agent   ★ Google's missing piece, our population-health MCP server,
                     connected over stdio via ADK McpToolset (a REAL MCP client hop)
   action_agent      human-in-the-loop drafts (never writes to the EMR)
 
@@ -46,7 +46,7 @@ PREFERRED_MODELS = [
 FALLBACK_MODEL = "gemini-2.5-flash"
 MODEL_CANDIDATES = [m for m in [os.getenv("MODEL", "").strip() or None, *PREFERRED_MODELS] if m]
 
-# How the model was chosen — surfaced on /api/health and in the deploy log so a wrong
+# How the model was chosen, surfaced on /api/health and in the deploy log so a wrong
 # key or an invisible model is obvious before demo day.
 RESOLUTION: dict = {"model": None, "source": None, "visible": [], "error": None}
 
@@ -96,14 +96,14 @@ def resolve_model() -> str:
     except Exception as e:
         RESOLUTION["error"] = f"{type(e).__name__}: {str(e)[:300]}"
     if P.VERTEX:      # Vertex lists publisher models differently; let the self-test verify and fall back
-        RESOLUTION.update(model=PREFERRED_MODELS[0], source="Vertex AI — verified by self-test")
+        RESOLUTION.update(model=PREFERRED_MODELS[0], source="Vertex AI, verified by self-test")
         return PREFERRED_MODELS[0]
-    RESOLUTION.update(model=FALLBACK_MODEL, source="UNVERIFIED fallback — check the key")
+    RESOLUTION.update(model=FALLBACK_MODEL, source="UNVERIFIED fallback, check the key")
     return FALLBACK_MODEL
 
 
 def is_model_missing(e: Exception) -> bool:
-    """404 / NOT_FOUND for the *model* — never for credentials or other 'not found' text."""
+    """404 / NOT_FOUND for the *model*, never for credentials or other 'not found' text."""
     code = getattr(e, "code", None)
     msg = str(e)
     if code == 404 or "NOT_FOUND" in msg:
@@ -160,7 +160,7 @@ def switch_model(reason: str) -> str | None:
     if nxt:
         _active["model"] = nxt
         _active["switches"].append({"from": cur, "to": nxt, "reason": reason[:160], "at": time.time()})
-        print(f"⚠ Gemini capacity error on {cur} — switching to {nxt}: {reason[:160]}", flush=True)
+        print(f"⚠ Gemini capacity error on {cur}, switching to {nxt}: {reason[:160]}", flush=True)
     return nxt
 
 
@@ -170,7 +170,7 @@ TURN_DEADLINE_SECONDS = float(os.getenv("AGENT_TURN_DEADLINE_SECONDS", "150"))
 
 
 class StallError(RuntimeError):
-    """The agent graph produced no event for STALL_SECONDS — treated like a capacity error."""
+    """The agent graph produced no event for STALL_SECONDS, treated like a capacity error."""
 
 
 def _retry_options():
@@ -194,7 +194,7 @@ def _llm(model: str):
 
     class NabdGemini(Gemini):
         @cached_property
-        def api_client(self) -> Client:                       # noqa: D401 — ADK hook
+        def api_client(self) -> Client:                       # noqa: D401, ADK hook
             return LC.make_client(http_options=_http_options())
 
     return NabdGemini(model=model, retry_options=_retry_options())
@@ -229,7 +229,7 @@ def self_test(model: str | None = None) -> dict:
 
 
 # ─────────────────────────── function tools ───────────────────────────
-# Complex arguments travel as JSON strings — maximally robust for function calling.
+# Complex arguments travel as JSON strings, maximally robust for function calling.
 
 def describe_dataset() -> dict:
     """List every HIE table with row counts, descriptions and columns. Call this FIRST
@@ -240,7 +240,7 @@ def describe_dataset() -> dict:
 def query_bigquery(sql: str) -> dict:
     """Run ONE read-only GoogleSQL SELECT against the national HIE in BigQuery (dataset
     nabd_hie; tables: patient_summary, patients, conditions, observations, medications,
-    encounters, care_gaps, facilities — unqualified names resolve to the dataset). Use it
+    encounters, care_gaps, facilities, unqualified names resolve to the dataset). Use it
     for aggregations, joins or window functions the other tools cannot express. Rows are
     capped at 200 and bytes billed are capped; the job id and bytes processed are returned."""
     from services import bq
@@ -257,11 +257,11 @@ def describe_column(column: str, table: str = "patient_summary") -> dict:
 
 def get_patient(patient_id: str) -> dict:
     """Full record for one patient: summary, conditions, active medications, recent
-    encounters. Respects HIE consent — restricted patients return a denial."""
+    encounters. Respects HIE consent, restricted patients return a denial."""
     res = hie.get_patient(patient_id)
     if res.get("consent") == "DENIED":
         audit.log("CONSENT·DENY", "cohort_agent",
-                  f"Access to {patient_id} blocked — restricted consent", patient_id, "warning")
+                  f"Access to {patient_id} blocked, restricted consent", patient_id, "warning")
     else:
         audit.log("FHIR·READ", "cohort_agent", f"Patient record read: {patient_id}", patient_id)
     return res
@@ -324,7 +324,7 @@ def facility_benchmark() -> dict:
 
 
 def equity_breakdown() -> dict:
-    """Outcomes by nationality — the health-equity view (control %, HbA1c, gaps, cost)."""
+    """Outcomes by nationality, the health-equity view (control %, HbA1c, gaps, cost)."""
     return {"rows": hie.equity_breakdown()}
 
 
@@ -354,7 +354,7 @@ def stratify_cohort_risk(filters_json: str = "", top_n: int = 10) -> dict:
 
 def similar_patients(patient_id: str, k: int = 6) -> dict:
     """Find the k most clinically similar patients (standardised feature space) and
-    what treatments/control they have — 'patients like this one'."""
+    what treatments/control they have, 'patients like this one'."""
     return ml.similar_patients(patient_id, k)
 
 
@@ -432,7 +432,7 @@ def draft_prescription(patient_id: str, drug: str, dose: str, rationale: str,
 
 
 def draft_recall(patient_ids_json: str, reason: str, channel: str = "sms") -> dict:
-    """Draft a recall/outreach campaign (sms|call|letter) for a list of patients —
+    """Draft a recall/outreach campaign (sms|call|letter) for a list of patients, 
     queued for human approval."""
     pids = json.loads(patient_ids_json)
     item = queue_service.add_draft("recall_campaign", f"Recall {len(pids)} patients ({channel})",
@@ -445,7 +445,7 @@ def draft_recall(patient_ids_json: str, reason: str, channel: str = "sms") -> di
 
 
 def draft_referral(patient_id: str, specialty: str, rationale: str) -> dict:
-    """Draft a specialist referral (e.g. cardiology, nephrology, ophthalmology) —
+    """Draft a specialist referral (e.g. cardiology, nephrology, ophthalmology), 
     queued for human approval."""
     item = queue_service.add_draft("referral", f"Referral → {specialty}", rationale,
                                    patient_id=patient_id)
@@ -456,18 +456,18 @@ def draft_referral(patient_id: str, specialty: str, rationale: str) -> dict:
 
 # ─────────────────────────── agent graph ───────────────────────────
 
-SUPERVISOR_INSTRUCTION = """You are Nabd (نبض) — the national population-health AI assistant operating on top of the Health Information Exchange for the national diabetes registry: 4,000 people living with type 1 or type 2 diabetes, their complications (retinopathy, neuropathy, kidney disease), therapy, adherence and utilisation.
+SUPERVISOR_INSTRUCTION = """You are Nabd (نبض), the national population-health AI assistant operating on top of the Health Information Exchange for the national diabetes registry: 4,000 people living with type 1 or type 2 diabetes, their complications (retinopathy, neuropathy, kidney disease), therapy, adherence and utilisation.
 
 You serve two personas (the user message states which):
 - CLINICIAN: point-of-care decision support. Be clinically precise and concise.
-- EXECUTIVE: population insight — benchmarking, cost, equity, policy. Lead with the number that matters.
+- EXECUTIVE: population insight, benchmarking, cost, equity, policy. Lead with the number that matters.
 
 You are a SUPERVISOR of specialist agents, each exposed as a tool:
-- cohort_agent: ANY question needing patient or population data (counts, filters, group-bys, rankings, correlations, patient records, timelines, facility/equity views). It queries the HIE directly — never invent figures.
+- cohort_agent: ANY question needing patient or population data (counts, filters, group-bys, rankings, correlations, patient records, timelines, facility/equity views). It queries the HIE directly, never invent figures.
 - guideline_agent: national clinical guideline retrieval. MANDATORY before any clinical recommendation; cite document + page.
-- risk_agent: the deployed ML models — patient risk scoring with explanations, cohort stratification, similar patients, demand forecast, counterfactual policy simulation, model cards.
-- pophealth_agent: population-health MCP tools — quality measures, care gaps, cohort building, risk stratification, policy simulation, and drafting population interventions. Prefer it for care-gap / quality-measure / campaign questions.
-- action_agent: draft prescriptions, recalls, referrals. Drafts ALWAYS go to the human approval queue — never present a clinical action as done.
+- risk_agent: the deployed ML models, patient risk scoring with explanations, cohort stratification, similar patients, demand forecast, counterfactual policy simulation, model cards.
+- pophealth_agent: population-health MCP tools, quality measures, care gaps, cohort building, risk stratification, policy simulation, and drafting population interventions. Prefer it for care-gap / quality-measure / campaign questions.
+- action_agent: draft prescriptions, recalls, referrals. Drafts ALWAYS go to the human approval queue, never present a clinical action as done.
 
 You also own render_chart (charts) and render_map (a colour-coded facility map of Qatar): call them whenever the user asks to see/plot/compare data, or asks about facilities/regions/geography. Keep chart data compact (≤24 rows).
 
@@ -476,8 +476,8 @@ Rules:
 2. Delegate with a specific, self-contained request (the specialist has no chat context).
 3. For clinical recommendations: guideline citation (document + page) is mandatory.
 4. Lead the final answer with the direct result and its actual numbers; then brief supporting detail. Clean markdown, short sentences, bold the key figures.
-5. Never end on a filler line like "let me check" — always finish with the complete written answer. Charts support the text; they never replace it.
-6. Population aggregates are fine to show; do not expose row-level data for restricted-consent patients (the tools enforce this — surface the denial transparently when it happens).
+5. Never end on a filler line like "let me check", always finish with the complete written answer. Charts support the text; they never replace it.
+6. Population aggregates are fine to show; do not expose row-level data for restricted-consent patients (the tools enforce this, surface the denial transparently when it happens).
 """
 
 _runners: dict = {}
@@ -523,7 +523,7 @@ def _build_tools_map(model_name: str | None = None):
         description=("Runs the deployed ML models: risk scoring with SHAP drivers, cohort "
                      "stratification, similar patients, demand forecast, counterfactual policy "
                      "simulation, model governance cards."),
-        instruction=("You are the ML specialist. Use the models — never guess. When you score, "
+        instruction=("You are the ML specialist. Use the models, never guess. When you score, "
                      "report the probability, the band, and the top drivers in plain clinical "
                      "language. For simulations report events avoided, costs and net benefit, "
                      "and state the method in one line. For a single patient's what-if question "
@@ -546,7 +546,7 @@ def _build_tools_map(model_name: str | None = None):
                      "and drafting population interventions (human-approved)."),
         instruction=("You are the population-health specialist, working through the "
                      "population-health MCP server's tools. Answer with the measure/gap/cohort "
-                     "numbers you computed. When asked to act, use draft_intervention — it goes "
+                     "numbers you computed. When asked to act, use draft_intervention, it goes "
                      "to the human approval queue."),
         tools=[pophealth_tools])
 
@@ -554,7 +554,7 @@ def _build_tools_map(model_name: str | None = None):
         name="action_agent", model=llm, generate_content_config=gen_cfg,
         description="Drafts prescriptions, recall campaigns and referrals for human approval.",
         instruction=("You draft clinical actions. Every draft goes to the human-in-the-loop "
-                     "queue — say so explicitly. Include the clinical rationale and guideline "
+                     "queue, say so explicitly. Include the clinical rationale and guideline "
                      "citation when provided. Never claim an action was executed."),
         tools=[draft_prescription, draft_recall, draft_referral])
 
@@ -617,7 +617,7 @@ def _summarise_result(tool: str, resp: Any) -> str:
         if "patient" in r:
             return "patient record retrieved"
         if r.get("consent") == "DENIED":
-            return "CONSENT DENIED — access blocked"
+            return "CONSENT DENIED, access blocked"
         keys = list(r.keys())[:4]
         return f"returned: {', '.join(keys)}"
     if isinstance(r, list):
@@ -642,7 +642,7 @@ async def stream_chat(message: str, session_id: str, persona: str = "clinician",
                        if is_model_missing(e) else "at capacity (503)")
                 yield {"type": "reset"}
                 yield {"type": "step", "status": "done", "agent": "system", "tool": "model_fallback",
-                       "detail": f"{model} {why} — re-running on {active_model()}"}
+                       "detail": f"{model} {why}, re-running on {active_model()}"}
                 continue
             raise
 
@@ -680,8 +680,8 @@ async def _stream_once(message: str, session_id: str, persona: str, model: str,
                                               session_id=session_id)
 
     persona_hint = {
-        "clinician": "[persona: CLINICIAN — point-of-care decision support]",
-        "executive": "[persona: EXECUTIVE — population health leadership]",
+        "clinician": "[persona: CLINICIAN, point-of-care decision support]",
+        "executive": "[persona: EXECUTIVE, population health leadership]",
     }.get(persona, "")
     content = gtypes.Content(role="user", parts=[gtypes.Part(text=f"{persona_hint}\n{message}")])
 
@@ -763,7 +763,7 @@ async def _stream_once(message: str, session_id: str, persona: str, model: str,
             uniq.append(c)
 
     audit.log("AGENT·ANSWER", "nabd_supervisor",
-              f"Answered ({persona}): '{message[:90]}' — {len(trace)} tool steps, "
+              f"Answered ({persona}): '{message[:90]}', {len(trace)} tool steps, "
               f"{usage['total_tokens']} tokens")
     yield {"type": "final",
            "answer": final_text or "I wasn't able to produce an answer for that query.",

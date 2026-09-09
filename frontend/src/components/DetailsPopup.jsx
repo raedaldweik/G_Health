@@ -1,7 +1,7 @@
 import { AgentChip } from './ui';
 
 /** Full traceability popup: the question, per-agent tool calls with args/results,
- *  citations, drafted actions and token usage — the "nothing is a black box" view. */
+ *  citations, drafted actions and token usage, the "nothing is a black box" view. */
 export default function DetailsPopup({ data, query, onClose, onOpenSource }) {
   if (!data) return null;
   const usage = data.usage || {};
@@ -39,7 +39,7 @@ export default function DetailsPopup({ data, query, onClose, onOpenSource }) {
                 <span className="badge badge-blue">{usage.total_tokens.toLocaleString()} tokens</span>
                 <span className="badge badge-blue">{usage.prompt_tokens?.toLocaleString()} prompt / {usage.completion_tokens?.toLocaleString()} completion</span>
                 <span className="badge badge-blue">{usage.llm_calls} LLM calls</span>
-                {usage.wall_ms != null && <span className="badge badge-blue">{(usage.wall_ms / 1000).toFixed(1)} s wall · first token {usage.first_token_ms != null ? `${(usage.first_token_ms / 1000).toFixed(1)} s` : '—'}</span>}
+                {usage.wall_ms != null && <span className="badge badge-blue">{(usage.wall_ms / 1000).toFixed(1)} s wall · first token {usage.first_token_ms != null ? `${(usage.first_token_ms / 1000).toFixed(1)} s` : 'n/a'}</span>}
                 {usage.thinking_level && <span className="badge badge-blue">thinking {usage.thinking_level.toLowerCase()}</span>}
               </>
             )}
@@ -48,7 +48,7 @@ export default function DetailsPopup({ data, query, onClose, onOpenSource }) {
 
           <div>
             <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--text-dim)' }}>
-              Tool calls — every agent hop
+              Tool calls: every agent hop
             </p>
             <div className="space-y-2">
               {(data.trace || []).map((t, i) => (

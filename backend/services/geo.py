@@ -1,5 +1,5 @@
 """
-Nabd — geography of the gap.
+Nabd, geography of the gap.
 
 Facility coordinates + per-facility outcome metrics for the map layer, and the
 `map_spec` helper the agent's render_map tool and the scripted scenarios use to

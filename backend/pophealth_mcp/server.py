@@ -1,11 +1,11 @@
 """
-population-health-mcp — the first population-health MCP server on Google Cloud's
+population-health-mcp, the first population-health MCP server on Google Cloud's
 healthcare stack.
 
 Why it exists (verified gap, Sept 2026): Google ships official MCP tools to READ
 FHIR (MCP Toolbox `cloud-healthcare`: single-patient lookups, store metadata) and
 to CALL ML plumbing (Agent Platform remote MCP: /mcp/predict, /mcp/models). But no
-MCP server — official or community — lets an agent reason about a POPULATION:
+MCP server, official or community, lets an agent reason about a POPULATION:
 quality measures, care gaps, cohorts, risk stratification, policy what-ifs, or a
 safe write-back path for interventions. This server fills exactly that gap.
 
@@ -18,7 +18,7 @@ Tools:
   simulate_policy           counterfactual what-if via model re-scoring
   draft_intervention        DRAFT-ONLY FHIR-style intervention → human approval queue
 
-Runs over stdio for any MCP client — the Nabd agent (ADK McpToolset), Gemini CLI,
+Runs over stdio for any MCP client, the Nabd agent (ADK McpToolset), Gemini CLI,
 Claude Desktop. Start from backend/:  python -m pophealth_mcp
 Phase 2: same tools re-hosted on Cloud Run, backed by BigQuery + a Vertex AI
 endpoint instead of the local engine.
@@ -80,7 +80,7 @@ def find_care_gaps(gap_key: str = "", facility: str = "", limit: int = 12) -> st
     """Find open, guideline-derived care gaps across the population.
 
     Args:
-        gap_key: optional filter — one of hba1c_overdue, retinal_screening_overdue,
+        gap_key: optional filter, one of hba1c_overdue, retinal_screening_overdue,
             foot_exam_overdue, acr_screening_missing, bp_uncontrolled, glp1_sglt2_gap,
             therapy_inertia, low_adherence, renal_protection_gap. Empty = summary of all.
         facility: optional facility name filter (substring match).
@@ -139,7 +139,7 @@ def stratify_risk(filters_json: str = "", top_n: int = 10) -> str:
 @mcp.tool()
 def simulate_policy(intervention: str, horizon_months: int = 12) -> str:
     """Counterfactual policy what-if: flips the treatment flag for every eligible
-    patient and RE-SCORES them through the same risk model — projecting events
+    patient and RE-SCORES them through the same risk model, projecting events
     avoided, cost avoided, programme cost and net benefit. Not a canned number.
 
     Args:
@@ -154,7 +154,7 @@ def simulate_policy(intervention: str, horizon_months: int = 12) -> str:
 def draft_intervention(patient_ids_json: str, action_type: str, title: str, rationale: str,
                        citation: str = "") -> str:
     """DRAFT a population intervention (recall campaign, therapy review, referral batch)
-    for the listed patients. The draft is queued for HUMAN clinician approval — this
+    for the listed patients. The draft is queued for HUMAN clinician approval, this
     tool never writes to the EMR. Fills the write-back gap left by Google's read-only
     healthcare MCP tools, safely.
 

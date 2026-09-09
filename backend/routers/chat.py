@@ -1,4 +1,4 @@
-"""Chat API — streams NDJSON events (live agent steps → final payload)."""
+"""Chat API, streams NDJSON events (live agent steps → final payload)."""
 from __future__ import annotations
 
 import json
@@ -68,7 +68,7 @@ async def chat(req: ChatRequest):
             fb = scenarios.get_runner(req.scenario_id) if req.scenario_id else None
             if fb:
                 yield {"type": "step", "status": "done", "agent": "system", "tool": "fallback",
-                       "detail": f"live agent unavailable ({e.__class__.__name__}) — scripted engine engaged"}
+                       "detail": f"live agent unavailable ({e.__class__.__name__}), scripted engine engaged"}
                 async for ev in fb(req.persona):
                     yield ev
             else:

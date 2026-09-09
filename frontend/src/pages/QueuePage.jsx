@@ -79,7 +79,7 @@ export default function QueuePage() {
           Human-in-the-loop queue
         </h1>
         <p className="text-[11px] mt-1 mb-5" style={{ color: 'var(--text-dim)' }}>
-          The agents draft; a clinician signs. <b>No clinical write ever happens without a human</b> —
+          The agents draft; a clinician signs. <b>No clinical write ever happens without a human</b>: 
           this queue is the safety model, and every decision lands in the audit trail.
         </p>
 
@@ -88,7 +88,7 @@ export default function QueuePage() {
           {pending.map((i) => <Card key={i.id} item={i} showActions />)}
           {pending.length === 0 && (
             <p className="text-[12px] py-6 text-center" style={{ color: 'var(--text-faint)' }}>
-              Nothing pending — run a clinician scenario in the Assistant and the drafts appear here.
+              Nothing pending. Run a clinician scenario in the Assistant and the drafts appear here.
             </p>
           )}
         </div>

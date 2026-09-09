@@ -50,7 +50,7 @@ export default function ResponseCard({ data, onOpenSource, onOpenDetails }) {
 
       {(data.charts || []).map((spec, i) => <DynamicChart key={i} spec={spec} />)}
 
-      {/* Guideline citations — click to read the passage */}
+      {/* Guideline citations, click to read the passage */}
       {citations.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {citations.map((c, i) => (
@@ -77,7 +77,7 @@ export default function ResponseCard({ data, onOpenSource, onOpenDetails }) {
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
               </svg>
               <span className="font-bold">Draft {a.draft_id}</span>
-              <span>queued — awaiting human approval in the Queue tab. No EMR write has occurred.</span>
+              <span>queued for human approval in the Queue tab. No EMR write has occurred.</span>
             </div>
           ))}
         </div>

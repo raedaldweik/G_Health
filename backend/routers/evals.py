@@ -1,4 +1,4 @@
-"""AI Evaluation APIs — model metrics from held-out data, agent evalset runner, LLM selection, governance."""
+"""AI Evaluation APIs, model metrics from held-out data, agent evalset runner, LLM selection, governance."""
 from __future__ import annotations
 
 from fastapi import APIRouter

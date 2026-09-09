@@ -494,7 +494,7 @@ html, body, #root {
   pointer-events: none;
 }
 .donut-center-val {
-  font-size: clamp(18px, 2.6cqw, 40px);
+  font-size: 22px;
   font-weight: 800;
   letter-spacing: -0.02em;
   font-feature-settings: 'tnum' 1;
@@ -502,11 +502,11 @@ html, body, #root {
   color: var(--text);
 }
 .donut-center-lbl {
-  font-size: 9.5px; font-weight: 700;
-  letter-spacing: 0.18em; text-transform: uppercase;
+  font-size: 8.5px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase;
   color: var(--text-faint);
-  margin-top: 3px;
-  max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  margin-top: 2px;
+  max-width: 96px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .donut-legend {
   flex: 0 0 auto;
@@ -844,3 +844,28 @@ html, body, #root {
 @keyframes simPulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
 .sim-cursor { display: inline-block; width: 7px; height: 13px; margin-left: 2px; vertical-align: -2px;
   background: var(--brand); border-radius: 2px; animation: simPulse 0.9s ease-in-out infinite; }
+
+
+/* ─── Dashboard cross-filter ─── */
+.v3d-bar-group.selectable { cursor: pointer; }
+.v3d-bar-group.dimmed { opacity: 0.32; filter: saturate(0.6); }
+.v3d-bar-group.picked .v3d-bar-total { fill: var(--brand); font-weight: 800; }
+.filter-bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.filter-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 8px 4px 10px; border-radius: 999px;
+  font-size: 10.5px; font-weight: 700; color: var(--brand-lo);
+  background: rgba(138,21,56,0.08); border: 1px solid rgba(138,21,56,0.25);
+}
+.filter-chip .k { font-weight: 600; color: var(--text-dim); }
+.filter-chip button {
+  width: 14px; height: 14px; border-radius: 50%; border: 0; padding: 0; cursor: pointer;
+  background: rgba(138,21,56,0.15); color: var(--brand-lo); font-size: 10px; line-height: 14px; font-weight: 800;
+}
+.filter-chip button:hover { background: var(--brand); color: #fff; }
+.filter-hint { font-size: 10px; color: var(--text-faint); }
+.filter-clear { font-size: 10px; font-weight: 700; color: var(--brand); background: none; border: 0; cursor: pointer; padding: 2px 4px; }
+.title-sep { color: var(--text-faint); font-weight: 400; margin: 0 2px; }
+.row-pick { cursor: pointer; }
+.row-pick:hover { background: rgba(138,21,56,0.05); }
+.row-pick.picked { background: rgba(138,21,56,0.09); }

@@ -1,7 +1,7 @@
 import { useId, useMemo, useRef, useState } from 'react';
 
 /*
- * Chart3D — faithful React ports of the reports repository's signature charts:
+ * Chart3D, faithful React ports of the reports repository's signature charts:
  *   Bar3D    isometric bars (front/side/top faces, sheen, shadow, staggered pop-in)
  *   Donut3D  tilted ring (per-segment top gradients, depth walls, sheen, legend chips)
  * Same geometry, gradients and interaction language as bar.html / donut.html.
@@ -43,7 +43,7 @@ const truncate = (s, n) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
 /* ─────────────────────────── Bar3D ───────────────────────────
  * data: [{ label, value }] · ramp: index into RAMPS (default teal)
  * The full render3DBars visual language from bar.html. */
-export function Bar3D({ data, ramp = 0, maxBars = 12, height = '100%', unit = '' }) {
+export function Bar3D({ data, ramp = 0, maxBars = 12, height = '100%', unit = '', onSelect, activeLabel = null }) {
   const uid = useId().replace(/[:]/g, '');
   const wrapRef = useRef(null);
   const [tip, setTip] = useState(null);
@@ -130,10 +130,13 @@ export function Bar3D({ data, ramp = 0, maxBars = 12, height = '100%', unit = ''
           const barX = padL + CAT_GAP + ci * (BAR_W + CAT_GAP);
           const barH = Math.max(0, (d.value / maxV) * chartH);
           const barY = baseY - barH;
+          const picked = activeLabel != null && String(d.label) === String(activeLabel);
+          const dimmed = activeLabel != null && !picked;
           return (
             <g key={ci}>
-              <g className="v3d-stack-group v3d-bar-group"
+              <g className={`v3d-stack-group v3d-bar-group${onSelect ? ' selectable' : ''}${dimmed ? ' dimmed' : ''}${picked ? ' picked' : ''}`}
                 style={{ animationDelay: `${0.15 + ci * 0.06}s` }}
+                onClick={onSelect ? () => onSelect(d.label, d) : undefined}
                 onMouseMove={(e) => showTip(e, d)} onMouseLeave={() => setTip(null)}>
                 <ellipse cx={barX + BAR_W / 2 + ISO_X / 2} cy={baseY + ISO_Y + 2}
                   rx={BAR_W * 0.62} ry={ISO_Y * 0.7} fill={`url(#b3sh-${uid})`} opacity="0.5" />
@@ -181,12 +184,16 @@ export function Bar3D({ data, ramp = 0, maxBars = 12, height = '100%', unit = ''
 }
 
 /* ─────────────────────────── Donut3D ───────────────────────────
- * data: [{ label, value }] — tilted 3D ring with depth walls, sheen,
+ * data: [{ label, value }], tilted 3D ring with depth walls, sheen,
  * centre total and clickable legend chips (donut.html, verbatim geometry). */
 export function Donut3D({ data, centerLabel = 'Total', centerValue = null, height = '100%',
-                          showLegend = true, valueFormatter = fmt3d }) {
+                          showLegend = true, valueFormatter = fmt3d, onSelect, activeLabel }) {
   const uid = useId().replace(/[:]/g, '');
-  const [activeKey, setActiveKey] = useState('');
+  const [innerKey, setInnerKey] = useState('');
+  // Controlled when the parent passes activeLabel (dashboard cross-filter); local otherwise.
+  const controlled = activeLabel !== undefined;
+  const activeKey = controlled ? (activeLabel || '') : innerKey;
+  const setActiveKey = controlled ? () => {} : setInnerKey;
 
   const items = useMemo(() => (data || [])
     .filter((d) => d && d.value > 0.0001)
@@ -241,7 +248,7 @@ export function Donut3D({ data, centerLabel = 'Total', centerValue = null, heigh
 
   const walls = [...segments].map((seg, i) => ({ ...seg, idx: i }))
     .sort((a, b) => Math.sin(a.midAngle) - Math.sin(b.midAngle));
-  const toggle = (seg) => setActiveKey(activeKey === seg.key ? '' : seg.key);
+  const toggle = (seg) => { setActiveKey(activeKey === seg.key ? '' : seg.key); if (onSelect) onSelect(seg.label ?? seg.key); };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height, minHeight: 0 }}>
@@ -302,7 +309,7 @@ export function Donut3D({ data, centerLabel = 'Total', centerValue = null, heigh
                   fill={`url(#dtop-${uid}-${i})`} className="d3d-top"
                   stroke={seg.color[2]} strokeWidth="0.3" strokeOpacity="0.5" />
                 {sheen && <path d={sheen} fill={`url(#dsheen-${uid})`} opacity="0.6" style={{ pointerEvents: 'none' }} />}
-                <title>{`${seg.label} — ${seg.value.toLocaleString(undefined, { maximumFractionDigits: 2 })} (${((seg.value / total) * 100).toFixed(1)}%)`}</title>
+                <title>{`${seg.label}, ${seg.value.toLocaleString(undefined, { maximumFractionDigits: 2 })} (${((seg.value / total) * 100).toFixed(1)}%)`}</title>
               </g>
             );
           })}

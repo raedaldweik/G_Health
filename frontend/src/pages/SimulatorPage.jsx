@@ -11,7 +11,7 @@ import {
 import { Panel, Spinner } from '../components/ui';
 
 /*
- * What-if simulator — one patient, the deployed deterioration-risk model, live.
+ * What-if simulator, one patient, the deployed deterioration-risk model, live.
  *   Left    · the levers a clinician can move (record values marked, changes in gold)
  *   Centre  · baseline vs simulated risk: gauge, band, registry percentile, cost, gaps closed
  *   Right   · which features moved the estimate (model attribution) and Gemini's explanation
@@ -22,11 +22,11 @@ const BAND_COLOR = { Low: '#3a8e5a', Moderate: '#b8862e', High: '#d97706', 'Very
 const UP = '#b03c3c';
 const DOWN = '#3a8e5a';
 
-const pct = (p, d = 1) => (p == null ? '—' : `${(p * 100).toFixed(d)}%`);
-const qar = (n) => (n == null ? '—' : `${n < 0 ? '−' : n > 0 ? '+' : ''}QAR ${Math.abs(n).toLocaleString()}`);
+const pct = (p, d = 1) => (p == null ? 'n/a' : `${(p * 100).toFixed(d)}%`);
+const qar = (n) => (n == null ? 'n/a' : `${n < 0 ? '−' : n > 0 ? '+' : ''}QAR ${Math.abs(n).toLocaleString()}`);
 
 function fmtLever(l, v) {
-  if (v == null) return '—';
+  if (v == null) return 'n/a';
   if (l.kind === 'toggle') return v ? 'Yes' : 'No';
   if (l.percent) return `${Math.round(v * 100)}%`;
   if (Number.isInteger(+l.step) && +l.step >= 1) return `${Math.round(v)}${l.unit ? ` ${l.unit}` : ''}`;
@@ -239,7 +239,7 @@ export default function SimulatorPage() {
       <div className="flex items-end justify-between gap-4 shrink-0 px-1">
         <div className="min-w-0">
           <h1 className="text-[17px] font-extrabold tracking-tight leading-none" style={{ color: 'var(--text)' }}>
-            Risk Simulator — what changes one patient's deterioration risk
+            Risk Simulator: what changes one patient's deterioration risk
           </h1>
           <p className="text-[10.5px] mt-1" style={{ color: 'var(--text-dim)' }}>
             Move a lever and the deployed model re-scores the patient. The attribution shows which inputs moved the estimate; Gemini explains it in clinical language. Decision support, not a treatment recommendation.
@@ -264,7 +264,7 @@ export default function SimulatorPage() {
                   <button key={m.patient_id} className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-[rgba(138,21,56,0.06)] flex items-center justify-between gap-2"
                     onMouseDown={() => { setPid(m.patient_id); setQ(''); setOpen(false); }}>
                     <span className="text-[11px] font-bold truncate" style={{ color: 'var(--text)' }}>{m.name} <span className="font-mono font-normal" style={{ color: 'var(--text-faint)' }}>{m.patient_id}</span></span>
-                    <span className="text-[10px] shrink-0" style={{ color: 'var(--text-dim)' }}>{m.age} · {m.diabetes_type === 'type1' ? 'T1' : 'T2'} · HbA1c {m.hba1c_latest ?? '—'} · {m.registry_tier}</span>
+                    <span className="text-[10px] shrink-0" style={{ color: 'var(--text-dim)' }}>{m.age} · {m.diabetes_type === 'type1' ? 'T1' : 'T2'} · HbA1c {m.hba1c_latest ?? 'n/a'} · {m.registry_tier}</span>
                   </button>
                 ))}
               </div>
@@ -284,7 +284,7 @@ export default function SimulatorPage() {
         <div className="flex-1 grid grid-cols-12 gap-2.5 min-h-0">
           {/* ── levers ── */}
           <div className="col-span-4 min-h-0">
-            <Panel title="Levers — the record, and what you change" pad={false}
+            <Panel title="Levers: the record and what you change" pad={false}
               right={
                 <div className="flex items-center gap-1">
                   <button className="sim-chip" onClick={reset} disabled={!changed}>Reset</button>
@@ -329,19 +329,19 @@ export default function SimulatorPage() {
 
           {/* ── risk ── */}
           <div className="col-span-3 min-h-0">
-            <Panel title="Model estimate — before and after" right={busy && <span className="text-[9.5px] font-bold" style={{ color: 'var(--text-faint)' }}>re-scoring…</span>}>
+            <Panel title="Model estimate: before and after" right={busy && <span className="text-[9.5px] font-bold" style={{ color: 'var(--text-faint)' }}>re-scoring…</span>}>
               <div className="h-full min-h-0 flex flex-col overflow-y-auto">
                 <Gauge base={b0} sim={sim} changed={changed} />
                 <div className="grid grid-cols-2 gap-1.5 mt-1">
-                  <Stat label="Change" value={changed && result ? `${result.delta.absolute >= 0 ? '+' : '−'}${Math.abs(result.delta.absolute * 100).toFixed(1)} pts` : '—'}
+                  <Stat label="Change" value={changed && result ? `${result.delta.absolute >= 0 ? '+' : '−'}${Math.abs(result.delta.absolute * 100).toFixed(1)} pts` : 'n/a'}
                     sub={changed && result ? `${result.delta.relative_pct >= 0 ? '+' : '−'}${Math.abs(result.delta.relative_pct).toFixed(0)}% relative` : 'move a lever'}
                     tone={changed && result ? (result.delta.absolute < 0 ? 'good' : 'bad') : null} />
-                  <Stat label="Registry percentile" value={sim ? `${sim.percentile.toFixed(0)}th` : b0 ? `${b0.percentile.toFixed(0)}th` : '—'}
+                  <Stat label="Registry percentile" value={sim ? `${sim.percentile.toFixed(0)}th` : b0 ? `${b0.percentile.toFixed(0)}th` : 'n/a'}
                     sub={changed && b0 ? `was ${b0.percentile.toFixed(0)}th · higher risk than that share of the registry` : 'higher risk than this share of the registry'} />
-                  <Stat label="Expected cost · 12 months" value={changed && result ? qar(result.expected_cost_delta_qar) : '—'}
+                  <Stat label="Expected cost · 12 months" value={changed && result ? qar(result.expected_cost_delta_qar) : 'n/a'}
                     sub={`at QAR ${(base.event_cost_qar || 18500).toLocaleString()} per deterioration episode`}
                     tone={changed && result ? (result.expected_cost_delta_qar < 0 ? 'good' : 'bad') : null} />
-                  <Stat label="Band" value={sim ? sim.band : b0?.band || '—'}
+                  <Stat label="Band" value={sim ? sim.band : b0?.band || 'n/a'}
                     sub={changed && b0 && sim && b0.band !== sim.band ? `was ${b0.band}` : 'model band (registry tier ' + pt.registry_tier + ')'}
                     color={BAND_COLOR[sim?.band || b0?.band]} />
                 </div>
@@ -364,7 +364,7 @@ export default function SimulatorPage() {
 
           {/* ── attribution + explanation ── */}
           <div className="col-span-5 min-h-0 grid grid-rows-2 gap-2.5">
-            <Panel title="What moved the estimate — model attribution (probability points)">
+            <Panel title="What moved the estimate: model attribution (probability points)">
               {changed && attribution.length ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={attribution} layout="vertical" margin={{ top: 4, right: 44, bottom: 0, left: 4 }} barCategoryGap={5}>
@@ -398,7 +398,7 @@ export default function SimulatorPage() {
               )}
             </Panel>
 
-            <Panel title="Why — explanation"
+            <Panel title="Explanation"
               right={
                 <div className="flex items-center gap-1.5">
                   {explain.mode && (
@@ -465,7 +465,7 @@ function GIcon() {
 function initials(n) { return (n || '?').split(' ').map((s) => s[0]).slice(0, 2).join('').toUpperCase(); }
 function bandOf(p) { return p >= 0.25 ? 'Very High' : p >= 0.12 ? 'High' : p >= 0.05 ? 'Moderate' : 'Low'; }
 function fmtAttr(feature, v) {
-  if (v == null) return '—';
+  if (v == null) return 'n/a';
   if (['smoker', 'on_metformin', 'on_sglt2_glp1', 'on_insulin', 'on_raas_inhibitor', 'albuminuria', 'retinopathy', 'neuropathy', 'foot_ulcer_history', 'htn', 'is_male'].includes(feature)) return v ? 'yes' : 'no';
   if (feature === 'adherence_pdc') return `${Math.round(v * 100)}%`;
   return Number.isInteger(+v) ? `${v}` : (+v).toFixed(1);

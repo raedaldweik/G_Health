@@ -28,13 +28,15 @@ RULE: Check the clock at 18:00 and at 26:00. More than two minutes behind at 18:
 
 ## 2. Pre-flight, thirty minutes before
 
-- [ ] Tab 1: the Railway URL. The header pill shows a live model name, not "warming up" and not a key error. If it says warming up, wait; it takes under a minute. If the key has failed, the scenario chips still run on the scripted engine with live data; only free-form questions need the key.
+- [ ] Tab 1: the Railway URL. The header shows no warning pill. If it shows "Warming up", wait; it takes under a minute. If it shows a key or capacity warning, the scenario chips still run on the scripted engine with live data; only free-form questions need the key.
 - [ ] Tab 2: the same URL, already loaded. This is the parachute if tab 1 misbehaves.
 - [ ] Persona set to Dr. Amal Al-Mansoori (clinician) in tab 1.
 - [ ] Run "Patient review + draft prescription" once. Confirm the hero is Kamal Miah at about 33%. This also warms Gemini.
 - [ ] Queue tab: approve or reject anything left over from rehearsal so the panel sees only today's draft.
 - [ ] Open Dashboards → Geography once so the map tiles are cached.
 - [ ] Open Simulator once, press Reset. Kamal is preselected.
+- [ ] Dashboards: click a bar once (for example "High" in the registry tiers) and clear it, so the cross-filter is warm and you remember where the Clear button sits.
+- [ ] Documents tab: the retrieval line should read hybrid. If it says the semantic index is pending, run `python -m scripts.embed_corpus` locally with your key and commit the cache file before the day (see the README).
 - [ ] Deck open in PowerPoint presenter view. Notes on your screen only. Slide 1 showing.
 - [ ] Browser at 100% zoom, window at least 1,600 px wide. Close every other tab. Notifications off.
 - [ ] Phone hotspot ready as a second network. Water within reach. A clock you can see.
@@ -235,9 +237,9 @@ SCREEN: mean HbA1c by nationality, from 7.17% (Qatari) to 8.01% (Nepali).
 
 SAY: Mean HbA1c runs from 7.2 for Qatari patients to 8.0 for Nepali patients, and the control rates follow the same gradient. That tracks access, not biology. Multilingual outreach is the cheapest lever on the board, and it is a pillar of the National Health Strategy.
 
-DO: Click Dashboards → Registry. Fifteen seconds.
+DO: Click Dashboards → Registry. Click the "High" bar in the registry risk tiers. Every panel narrows to those patients and a chip appears at the top right: Registry tier High, 406 of 4,000 patients. Click Clinical Quality: the filter follows. Click Clear.
 
-SAY: Every number on these dashboards is the same query the assistant runs. The briefing and the conversation can never disagree, because there is one source of truth.
+SAY: Every number on these dashboards is the same query the assistant runs. The briefing and the conversation can never disagree, because there is one source of truth. And the dashboards filter each other: one click on a bar, and every panel, on every tab, answers for that group.
 
 ### Trust — the Evaluation tab (26:00, three minutes)
 

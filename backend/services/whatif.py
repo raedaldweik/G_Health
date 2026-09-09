@@ -97,7 +97,7 @@ PRESETS = {
     },
     "deteriorate": {
         "label": "Left untreated",
-        "description": "HbA1c +1.5 points, systolic +15 mmHg, adherence −0.20, one admission — the trajectory if nothing changes.",
+        "description": "HbA1c +1.5 points, systolic +15 mmHg, adherence −0.20, one admission, the trajectory if nothing changes.",
         "delta": {"hba1c_latest": 1.5, "sbp_latest": 15, "adherence_pdc": -0.20, "admissions_12mo": 1},
     },
 }
@@ -130,7 +130,7 @@ def _facility_name(fid: str) -> str:
 
 @lru_cache(maxsize=1)
 def _registry_probs() -> np.ndarray:
-    """Every consenting patient scored once — gives the percentile context."""
+    """Every consenting patient scored once, gives the percentile context."""
     s = hie.summary()
     s = s[s["consent_status"] != "restricted"]
     return np.sort(ml._score(ml._feature_frame(s)))
@@ -213,7 +213,7 @@ def baseline(patient_id: str) -> dict:
         return {"error": f"patient {patient_id} not found"}
     if row["consent_status"] == "restricted":
         return {"consent": "DENIED", "patient_id": patient_id,
-                "message": "Restricted consent — the record cannot be opened or scored. This attempt has been logged."}
+                "message": "Restricted consent, the record cannot be opened or scored. This attempt has been logged."}
     prob, contribs = _contribs(row)
     mono = _monotone()
     levers = [{**l, "direction": mono.get(l["key"], 0)} for l in LEVERS]
@@ -381,7 +381,7 @@ def _explanation_context(patient_id: str, overrides: dict, result: dict) -> str:
 
 
 def scripted_explanation(result: dict) -> str:
-    """Deterministic narrative from the numbers — used when no LLM is configured."""
+    """Deterministic narrative from the numbers, used when no LLM is configured."""
     b, s, d = result["baseline"], result["simulated"], result["delta"]
     if not result["changed"]:
         return (f"No lever has been changed. The model's baseline estimate is a {b['probability']*100:.1f}% "
@@ -424,7 +424,7 @@ async def explain(patient_id: str, overrides: dict | None, actor: str = "clinici
 
     if not LC.llm_available():
         text = scripted_explanation(result)
-        audit_svc.log("SIM·EXPLAIN", actor, f"What-if explanation (scripted) — risk {result['baseline']['probability']*100:.1f}% → "
+        audit_svc.log("SIM·EXPLAIN", actor, f"What-if explanation (scripted), risk {result['baseline']['probability']*100:.1f}% → "
                       f"{result['simulated']['probability']*100:.1f}%", patient_id, "info")
         yield {"type": "meta", "mode": "scripted", "model": None}
         for chunk in text.split(" "):
@@ -472,7 +472,7 @@ async def explain(patient_id: str, overrides: dict | None, actor: str = "clinici
             yield {"type": "final", "text": text, "mode": "scripted-fallback", "model": model, "error": str(e)[:200]}
             return
     audit_svc.log("SIM·EXPLAIN", actor,
-                  f"What-if explanation by {model} in {time.time()-started:.1f}s — risk "
+                  f"What-if explanation by {model} in {time.time()-started:.1f}s, risk "
                   f"{result['baseline']['probability']*100:.1f}% → {result['simulated']['probability']*100:.1f}%; "
                   f"levers: {', '.join(FEATURE_LABELS.get(k, k) for k in result['changed']) or 'none'}",
                   patient_id, "info")

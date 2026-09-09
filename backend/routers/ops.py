@@ -96,6 +96,6 @@ def patient(patient_id: str):
 
 @router.get("/api/story/hero")
 def story_hero():
-    """The patient the demo follows — the highest-yield, believable deep-dive case."""
+    """The patient the demo follows, the highest-yield, believable deep-dive case."""
     from services import scenarios
     return patient(scenarios._pick_deepdive_patient())

@@ -57,6 +57,22 @@ automatically falls back to the scripted engine.
 Regenerate the synthetic HIE from scratch (deterministic, seeded):
 `python -m scripts.generate_hie_data`.
 
+## Guideline retrieval and the semantic index
+
+Guideline PDFs are chunked once (cached in `backend/data/runtime/ragchunks-*.json`, committed).
+The semantic index (`gemini-embedding-001`, 768 dimensions) is also computed once and cached as
+`backend/data/runtime/ragembed-<corpus hash>-gemini-embedding-001.npz`. Build it locally with a
+key that has embedding quota and commit the file, so deployments load it instead of embedding:
+
+```bash
+cd backend && GEMINI_API_KEY=... python -m scripts.embed_corpus
+git add backend/data/runtime/ragembed-*.npz && git commit -m "Add the guideline semantic index"
+```
+
+Without the cache, retrieval is BM25 keyword search until the background build succeeds; the
+Documents tab says which mode is active. The map basemap is OpenFreeMap (no API key). Set
+`VITE_BASEMAP_STYLE` at build time to use a different MapLibre style.
+
 ## Deploy to Railway
 
 Push to GitHub → Railway → **New Project → Deploy from GitHub repo**. The

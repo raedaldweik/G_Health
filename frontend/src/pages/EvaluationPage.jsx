@@ -10,7 +10,7 @@ import { Bar3D } from '../components/Chart3D';
 import { AgentChip, KpiStrip, Panel, Spinner } from '../components/ui';
 
 /*
- * AI Evaluation — the "prove it" tab.
+ * AI Evaluation, the "prove it" tab.
  *   Model   · held-out discrimination, calibration, threshold economics, subgroup fairness
  *   Agents  · golden evalset run through the real graph: trajectory, groundedness, safety, faithfulness, cost
  *   LLM     · why this model, why not Pro everywhere, why specialists beat one fat agent (measured in tokens)
@@ -30,7 +30,7 @@ const VIEWS = [
   ['governance', 'Governance'],
 ];
 
-const pct = (v, d = 1) => (v == null ? '—' : `${(v * 100).toFixed(d)}%`);
+const pct = (v, d = 1) => (v == null ? 'n/a' : `${(v * 100).toFixed(d)}%`);
 /** Linear interpolation of a monotone {x,y} curve at x (curves from the backend are sorted by x). */
 function interp(curve, x) {
   if (!curve.length) return 0;
@@ -43,7 +43,7 @@ function interp(curve, x) {
   }
   return curve[curve.length - 1].y;
 }
-const num = (v, d = 3) => (v == null ? '—' : Number(v).toFixed(d));
+const num = (v, d = 3) => (v == null ? 'n/a' : Number(v).toFixed(d));
 
 function Tick({ children }) {
   return <span className="font-extrabold" style={{ color: GREEN }}>{children ?? '✓'}</span>;
@@ -87,7 +87,7 @@ function ModelView() {
   return (
     <div className="flex flex-col gap-2.5">
       <KpiStrip items={[
-        { icon: 'gauge', tone: 'maroon', label: 'AUC — held-out (legacy registry score)', value: d.auc.toFixed(3),
+        { icon: 'gauge', tone: 'maroon', label: 'AUC: held-out (legacy registry score)', value: d.auc.toFixed(3),
           trend: `+${aucDelta} pts vs ${d.legacy_auc.toFixed(3)}`, trendDir: 'up' },
         { icon: 'activity', tone: 'gold', label: 'Average precision (event rate)', value: d.average_precision.toFixed(3),
           trend: `base ${pct(d.event_rate)}`, trendDir: 'flat' },
@@ -100,7 +100,7 @@ function ModelView() {
 
       <div className="grid grid-cols-12 gap-2.5" style={{ minHeight: 300 }}>
         <div className="col-span-5" style={{ height: 300 }}>
-          <Panel title="ROC — model vs the registry's rule-based tier">
+          <Panel title="ROC: model vs the registry's rule-based tier">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={roc} margin={{ top: 8, right: 12, left: -18, bottom: 2 }}>
                 <CartesianGrid stroke="rgba(15,23,42,0.06)" />
@@ -133,7 +133,7 @@ function ModelView() {
         </div>
 
         <div className="col-span-4" style={{ height: 300 }}>
-          <Panel title="Calibration — predicted vs observed by risk decile">
+          <Panel title="Calibration: predicted vs observed by risk decile">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={calib} margin={{ top: 8, right: 12, left: -18, bottom: 2 }}>
                 <CartesianGrid stroke="rgba(15,23,42,0.06)" vertical={false} />
@@ -151,7 +151,7 @@ function ModelView() {
 
       <div className="grid grid-cols-12 gap-2.5">
         <div className="col-span-7">
-          <Panel title="Threshold economics — where do you draw the line?"
+          <Panel title="Threshold economics: where do you draw the line?"
             right={
               <div className="flex items-center gap-2 text-[10px]" style={{ color: 'var(--text-dim)' }}>
                 <span>Operating threshold</span>
@@ -193,14 +193,14 @@ function ModelView() {
                         className="border-t border-[rgba(15,23,42,0.05)]">
                         <td className="py-1 font-bold" style={{ color: active ? 'var(--brand)' : 'var(--text)' }}>≥ {pct(r.threshold, 0)}</td>
                         <td>{pct(r.flag_rate)}</td><td>{pct(r.sensitivity)}</td><td>{pct(r.specificity)}</td><td>{pct(r.ppv)}</td>
-                        <td>{r.nnt_to_find_one_event ?? '—'}</td>
+                        <td>{r.nnt_to_find_one_event ?? 'n/a'}</td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
               <p className="text-[9.5px] mt-1.5 px-1" style={{ color: 'var(--text-dim)' }}>
-                The model does not choose the threshold — the ministry does. At {pct(t, 0)} a nurse reviews {op.nnt_to_find_one_event} charts to find one
+                The model does not choose the threshold; the ministry does. At {pct(t, 0)} a nurse reviews {op.nnt_to_find_one_event} charts to find one
                 12-month event; the Very-High band (≥ 25%) needs {d.very_high.nnt_to_find_one_event} but misses {pct(1 - d.very_high.sensitivity, 0)} of events.
               </p>
             </div>
@@ -240,7 +240,7 @@ function ModelView() {
               ))}
               <p className="text-[9.5px]" style={{ color: 'var(--text-dim)' }}>
                 Gaps are computed only across groups with ≥ {d.subgroups[0]?.min_events} events; smaller groups are shown but not judged.
-                The age gap is expected — event prevalence is {pct(d.subgroups.find((s) => s.dimension === 'age_band')?.rows.find((r) => r.group === '65+')?.prevalence, 0)} over 65 versus
+                The age gap is expected: event prevalence is {pct(d.subgroups.find((s) => s.dimension === 'age_band')?.rows.find((r) => r.group === '65+')?.prevalence, 0)} over 65 versus
                 {' '}{pct(d.subgroups.find((s) => s.dimension === 'age_band')?.rows.find((r) => r.group === '<50')?.prevalence, 0)} under 50, so a single threshold catches more of the older group.
                 Phase 2 monitors these rows monthly in Vertex Model Monitoring and alerts on drift.
               </p>
@@ -294,12 +294,12 @@ function AgentsView() {
           { icon: 'heart', tone: 'gold', label: 'Groundedness · citations where required', value: pct(r.groundedness_rate, 0) },
           { icon: 'alert', tone: 'violet', label: 'Action safety · nothing bypassed the queue', value: pct(r.action_safety_rate, 0) },
           { icon: 'gauge', tone: 'sand', label: 'Numeric faithfulness vs ground truth', value: pct(r.faithfulness_rate, 0) },
-        ] : [{ icon: 'alert', tone: 'amber', label: 'No results yet — run the evalset', value: '—' }]} />
+        ] : [{ icon: 'alert', tone: 'amber', label: 'No results yet: run the evalset', value: 'n/a' }]} />
       </div>
 
       <div className="grid grid-cols-12 gap-2.5">
         <div className="col-span-8">
-          <Panel title={`Golden evalset — ${cases.length} cases through the real agent graph`}
+          <Panel title={`Golden evalset: ${cases.length} cases through the real agent graph`}
             right={
               <div className="flex items-center gap-2">
                 <div className="seg-track" style={{ padding: 2 }}>
@@ -406,7 +406,7 @@ function AgentsView() {
               {[
                 ['Tool-trajectory recall', 'Did the graph call every tool a clinician-reviewer said it must? Same idea as ADK\'s tool_trajectory_avg_score, scored in-order-agnostic.'],
                 ['Groundedness', 'Clinical claims must carry a guideline citation (doc + page). Phase 2: Gen AI Evaluation Service groundedness autorater on the citation spans.'],
-                ['Action safety', 'A draft prescription / recall / referral may only appear as a queued item — never as a completed write. Zero tolerance.'],
+                ['Action safety', 'A draft prescription / recall / referral may only appear as a queued item, never as a completed write. Zero tolerance.'],
                 ['Numeric faithfulness', 'Every headline number in the answer is re-computed from the HIE tables and matched within tolerance. Catches the classic LLM failure: a fluent, wrong number.'],
                 ['Latency · tokens · cost', 'Wall-clock per question, tokens from ADK usage metadata, priced at the list rates on the LLM tab.'],
               ].map(([k, v]) => (
@@ -452,12 +452,12 @@ function LlmView() {
         { icon: 'coins', tone: 'gold', label: 'Same traffic · one flat agent carrying every tool', value: `$${ac.monthly_cost_flat_usd.toLocaleString()}`, trend: `+$${saving.toLocaleString()}/mo`, trendDir: 'down' },
         { icon: 'coins', tone: 'violet', label: 'Same traffic · Gemini 3.1 Pro everywhere', value: `$${ac.monthly_cost_hierarchical_pro_usd.toLocaleString()}`, trend: `${(ac.monthly_cost_hierarchical_pro_usd / ac.monthly_cost_hierarchical_usd).toFixed(1)}×`, trendDir: 'down' },
         { icon: 'activity', tone: 'sand', label: 'Budget after intro pricing ends (Jan 2027)', value: `$${ac.monthly_cost_hierarchical_usd_2027.toLocaleString()}` },
-        { icon: 'gauge', tone: 'green', label: 'Prompt tokens read per hop — specialist vs flat', value: `${ac.hierarchical_supervisor_schema_tokens} / ${ac.flat_single_agent_schema_tokens}` },
+        { icon: 'gauge', tone: 'green', label: 'Prompt tokens read per hop: specialist vs flat', value: `${ac.hierarchical_supervisor_schema_tokens} / ${ac.flat_single_agent_schema_tokens}` },
       ]} />
 
       <div className="grid grid-cols-12 gap-2.5">
         <div className="col-span-7">
-          <Panel title="Model matrix — list prices per 1M tokens (Agent Platform / Gemini API price pages)"
+          <Panel title="Model matrix: list prices per 1M tokens (Agent Platform / Gemini API price pages)"
             right={<span className="text-[9.5px]" style={{ color: 'var(--text-faint)' }}>as of {d.prices_as_of}</span>}>
             <div className="px-1">
               <table className="w-full text-[10px]">
@@ -483,7 +483,7 @@ function LlmView() {
                         <p className="text-[9px] italic" style={{ color: 'var(--text-faint)' }}>{m.note}</p>
                       </td>
                       <td className="text-right font-bold">${m.in.toFixed(2)}</td>
-                      <td className="text-right font-bold">{m.out ? `$${m.out.toFixed(2)}` : '—'}</td>
+                      <td className="text-right font-bold">{m.out ? `$${m.out.toFixed(2)}` : 'n/a'}</td>
                       <td className="pl-3">{m.context}</td><td>{m.latency}</td>
                     </tr>
                   ))}
@@ -499,7 +499,7 @@ function LlmView() {
               <Bar3D data={perAgent} ramp={0} maxBars={6} unit=" tok" />
             </Panel>
           </div>
-          <Panel title="Why a supervisor with specialists rather than one agent — the token arithmetic">
+          <Panel title="Why a supervisor with specialists rather than one agent: the token arithmetic">
             <div className="px-1 text-[10px]" style={{ color: 'var(--text-md)' }}>
               <p>A flat agent re-reads <b>{ac.flat_single_agent_schema_tokens.toLocaleString()}</b> schema tokens on each of ~{ac.typical_hops} tool rounds
                 (≈ {ac.flat_tokens_per_turn_est.toLocaleString()} / turn). The supervisor reads <b>{ac.hierarchical_supervisor_schema_tokens}</b> and hands off to specialists
@@ -514,15 +514,15 @@ function LlmView() {
       <div className="grid grid-cols-3 gap-2.5">
         {[
           ['How the LLM was chosen', [
-            'Function-calling reliability on our own evalset (trajectory recall) — the metric that matters for an agent, not MMLU.',
-            'Price per question at 3 hops: Flash 3.8 ≈ 0.6¢, Flash 3.5 ≈ 1.3¢, Pro 3.1 ≈ 1.9¢ — and quality on structured tool tasks was indistinguishable.',
+            'Function-calling reliability on our own evalset (trajectory recall): the metric that matters for an agent, not MMLU.',
+            'Price per question at 3 hops: Flash 3.8 ≈ 0.6¢, Flash 3.5 ≈ 1.3¢, Pro 3.1 ≈ 1.9¢, and quality on structured tool tasks was indistinguishable.',
             'Lifecycle: 2.5 Flash retires Oct 2026; 3.1 Pro is still preview. Default must be GA and at least a year from deprecation.',
             'Latency: clinicians tolerate ~5 s for a briefing; Flash keeps p95 there with 3 hops, Pro does not.',
             'Region & residency: Gemini is called with pseudonymised, aggregated payloads only, so the endpoint region is a latency question, not a PHI question.',
           ]],
           ['Where Pro is used deliberately', [
-            'LLM-as-judge in evaluation — grading needs depth; it runs offline and on 10 cases, so cost is irrelevant.',
-            'Long executive syntheses on request (monthly ministry report) — one call per report, not per question.',
+            'LLM-as-judge in evaluation: grading needs depth; it runs offline and on 10 cases, so cost is irrelevant.',
+            'Long executive syntheses on request (monthly ministry report), one call per report, not per question.',
             'Nothing on the hot path. If a Flash answer fails a faithfulness check in production it is flagged, not silently escalated to Pro.',
           ]],
           ['What would change the decision', [
@@ -581,7 +581,7 @@ function GovernanceView() {
         ))}
       </div>
       <div className="glass-card px-4 py-2.5 text-[10.5px]" style={{ color: 'var(--text-md)' }}>
-        <b style={{ color: 'var(--text)' }}>Regulatory frame.</b> Qatar PDPPL (Law 13/2016) treats health data as sensitive personal data — processing needs a lawful basis and a
+        <b style={{ color: 'var(--text)' }}>Regulatory frame.</b> Qatar PDPPL (Law 13/2016) treats health data as sensitive personal data, processing needs a lawful basis and a
         permit; MOPH's National Health Strategy requires auditability of decision support. The design answer is the same in every lane: PHI stays in Doha, the
         model never prescribes, every automated inference is logged with its inputs, and a human owns every clinical write.
       </div>
@@ -604,7 +604,7 @@ export default function EvaluationPage() {
       <div className="flex items-end justify-between px-1 mb-2.5">
         <div>
           <h1 className="text-[17px] font-extrabold tracking-tight leading-none" style={{ color: 'var(--text)' }}>
-            Evaluation — model and agent performance
+            Evaluation: model and agent performance
           </h1>
           <p className="text-[10.5px] mt-1" style={{ color: 'var(--text-dim)' }}>{sub}</p>
         </div>

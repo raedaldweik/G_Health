@@ -1,14 +1,14 @@
 """
-Nabd — AI evaluation harness.
+Nabd, AI evaluation harness.
 
 Two evaluation surfaces, both computed from real artefacts (never hand-typed):
 
-  1. Model evaluation — from the held-out predictions persisted by train_models.py:
+  1. Model evaluation, from the held-out predictions persisted by train_models.py:
      ROC / PR curves, Brier score, decile calibration, a threshold sweep (sensitivity,
      specificity, PPV, patients flagged), confusion at the operating thresholds, and
      subgroup fairness (AUC, TPR, FPR, flag rate by nationality group, gender, age band).
 
-  2. Agent evaluation — a golden evalset (data/evals/agent_evalset.json) executed through
+  2. Agent evaluation, a golden evalset (data/evals/agent_evalset.json) executed through
      the live Gemini agent (when a key is present) or the scripted engine, scored on:
        • tool-trajectory recall (expected tools ⊆ observed tools),
        • groundedness (a citation is present whenever the case is clinical),
@@ -55,7 +55,7 @@ PRICES = {
     "gemini-3.5-flash-lite": {"in": 0.30, "out": 2.50,  "cached_in": 0.03,
                               "note": "cheapest current tier; classification / routing"},
     "gemini-2.5-flash":      {"in": 0.30, "out": 2.50,
-                              "note": "retiring Oct 2026 — do not build on it"},
+                              "note": "retiring Oct 2026, do not build on it"},
     "gemini-embedding-001":  {"in": 0.15, "out": 0.0,   "note": "embeddings (input only)"},
 }
 PRICES_AS_OF = "2026-09-07"
@@ -339,22 +339,22 @@ def llm_selection() -> dict:
         "models": [
             {"model": "gemini-3.8-flash", "role": "Supervisor + all specialists", "chosen": True,
              **PRICES["gemini-3.8-flash"], "context": "1M", "latency": "fast",
-             "why": "Agent-tuned Flash (GA Sept 2 2026): best function-calling reliability per dollar on our evalset; thinking_level LOW on routing turns keeps first-token latency under a second; a 3-hop question stays under a cent. Served from the global endpoint — fine, because prompts carry pseudonymous ids only."},
+             "why": "Agent-tuned Flash (GA Sept 2 2026): best function-calling reliability per dollar on our evalset; thinking_level LOW on routing turns keeps first-token latency under a second; a 3-hop question stays under a cent. Served from the global endpoint, fine, because prompts carry pseudonymous ids only."},
             {"model": "gemini-3.1-pro-preview", "role": "LLM-as-judge (eval) · complex synthesis on demand", "chosen": True,
              **PRICES["gemini-3.1-pro-preview"], "context": "1M", "latency": "slower",
-             "why": "Reserved for where reasoning depth pays: grading answers in evaluation and long executive syntheses. Not on the hot path — still labelled Preview on the price page, and 3× the cost."},
+             "why": "Reserved for where reasoning depth pays: grading answers in evaluation and long executive syntheses. Not on the hot path, still labelled Preview on the price page, and 3× the cost."},
             {"model": "gemini-3.5-flash", "role": "Fallback", "chosen": False,
              **PRICES["gemini-3.5-flash"], "context": "1M", "latency": "fast",
-             "why": "GA and stable, but $1.50/$9 — twice the price of 3.8 Flash. The resolver drops to it only if 3.8 is unavailable in the region or quota-limited."},
+             "why": "GA and stable, but $1.50/$9, twice the price of 3.8 Flash. The resolver drops to it only if 3.8 is unavailable in the region or quota-limited."},
             {"model": "gemini-3.5-flash-lite", "role": "Not used (candidate for routing/classification)", "chosen": False,
              **PRICES["gemini-3.5-flash-lite"], "context": "1M", "latency": "fastest",
              "why": "Too weak for multi-step tool planning; would fit a front-door intent classifier if traffic grows. Not worth a second model to operate at PoC scale."},
             {"model": "gemini-2.5-flash", "role": "Avoided", "chosen": False,
              **PRICES["gemini-2.5-flash"], "context": "1M", "latency": "fast",
-             "why": "Retires mid-October 2026 — weeks after the interview. Never build a clinical product on a model with a published retirement date."},
+             "why": "Retires mid-October 2026, weeks after the interview. Never build a clinical product on a model with a published retirement date."},
             {"model": "gemini-embedding-001", "role": "RAG embeddings (hybrid with BM25)", "chosen": True,
-             **PRICES["gemini-embedding-001"], "context": "2k/chunk", "latency": "—",
-             "why": "3072-dim, MRL-truncatable, GA; corpus is embedded once and cached — near-zero recurring cost."},
+             **PRICES["gemini-embedding-001"], "context": "2k/chunk", "latency": "n/a",
+             "why": "3072-dim, MRL-truncatable, GA; corpus is embedded once and cached, near-zero recurring cost."},
         ],
         "architecture_comparison": {
             "flat_single_agent_schema_tokens": flat,
@@ -382,8 +382,8 @@ def llm_selection() -> dict:
 
 def governance() -> list[dict]:
     return [
-        {"area": "Data", "control": "Synthetic data only — zero PHI in this PoC", "status": "implemented", "evidence": "Data tab · generator is seeded and documented"},
-        {"area": "Data", "control": "Consent enforcement — restricted patients blocked at the tool layer, denial audited", "status": "implemented", "evidence": "Audit tab · CONSENT·DENY events"},
+        {"area": "Data", "control": "Synthetic data only, zero PHI in this PoC", "status": "implemented", "evidence": "Data tab · generator is seeded and documented"},
+        {"area": "Data", "control": "Consent enforcement, restricted patients blocked at the tool layer, denial audited", "status": "implemented", "evidence": "Audit tab · CONSENT·DENY events"},
         {"area": "Data", "control": "FHIR consent enforcement (consentConfig.accessEnforced) + de-identified analytics zone", "status": "phase 2", "evidence": "Architecture tab · Store & Govern lane"},
         {"area": "Model", "control": "Held-out evaluation, calibration and subgroup fairness reported per model version", "status": "implemented", "evidence": "This tab · Model evaluation"},
         {"area": "Model", "control": "Model cards with intended use and limitations; versions pinned", "status": "implemented", "evidence": "Risk & Models dashboard"},
@@ -391,7 +391,7 @@ def governance() -> list[dict]:
         {"area": "Agent", "control": "Numbers only from tools; clinical claims only with citations; actions only via the human queue", "status": "implemented", "evidence": "Supervisor instruction · agent trace"},
         {"area": "Agent", "control": "Golden evalset with trajectory, groundedness, action-safety and faithfulness checks", "status": "implemented", "evidence": "This tab · Agent evaluation"},
         {"area": "Agent", "control": "Least-privilege tools per specialist (guideline agent cannot draft; action agent cannot read cohorts)", "status": "implemented", "evidence": "Agent definitions"},
-        {"area": "Agent", "control": "Prompt & response screening — Sensitive Data Protection in me-central1, then Model Armor (injection / jailbreak)", "status": "phase 2", "evidence": "Architecture tab · Agents lane"},
+        {"area": "Agent", "control": "Prompt & response screening, Sensitive Data Protection in me-central1, then Model Armor (injection / jailbreak)", "status": "phase 2", "evidence": "Architecture tab · Agents lane"},
         {"area": "Agent", "control": "adk eval in CI as a release gate; Gen AI Evaluation Service as LLM judge", "status": "phase 2", "evidence": "Evalset format is ADK-compatible"},
         {"area": "Operations", "control": "Full audit trail of tool calls, scores, drafts and human decisions", "status": "implemented", "evidence": "Audit tab"},
         {"area": "Operations", "control": "Cloud Audit Logs + OpenTelemetry traces from the ADK runtime to Cloud Trace", "status": "phase 2", "evidence": "Architecture tab · Observability rail"},

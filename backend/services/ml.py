@@ -1,9 +1,9 @@
 """
-Nabd — ML scoring service.
+Nabd, ML scoring service.
 
 Loads the trained artifacts (see scripts/train_models.py) and serves:
   • real-time patient risk scoring with per-feature SHAP explanations
-    (XGBoost pred_contribs — no external explainability dependency),
+    (XGBoost pred_contribs, no external explainability dependency),
   • cohort-level risk stratification,
   • patient similarity lookups,
   • population segments,
@@ -86,7 +86,7 @@ def score_patient(patient_id: str) -> dict:
     if row.empty:
         return {"error": f"patient {patient_id} not found"}
     if row.iloc[0]["consent_status"] == "restricted":
-        return {"consent": "DENIED", "message": "Restricted consent — scoring blocked and logged."}
+        return {"consent": "DENIED", "message": "Restricted consent, scoring blocked and logged."}
     X = _feature_frame(row)
     booster, features, _ = _risk()
     prob = float(_score(X)[0])
@@ -103,8 +103,9 @@ def score_patient(patient_id: str) -> dict:
             "note": "SHAP-style contributions from XGBoost pred_contribs; positive pushes risk up."}
 
 
-def stratify_cohort(filters: list[dict] | None = None, top_n: int = 10) -> dict:
-    df = hie._apply_filters(hie.summary(), filters)
+def stratify_cohort(filters: list[dict] | None = None, top_n: int = 10,
+                    df: pd.DataFrame | None = None) -> dict:
+    df = hie._apply_filters(hie.summary() if df is None else df, filters)
     df = df[df["consent_status"] != "restricted"]
     if df.empty:
         return {"matched": 0}
@@ -149,16 +150,25 @@ def similar_patients(patient_id: str, k: int = 6) -> dict:
             "note": "Nearest neighbours in standardised clinical feature space."}
 
 
-def segment_summary() -> dict:
+def segment_labels(s: pd.DataFrame) -> pd.Series:
+    """KMeans segment name for every row of a patient-summary frame."""
     art = _segments()
-    s = hie.summary()
+    if s.empty:
+        return pd.Series([], dtype=object, index=s.index)
     probs = _score(_feature_frame(s))
     feats = pd.DataFrame({"annual_cost_qar": s["annual_cost_qar"], "risk_prob": probs,
                           "age": s["age"], "care_gap_count": s["care_gap_count"],
                           "admissions_12mo": s["admissions_12mo"]})[art["features"]]
     labels = art["kmeans"].predict(art["scaler"].transform(feats))
-    s2 = s.assign(segment=[art["segment_names"][int(l)] for l in labels],
-                  risk_prob=probs)
+    return pd.Series([art["segment_names"][int(l)] for l in labels], index=s.index)
+
+
+def segment_summary(df: pd.DataFrame | None = None) -> dict:
+    s = hie.summary() if df is None else df
+    if s.empty:
+        return {"segments": [], "scatter_sample": []}
+    probs = _score(_feature_frame(s))
+    s2 = s.assign(segment=segment_labels(s).values, risk_prob=probs)
     g = s2.groupby("segment").agg(
         patients=("patient_id", "count"), mean_cost=("annual_cost_qar", "mean"),
         total_cost=("annual_cost_qar", "sum"), mean_risk=("risk_prob", "mean"),
@@ -166,7 +176,7 @@ def segment_summary() -> dict:
     return {"segments": [{"segment": k, **{c: (v.item() if hasattr(v, "item") else v)
                                            for c, v in row.items()}}
                          for k, row in g.iterrows()],
-            "scatter_sample": s2.sample(600, random_state=1)[
+            "scatter_sample": s2.sample(min(600, len(s2)), random_state=1)[
                 ["risk_prob", "annual_cost_qar", "segment"]].round(4).to_dict("records")}
 
 

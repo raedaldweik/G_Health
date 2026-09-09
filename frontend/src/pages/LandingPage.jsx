@@ -27,7 +27,7 @@ function Counter({ value, format, label }) {
   const v = useCountUp(value);
   return (
     <div>
-      <div className="counter-val">{value == null ? '—' : format(v)}</div>
+      <div className="counter-val">{value == null ? 'n/a' : format(v)}</div>
       <div className="counter-lbl">{label}</div>
     </div>
   );
@@ -176,8 +176,8 @@ export default function LandingPage({ go }) {
               </div>
             </div>
             <div className="flex items-center gap-2 mt-3 justify-end">
-              <span className="badge badge-red">{overdue ?? '—'} HbA1c tests overdue</span>
-              <span className="badge badge-amber">{gaps?.toLocaleString() ?? '—'} open care gaps</span>
+              <span className="badge badge-red">{overdue ?? 'n/a'} HbA1c tests overdue</span>
+              <span className="badge badge-amber">{gaps?.toLocaleString() ?? 'n/a'} open care gaps</span>
               <span className="badge badge-green">Synthetic data · no PHI</span>
             </div>
           </div>
@@ -209,7 +209,7 @@ export default function LandingPage({ go }) {
                 <div key={i} className="flex items-start gap-3">
                   <span className="step-num">{i + 1}</span>
                   <p className="text-[12.5px] leading-relaxed" style={{ color: 'var(--text-md)' }}>
-                    <b style={{ color: 'var(--text)' }}>{t}</b> — {d}
+                    <b style={{ color: 'var(--text)' }}>{t}</b>: {d}
                   </p>
                 </div>
               ))}
@@ -261,12 +261,12 @@ export default function LandingPage({ go }) {
         {/* ── THE STORY ── */}
         <section className="landing-section">
           <div className="section-eyebrow">The patient the demonstration follows</div>
-          <h2 className="section-title">{p ? p.full_name : 'A patient'} — flagged by the model, not by the registry tier.</h2>
+          <h2 className="section-title">{p ? p.full_name : 'A patient'}: flagged by the model, not by the registry tier.</h2>
           <div className="grid grid-cols-[1.2fr_1fr] gap-6 mt-5 items-stretch">
             <div className="glass-card p-5 flex gap-5 items-center">
               <div className="w-16 h-16 rounded-2xl shrink-0 flex items-center justify-center text-white text-[18px] font-extrabold"
                 style={{ background: 'var(--brand-grad)', boxShadow: '0 8px 20px rgba(138,21,56,0.3)' }}>
-                {p ? p.full_name.split(' ').map((w) => w[0]).join('').slice(0, 2) : '—'}
+                {p ? p.full_name.split(' ').map((w) => w[0]).join('').slice(0, 2) : 'n/a'}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[16px] font-extrabold" style={{ color: 'var(--text)' }}>
@@ -276,8 +276,8 @@ export default function LandingPage({ go }) {
                   {(hero?.conditions || []).slice(0, 6).map((c) => <span key={c.condition} className="chip-cond">{c.condition}</span>)}
                 </div>
                 <div className="grid grid-cols-4 gap-3 mt-3">
-                  {[['HbA1c', p ? `${p.hba1c_latest}%` : '—'], ['HbA1c 12 mo ago', p ? `${p.hba1c_12m_ago ?? '—'}%` : '—'],
-                    ['BMI · eGFR', p ? `${p.bmi} · ${Math.round(p.egfr_latest)}` : '—'], ['Registry tier', p ? p.registry_risk_tier : '—']].map(([k, v]) => (
+                  {[['HbA1c', p ? `${p.hba1c_latest}%` : 'n/a'], ['HbA1c 12 mo ago', p ? `${p.hba1c_12m_ago ?? 'n/a'}%` : 'n/a'],
+                    ['BMI · eGFR', p ? `${p.bmi} · ${Math.round(p.egfr_latest)}` : 'n/a'], ['Registry tier', p ? p.registry_risk_tier : 'n/a']].map(([k, v]) => (
                     <div key={k}>
                       <p className="text-[9px] font-bold tracking-widest uppercase" style={{ color: 'var(--text-faint)' }}>{k}</p>
                       <p className="text-[14px] font-extrabold" style={{ color: 'var(--text)' }}>{v}</p>
@@ -299,7 +299,7 @@ export default function LandingPage({ go }) {
               <div>
                 <p className="text-[12.5px] leading-relaxed" style={{ color: 'var(--text-md)' }}>
                   {p ? (
-                    <>HbA1c has risen from <b>{p.hba1c_12m_ago ?? '—'}%</b> to <b>{p.hba1c_latest}%</b> in twelve months on <b>metformin alone</b>
+                    <>HbA1c has risen from <b>{p.hba1c_12m_ago ?? 'n/a'}%</b> to <b>{p.hba1c_latest}%</b> in twelve months on <b>metformin alone</b>
                     {p.ckd || p.albuminuria ? <>, with early kidney involvement (eGFR {Math.round(p.egfr_latest)})</> : <>, with a BMI of {p.bmi}</>}.
                     The registry's rule-based tier lists {p.gender === 'female' ? 'her' : 'him'} as <b>{p.registry_risk_tier}</b>. The deterioration model puts the 12-month
                     risk at <b>{Math.round((hero?.risk?.event_probability_12m ?? 0) * 100)}%</b>, and the national guideline recommends adding an SGLT2 inhibitor or

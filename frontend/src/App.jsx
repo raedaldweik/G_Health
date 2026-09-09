@@ -39,7 +39,7 @@ function Bokeh() {
   );
 }
 
-/** Persona picker — the Roads TargetSelector recipe (light glass dropdown). */
+/** Persona picker, the Roads TargetSelector recipe (light glass dropdown). */
 function PersonaSelector() {
   const { persona, setPersona, personaInfo } = useApp();
   const [open, setOpen] = useState(false);
@@ -137,12 +137,12 @@ function Header({ tab, setTab }) {
       <div className="title-block">
         <div className="header-eyebrow">
           {health?.platform?.compute === 'cloud-run'
-            ? `Google Cloud · Cloud Run ${health.platform.region || 'me-central1'} · BigQuery ${health.platform.data?.dataset || ''} · Vertex AI Gemini · Qatar HIE`
-            : 'National diabetes registry · Qatar Health Information Exchange · Google Cloud (me-central1 target)'}
+            ? `National Diabetes Registry · Google Cloud ${health.platform.region || 'me-central1'}`
+            : 'National Diabetes Registry'}
         </div>
         <div className="title-row">
           <h1 className="app-title">
-            <b>Nabd</b> <span className="title-ar">نبض</span> — Population Health Intelligence
+            <b>Nabd</b> <span className="title-ar">نبض</span> <span className="title-sep">·</span> Population Health Intelligence
           </h1>
           <div className="accent-line" />
         </div>
@@ -172,20 +172,19 @@ function Header({ tab, setTab }) {
       </div>
 
       <div className="flex items-center gap-3">
-        <div className="status-pill">
-          <span className={`w-2 h-2 rounded-full ${ok && !warming && !keyBad ? '' : 'animate-pulse'}`}
-            style={{ background: !ok ? (health ? 'var(--red)' : 'var(--amber)') : keyBad ? 'var(--red)' : warming ? 'var(--amber)' : 'var(--green)' }} />
-          <span title={keyBad ? selfTest.error : undefined}>
-            {health == null ? 'Connecting…'
-              : !ok ? 'Backend offline'
-              : health.mode !== 'multi-agent' ? '6 agents · MCP · scripted engine'
-              : warming ? '6 agents · MCP · warming up…'
-              : keyBad ? (selfTest.capacity
-                  ? `Gemini at capacity (503) — retrying every minute · scripted chips still work`
-                  : `Gemini key rejected — scripted chips still work`)
-              : `6 agents · MCP · ${health.model}${switched ? ` (fell back from ${switched.from})` : ''}`}
-          </span>
-        </div>
+        {(health == null || !ok || warming || keyBad) && (
+          <div className="status-pill">
+            <span className={`w-2 h-2 rounded-full ${ok && !warming && !keyBad ? '' : 'animate-pulse'}`}
+              style={{ background: !ok ? (health ? 'var(--red)' : 'var(--amber)') : keyBad ? 'var(--red)' : 'var(--amber)' }} />
+            <span title={keyBad ? selfTest.error : undefined}>
+              {health == null ? 'Connecting'
+                : !ok ? 'Backend offline'
+                : warming ? 'Warming up'
+                : selfTest?.capacity ? 'Gemini at capacity, retrying every minute. Scenario chips still work.'
+                : 'Gemini key rejected. Scenario chips still work.'}
+            </span>
+          </div>
+        )}
         <PersonaSelector />
       </div>
     </header>

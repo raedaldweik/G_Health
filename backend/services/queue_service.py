@@ -1,4 +1,4 @@
-"""Human-in-the-loop queue — drafted actions awaiting clinician sign-off.
+"""Human-in-the-loop queue, drafted actions awaiting clinician sign-off.
 
 Nothing the agent drafts ever reaches the (synthetic) EMR: items sit here until a
 human approves, edits, or rejects them. JSON-persisted so demo state survives restarts.

@@ -77,7 +77,7 @@ def upload_local_tables(overwrite: bool = True) -> dict[str, int]:
             except Exception:
                 ds = bigquery.Dataset(ds_id)
                 ds.location = P.BQ_LOCATION
-                ds.description = "Nabd synthetic Qatar HIE — 8 relational tables, 36 months, zero PHI"
+                ds.description = "Nabd synthetic Qatar HIE, 8 relational tables, 36 months, zero PHI"
                 client().create_dataset(ds, exists_ok=True)
             loaded = {}
             for name in TABLES:
@@ -117,7 +117,7 @@ def provision_in_background():
 
 # ─────────────────────────── guarded read-only SQL for the agent ───────────────────────────
 _FORBIDDEN = re.compile(r"\b(INSERT|UPDATE|DELETE|MERGE|DROP|CREATE|ALTER|TRUNCATE|GRANT|REVOKE|CALL|EXPORT|LOAD|BEGIN|COMMIT|DECLARE|SET)\b", re.I)
-MAX_BYTES = 2 * 1024 ** 3     # 2 GiB per query — the whole dataset is ~50 MB
+MAX_BYTES = 2 * 1024 ** 3     # 2 GiB per query, the whole dataset is ~50 MB
 
 
 def query(sql: str, max_rows: int = 200) -> dict:

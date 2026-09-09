@@ -5,7 +5,10 @@ const json = async (res) => {
 
 export const getHealth = () => fetch('/api/health').then(json);
 export const getScenarios = (persona) => fetch(`/api/scenarios?persona=${persona}`).then(json);
-export const getDashboard = (name) => fetch(`/api/dashboards/${name}`).then(json);
+export const getDashboard = (name, filters) => {
+  const q = filters && Object.keys(filters).length ? `?filters=${encodeURIComponent(JSON.stringify(filters))}` : '';
+  return fetch(`/api/dashboards/${name}${q}`).then(json);
+};
 export const getQueue = () => fetch('/api/queue').then(json);
 export const decideQueue = (id, decision, decidedBy) =>
   fetch(`/api/queue/${id}/${decision}`, {
@@ -40,7 +43,7 @@ export async function streamChat({ message, sessionId, persona, scenarioId }, on
     });
   } catch (e) {
     clearTimeout(idle);
-    throw new Error(e.name === 'AbortError' ? 'no response from the agent for 75 s — Gemini may be saturated; try again or use a scenario chip' : e.message);
+    throw new Error(e.name === 'AbortError' ? 'no response from the agent for 75 s, Gemini may be saturated; try again or use a scenario chip' : e.message);
   }
   if (!res.ok || !res.body) { clearTimeout(idle); throw new Error(`chat failed: ${res.status}`); }
   const reader = res.body.getReader();
@@ -50,7 +53,7 @@ export async function streamChat({ message, sessionId, persona, scenarioId }, on
     let chunk;
     try { chunk = await reader.read(); } catch (e) {
       clearTimeout(idle);
-      throw new Error(e.name === 'AbortError' ? 'the agent went silent for 75 s — Gemini may be saturated; try again or use a scenario chip' : e.message);
+      throw new Error(e.name === 'AbortError' ? 'the agent went silent for 75 s, Gemini may be saturated; try again or use a scenario chip' : e.message);
     }
     const { done, value } = chunk;
     if (done) { clearTimeout(idle); break; }

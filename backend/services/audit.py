@@ -1,4 +1,4 @@
-"""Governance audit trail — every agent tool call, consent denial, model score and
+"""Governance audit trail, every agent tool call, consent denial, model score and
 human decision is logged. JSON-persisted; surfaced on the Audit page."""
 from __future__ import annotations
 

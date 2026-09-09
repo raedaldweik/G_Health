@@ -1,9 +1,9 @@
 """
-Nabd — model training pipeline.
+Nabd, model training pipeline.
 
 Trains the real ML models that power the platform (no mocked numbers anywhere):
 
-  1. complication_risk   XGBoost classifier — P(cardiometabolic event, next 12 months).
+  1. complication_risk   XGBoost classifier, P(cardiometabolic event, next 12 months).
                          Explainable per-patient via XGBoost pred_contribs (SHAP values).
                          Also drives the counterfactual policy simulator (flip treatment
                          flags → re-score the cohort → aggregate predicted event change).
@@ -14,7 +14,7 @@ Trains the real ML models that power the platform (no mocked numbers anywhere):
                          AI.FORECAST / TimesFM.)
 
 Artifacts land in backend/models/ together with model_cards.json (version, data,
-features, metrics, intended use, limitations) — surfaced in the UI for governance.
+features, metrics, intended use, limitations), surfaced in the UI for governance.
 
 Run from backend/:  python -m scripts.train_models
 """
@@ -49,7 +49,7 @@ RISK_FEATURES = [
 # Clinical priors as XGBoost monotonic constraints (+1 risk rises with the feature,
 # -1 risk falls, 0 unconstrained). A slider in the what-if simulator must never show risk
 # falling as HbA1c rises or rising as adherence improves; the constraint makes that a
-# property of the model rather than a hope. Insulin stays unconstrained on purpose — in the
+# property of the model rather than a hope. Insulin stays unconstrained on purpose, in the
 # registry it is a marker of advanced disease, not a treatment effect.
 MONOTONE = {
     "age": 1, "bmi": 1, "bmi_change_12m": 1, "years_since_diagnosis": 1, "smoker": 1,
@@ -233,11 +233,11 @@ def main():
     cards = [
         {"model_id": "complication_risk", "name": "Diabetes Deterioration Risk",
          "version": MODEL_VERSION, "trained": today, "framework": "XGBoost (gradient-boosted trees, monotonic constraints)",
-         "task": "Binary classification — P(diabetes deterioration event within 12 months: admission for hypo/hyperglycaemia, DKA/HHS, foot infection or AKI, or progression to HbA1c ≥ 10%)",
+         "task": "Binary classification, P(diabetes deterioration event within 12 months: admission for hypo/hyperglycaemia, DKA/HHS, foot infection or AKI, or progression to HbA1c ≥ 10%)",
          "training_data": f"{risk_metrics['train_rows']} patients (held-out test: {risk_metrics['test_rows']}), synthetic QHIE cohort",
          "features": RISK_FEATURES, "metrics": risk_metrics,
-         "intended_use": "Panel prioritisation for the diabetes programme, care-gap targeting, counterfactual programme simulation. Decision support only — never autonomous treatment decisions.",
-         "constraints": ("Monotonic constraints encode clinical priors: the estimate cannot fall as HbA1c, systolic BP, urine ACR, BMI, smoking, admissions, ED visits, monitoring delay or open care gaps rise, and cannot rise as eGFR, adherence, metformin, SGLT2i/GLP-1 RA or RAAS therapy improve. Insulin is deliberately unconstrained — in the registry it marks advanced disease rather than a treatment effect."),
+         "intended_use": "Panel prioritisation for the diabetes programme, care-gap targeting, counterfactual programme simulation. Decision support only, never autonomous treatment decisions.",
+         "constraints": ("Monotonic constraints encode clinical priors: the estimate cannot fall as HbA1c, systolic BP, urine ACR, BMI, smoking, admissions, ED visits, monitoring delay or open care gaps rise, and cannot rise as eGFR, adherence, metformin, SGLT2i/GLP-1 RA or RAAS therapy improve. Insulin is deliberately unconstrained, in the registry it marks advanced disease rather than a treatment effect."),
          "limitations": "Trained on synthetic data; requires clinical validation and bias audit before any production use. Programme counterfactuals assume guideline-average effect sizes. What-if estimates are associations, not causal treatment effects.",
          "phase2": "Retrain as BigQuery ML BOOSTED_TREE_CLASSIFIER, register to Vertex AI Model Registry, serve on an online endpoint, score via the official Agent Platform /mcp/predict toolset."},
         {"model_id": "cohort_segments", "name": "Population Segmentation",
@@ -262,7 +262,7 @@ def main():
          "metrics": fc_metrics,
          "intended_use": "Capacity planning and the executive demand narrative.",
          "limitations": "Univariate; no exogenous drivers (campaigns, epidemics).",
-         "phase2": "BigQuery AI.FORECAST (TimesFM foundation model) — zero-training forecasting in one SQL call."},
+         "phase2": "BigQuery AI.FORECAST (TimesFM foundation model), zero-training forecasting in one SQL call."},
     ]
     (OUT / "model_cards.json").write_text(json.dumps(cards, indent=2))
     print(f"\n✓ artifacts + model_cards.json written to {OUT}")

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { getDataRows, getDataTables } from '../services/api';
 import { Spinner } from '../components/ui';
 
-/** HIE browser — the relational exchange itself: 8 tables, longitudinal and coded. */
+/** HIE browser, the relational exchange itself: 8 tables, longitudinal and coded. */
 export default function DataPage() {
   const [tables, setTables] = useState(null);
   const [active, setActive] = useState('patient_summary');
@@ -90,7 +90,7 @@ export default function DataPage() {
                   <tr key={i}>
                     {cols.map((c) => (
                       <td key={c} className="max-w-[220px] overflow-hidden text-ellipsis">
-                        {r[c] === null || r[c] === undefined ? '—' : String(r[c])}
+                        {r[c] === null || r[c] === undefined ? 'n/a' : String(r[c])}
                       </td>
                     ))}
                   </tr>

@@ -29,7 +29,7 @@ export default function AuditPage() {
           Audit trail
         </h1>
         <p className="text-[11px] mt-1 mb-5" style={{ color: 'var(--text-dim)' }}>
-          Every agent tool call, guideline retrieval, model score, consent denial and human decision —
+          Every agent tool call, guideline retrieval, model score, consent denial and human decision: 
           logged. Phase 2 maps this to Cloud Audit Logs + OpenTelemetry tracing on Agent Engine.
         </p>
 
@@ -54,7 +54,7 @@ export default function AuditPage() {
           })}
           {entries.length === 0 && (
             <p className="text-[12px] py-8 text-center" style={{ color: 'var(--text-faint)' }}>
-              No audit entries yet — interact with the Assistant and this trail fills up.
+              No audit entries yet. Interact with the Assistant and this trail fills up.
             </p>
           )}
         </div>

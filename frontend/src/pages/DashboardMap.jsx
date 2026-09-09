@@ -4,7 +4,7 @@ import MapCard from '../components/MapCard';
 import { Bar3D } from '../components/Chart3D';
 import { KpiStrip, Panel, Spinner } from '../components/ui';
 
-/** Dashboard 5 — Geography: control is a Doha phenomenon. The equity gradient, on a map. */
+/** Dashboard 5, Geography: control is a Doha phenomenon. The equity gradient, on a map. */
 export default function DashboardMap() {
   const [d, setD] = useState(null);
   const [err, setErr] = useState(null);
@@ -41,7 +41,7 @@ export default function DashboardMap() {
       <div className="flex items-end justify-between shrink-0 px-1">
         <div>
           <h1 className="text-[17px] font-extrabold tracking-tight leading-none" style={{ color: 'var(--text)' }}>
-            Geography — glycaemic control by facility
+            Geography: glycaemic control by facility
           </h1>
           <p className="text-[10.5px] mt-1" style={{ color: 'var(--text-dim)' }}>
             Control is concentrated in Doha. Facilities in the north and around the Industrial Area carry more open gaps and worse control; distance from the capital and the access gradient follow the same line.
@@ -52,15 +52,15 @@ export default function DashboardMap() {
 
       <KpiStrip items={[
         { icon: 'alert', tone: 'red', label: 'Flagged facilities (below the line)', value: flagged.length },
-        { icon: 'activity', tone: 'maroon', label: `Heaviest gap load — ${regions[0].region}`, value: regions[0].gaps_per_100, suffix: '/100 pts' },
-        { icon: 'check', tone: 'green', label: `Best control — ${[...regions].sort((a, b) => b.pct_controlled - a.pct_controlled)[0].region}`,
+        { icon: 'activity', tone: 'maroon', label: `Heaviest gap load: ${regions[0].region}`, value: regions[0].gaps_per_100, suffix: '/100 pts' },
+        { icon: 'check', tone: 'green', label: `Best control: ${[...regions].sort((a, b) => b.pct_controlled - a.pct_controlled)[0].region}`,
           value: [...regions].sort((a, b) => b.pct_controlled - a.pct_controlled)[0].pct_controlled, suffix: '%' },
         { icon: 'droplet', tone: 'gold', label: 'HbA1c-overdue patients outside Doha', value: outsideDoha },
       ]} />
 
       <div className="flex-1 grid grid-cols-6 grid-rows-2 gap-2.5 min-h-0">
         <div className="col-span-4 row-span-2">
-          <Panel title="Facility map — sized by patients, coloured by metric" pad={false}
+          <Panel title="Facility map: sized by patients, coloured by metric" pad={false}
             right={
               <div className="flex items-center gap-2">
               <div className="seg-track" style={{ padding: 2 }}>
@@ -87,7 +87,7 @@ export default function DashboardMap() {
         </div>
 
         <div className="col-span-2">
-          <Panel title={`Ranked — ${meta.label} (${meta.worse_is_high ? 'worst first' : 'lowest first'})`} pad={false}>
+          <Panel title={`Ranked: ${meta.label} (${meta.worse_is_high ? 'worst first' : 'lowest first'})`} pad={false}>
             <div className="overflow-y-auto h-full px-3 pb-2">
               {ranked.map((f, i) => (
                 <button key={f.facility_id} onClick={() => setSelected(f.facility_id === selected ? null : f.facility_id)}
@@ -110,9 +110,9 @@ export default function DashboardMap() {
         </div>
 
         <div className="col-span-2">
-          <Panel title={sel ? `${sel.name} — profile` : 'Open care gaps per 100 patients — by region'}>
+          <Panel title={sel ? `${sel.name}: profile` : 'Open care gaps per 100 patients: by region'}>
             {sel ? (
-              <div className="h-full px-2 py-1 grid grid-cols-2 gap-x-3 gap-y-2 content-start">
+              <div className="h-full overflow-y-auto px-2 py-1 grid grid-cols-3 gap-x-3 gap-y-1.5 content-start">
                 {[['Patients', sel.patients], ['Region', sel.region], ['Type', sel.type],
                   ['Controlled', `${sel.pct_controlled}%`], ['Mean HbA1c', `${sel.mean_hba1c}%`],
                   ['Gaps / 100', sel.gaps_per_100], ['HbA1c overdue', sel.hba1c_overdue],
@@ -120,7 +120,7 @@ export default function DashboardMap() {
                   ['Expat share', `${sel.expat_share_pct}%`], ['Admissions 12m', sel.admissions_12mo]].map(([k, v]) => (
                   <div key={k}>
                     <p className="text-[8.5px] font-bold tracking-widest uppercase" style={{ color: 'var(--text-faint)' }}>{k}</p>
-                    <p className="text-[13px] font-extrabold" style={{ color: 'var(--text)' }}>{v}</p>
+                    <p className="text-[12px] font-extrabold leading-tight" style={{ color: 'var(--text)' }}>{v}</p>
                   </div>
                 ))}
               </div>

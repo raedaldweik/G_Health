@@ -1,5 +1,5 @@
 """
-Nabd — synthetic Health Information Exchange (HIE) generator: the national diabetes registry.
+Nabd, synthetic Health Information Exchange (HIE) generator: the national diabetes registry.
 
 Produces a relational, longitudinal, FHIR-shaped synthetic dataset for a Qatar-flavoured
 diabetes population (type 2 and type 1), the way a diabetes programme sees it:
@@ -246,7 +246,7 @@ def simulate_clinical(pat: pd.DataFrame) -> pd.DataFrame:
                      np.where(pat["nationality"].isin(["Bangladeshi", "Nepali", "Egyptian"]), 0.38, 0.22))).astype(int)
     pat["bmi_base"] = np.where(t1, np.clip(RNG.normal(26.5, 3.6, n), 18, 40),
                                np.clip(RNG.normal(31.0 + sev * 1.2, 4.2), 19, 52)).round(1)
-    # access_factor > 1 (worse healthcare access) directly worsens control — the equity story
+    # access_factor > 1 (worse healthcare access) directly worsens control, the equity story
     pat["hba1c_base"] = np.clip(RNG.normal(7.35 + sev * 0.55 + (pat["access_factor"] - 1) * 1.6, 0.9),
                                 5.6, 13.5).round(2)
     pat["sbp_base"] = np.clip(RNG.normal(132 + sev * 5.0, 12), 100, 205).round(0)
@@ -519,7 +519,7 @@ def build_summary(pat, meds, obs, enc) -> pd.DataFrame:
         prior_adm = int(adm12.get(pid, 0)); ed_n = int(ed12.get(pid, 0))
         # ── Outcome: diabetes deterioration event in the next 12 months (admission for
         # hypo/hyperglycaemia, DKA/HHS, foot infection, AKI, or progression to HbA1c ≥ 10).
-        # Ground-truth logistic model — the ML task is to recover these drivers.
+        # Ground-truth logistic model, the ML task is to recover these drivers.
         drivers = (0.25 * max(p["age"] - 50, 0) / 10
                    + (0.32 * max(hba1c - 7, 0) if not np.isnan(hba1c) else 0.3)
                    + (0.10 * max(sbp - 130, 0) / 10 if not np.isnan(sbp) else 0)
@@ -540,7 +540,7 @@ def build_summary(pat, meds, obs, enc) -> pd.DataFrame:
         cost *= float(RNG.lognormal(0, 0.18))
 
         # Legacy rules-based registry tier (what the ML model replaces): crude point buckets
-        # on age, HbA1c, admissions and BP — blind to complications, renal function,
+        # on age, HbA1c, admissions and BP, blind to complications, renal function,
         # adherence, monitoring gaps and therapy. The kind of tiering registries run today.
         legacy = (20 * (p["age"] >= 60)
                   + 25 * (not np.isnan(hba1c) and hba1c >= 9)
@@ -583,7 +583,7 @@ def build_summary(pat, meds, obs, enc) -> pd.DataFrame:
 
     df = pd.DataFrame(rows)
     # Calibrate the intercept so the registry-level 12-month event rate hits the target,
-    # then draw the labels — deterministic given the seed.
+    # then draw the labels, deterministic given the seed.
     d = np.array(drivers_all)
     lo, hi = -10.0, 5.0
     for _ in range(60):
@@ -740,7 +740,7 @@ def main():
           f" | HbA1c ≥9: {(s['hba1c_latest']>=9).mean()*100:.1f}%")
     print(f"retinopathy: {s['retinopathy'].mean()*100:.1f}% | neuropathy: {s['neuropathy'].mean()*100:.1f}% | CKD: {s['ckd'].mean()*100:.1f}%"
           f" | on SGLT2/GLP-1: {s['on_sglt2_glp1'].mean()*100:.1f}% | on insulin: {s['on_insulin'].mean()*100:.1f}%")
-    print(f"gaps — HbA1c overdue: {gc('hba1c_overdue')} | retinal: {gc('retinal_screening_overdue')} | foot: {gc('foot_exam_overdue')}"
+    print(f"gaps, HbA1c overdue: {gc('hba1c_overdue')} | retinal: {gc('retinal_screening_overdue')} | foot: {gc('foot_exam_overdue')}"
           f" | ACR: {gc('acr_screening_missing')} | BP: {gc('bp_uncontrolled')} | intensification: {gc('glp1_sglt2_gap')}"
           f" | inertia: {gc('therapy_inertia')} | adherence: {gc('low_adherence')} | renal: {gc('renal_protection_gap')}")
     print(f"deterioration rate (12m label): {s['deterioration_next_12m'].mean()*100:.1f}% | "

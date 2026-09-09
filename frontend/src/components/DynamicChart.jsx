@@ -7,7 +7,7 @@ import { Bar3D, Donut3D } from './Chart3D';
 import MapCard from './MapCard';
 
 /*
- * DynamicChart — renders a chart spec (from the agent's render_chart tool or a
+ * DynamicChart, renders a chart spec (from the agent's render_chart tool or a
  * dashboard endpoint) with the validated categorical palette and the dataviz
  * mark specs: thin rounded bars, 2px lines, recessive grid, glass tooltip,
  * legend only when ≥2 series.
@@ -17,7 +17,7 @@ import MapCard from './MapCard';
  *         referenceY }
  */
 
-// Validated categorical palette — the reports ramp mid-tones, fixed order.
+// Validated categorical palette, the reports ramp mid-tones, fixed order.
 export const PALETTE = ['#9b1c46', '#b8862e', '#6d4fa8', '#3a8e5a', '#d97706', '#a8407a'];
 
 const AXIS_TICK = { fontSize: 10, fill: '#64748b', fontFamily: 'Manrope' };
@@ -43,7 +43,7 @@ function GlassTooltip({ active, payload, label }) {
 
 const legendStyle = { fontSize: 10.5, fontFamily: 'Manrope' };
 
-export default function DynamicChart({ spec, bare = false, height = 230 }) {
+export default function DynamicChart({ spec, bare = false, height = 230, onSelect, activeLabel = null }) {
   if (spec?.type === 'map') return <MapCard spec={spec} height={bare ? '100%' : 360} compact={bare} />;
   if (!spec || !Array.isArray(spec.data) || spec.data.length === 0) return null;
   const type = (spec.type || 'bar').toLowerCase();
@@ -96,18 +96,21 @@ export default function DynamicChart({ spec, bare = false, height = 230 }) {
     );
 
   if (type === 'bar' && yKeys.length === 1 && !spec.stacked) {
-    return wrap3d(<Bar3D data={to3dRows(yKeys[0])} ramp={spec.ramp ?? 0} maxBars={20} />, height + 30);
+    return wrap3d(<Bar3D data={to3dRows(yKeys[0])} ramp={spec.ramp ?? 0} maxBars={20} onSelect={onSelect} activeLabel={activeLabel} />, height + 30);
   }
   if (type === 'pie') {
     return wrap3d(
-      <Donut3D data={to3dRows(yKeys[0])} centerLabel={spec.centerLabel || yKeys[0].label} />,
+      <Donut3D data={to3dRows(yKeys[0])} centerLabel={spec.centerLabel || yKeys[0].label}
+        onSelect={onSelect} activeLabel={onSelect ? (activeLabel || '') : undefined} />,
       height + 60);
   }
 
   let chart = null;
   if (type === 'bar') {
     chart = (
-      <BarChart data={data} margin={{ top: 6, right: 8, left: 0, bottom: 0 }} barCategoryGap="28%">
+      <BarChart data={data} margin={{ top: 6, right: 8, left: 0, bottom: 0 }} barCategoryGap="28%"
+        style={onSelect ? { cursor: 'pointer' } : undefined}
+        onClick={onSelect ? (e) => { if (e && e.activeLabel != null) onSelect(e.activeLabel); } : undefined}>
         {grid}{xAxis}{yAxis}{tip}{legend}{refLine}
         {yKeys.map((k) => (
           <Bar key={k.key} dataKey={k.key} name={k.label} fill={k.color}
