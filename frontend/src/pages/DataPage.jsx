@@ -12,7 +12,8 @@ export default function DataPage() {
   const [search, setSearch] = useState('');
   const limit = 40;
 
-  useEffect(() => { getDataTables().then((r) => setTables(r.tables)).catch(() => setTables([])); }, []);
+  const [source, setSource] = useState(null);
+  useEffect(() => { getDataTables().then((r) => { setTables(r.tables); setSource(r.source || null); }).catch(() => setTables([])); }, []);
   useEffect(() => {
     setRows(null);
     getDataRows(active, offset, limit, search)
@@ -30,8 +31,17 @@ export default function DataPage() {
         <div className="p-4 border-b border-[rgba(15,23,42,0.07)]">
           <p className="panel-title">HIE tables</p>
           <p className="text-[10px] mt-1.5 leading-snug" style={{ color: 'var(--text-dim)' }}>
-            A real exchange shape: coded, longitudinal, relational. Phase 2 = FHIR R4 store → BigQuery streaming.
+            A real exchange shape: coded, longitudinal, relational.
           </p>
+          {source && (
+            <p className="text-[9.5px] mt-1.5 font-bold" style={{ color: source.loaded_from === 'bigquery' ? 'var(--green)' : 'var(--text-dim)' }}>
+              {source.loaded_from === 'bigquery'
+                ? `● BigQuery · ${source.project}.${source.dataset} · ${source.location}${source.load_ms ? ` · loaded in ${(source.load_ms / 1000).toFixed(1)} s` : ''}`
+                : source.provisioning ? `◐ provisioning BigQuery ${source.dataset}…`
+                : source.backend === 'bigquery' ? `○ local files (BigQuery: ${source.error || 'pending'})`
+                : '○ local csv.gz (phase 1) · phase 2 = FHIR R4 store → BigQuery streaming'}
+            </p>
+          )}
         </div>
         <div className="flex-1 overflow-y-auto p-2 space-y-1">
           {tables.map((t) => (

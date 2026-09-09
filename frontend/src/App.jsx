@@ -135,7 +135,11 @@ function Header({ tab, setTab }) {
       </button>
 
       <div className="title-block">
-        <div className="header-eyebrow">Google Cloud · Doha region (me-central1) · Qatar Health Information Exchange</div>
+        <div className="header-eyebrow">
+          {health?.platform?.compute === 'cloud-run'
+            ? `Google Cloud · Cloud Run ${health.platform.region || 'me-central1'} · BigQuery ${health.platform.data?.dataset || ''} · Vertex AI Gemini · Qatar HIE`
+            : 'Google Cloud · Doha region (me-central1) · Qatar Health Information Exchange'}
+        </div>
         <div className="title-row">
           <h1 className="app-title">
             <b>Nabd</b> <span className="title-ar">نبض</span> — Population Health Intelligence

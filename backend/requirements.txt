@@ -11,3 +11,7 @@ google-genai>=1.16
 google-adk>=2.8.0
 mcp>=1.24,<2
 python-dotenv>=1.0
+google-cloud-bigquery>=3.25
+google-cloud-bigquery-storage>=2.24
+db-dtypes>=1.2
+pyarrow>=15

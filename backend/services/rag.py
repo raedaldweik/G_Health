@@ -84,8 +84,8 @@ def _extract_chunks() -> list[dict]:
 
 def _build_embeddings_async():
     """Compute the semantic index in the background; cache to disk."""
-    key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-    if not key:
+    from services import llm_client as LC
+    if not LC.llm_available():
         return
     _state["embed_status"] = "building"
 
@@ -96,8 +96,7 @@ def _build_embeddings_async():
                 _state["embeddings"] = np.load(cache)["emb"]
                 _state["embed_status"] = "ready"
                 return
-            from google import genai
-            client = genai.Client(api_key=key)
+            client = LC.make_client()
             texts = [c["text"] for c in _state["chunks"]]
             vecs = []
             for i in range(0, len(texts), 80):
@@ -138,10 +137,9 @@ def search(query: str, top_k: int = 4) -> list[dict]:
 
     emb = _state["embeddings"]
     if emb is not None:
-        key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         try:
-            from google import genai
-            client = genai.Client(api_key=key)
+            from services import llm_client as LC
+            client = LC.make_client()
             q = client.models.embed_content(model=EMBED_MODEL, contents=[query])
             qv = np.array(q.embeddings[0].values, dtype=np.float32)
             qv /= (np.linalg.norm(qv) + 1e-9)

@@ -47,12 +47,36 @@ _OPS = {
 }
 
 
+TABLE_NAMES = ["facilities", "patients", "conditions", "observations",
+               "medications", "encounters", "care_gaps", "patient_summary"]
+
+
+def _load_raw() -> dict[str, pd.DataFrame]:
+    """Phase 2: BigQuery is the system of record. Phase 1 / fallback: the committed csv.gz."""
+    from services import bq, platform as P
+    if P.HIE_BACKEND == "bigquery":
+        try:
+            return bq.load_tables()
+        except Exception as e:               # dataset empty (first boot) or unreachable
+            bq.STATUS["error"] = f"{type(e).__name__}: {str(e)[:300]}"
+            print(f"⚠ BigQuery unavailable ({bq.STATUS['error']}) — serving the local HIE files"
+                  + (" and provisioning BigQuery in the background" if P.BQ_AUTOLOAD and P.PROJECT else ""),
+                  flush=True)
+            if P.BQ_AUTOLOAD and P.PROJECT and isinstance(e, LookupError):
+                bq.provision_in_background()
+    t = {name: pd.read_csv(DATA / f"{name}.csv.gz") for name in TABLE_NAMES}
+    bq.STATUS["loaded_from"] = "local-csv"
+    bq.STATUS["rows"] = {k: len(v) for k, v in t.items()}
+    return t
+
+
 @lru_cache(maxsize=1)
 def tables() -> dict[str, pd.DataFrame]:
-    t = {}
-    for name in ["facilities", "patients", "conditions", "observations",
-                 "medications", "encounters", "care_gaps", "patient_summary"]:
-        t[name] = pd.read_csv(DATA / f"{name}.csv.gz")
+    t = _load_raw()
+    for name, df in t.items():                       # BigQuery returns DATE objects; the engine expects strings
+        for col in df.columns:
+            if df[col].dtype == object and len(df) and hasattr(df[col].iloc[0], "isoformat"):
+                t[name][col] = df[col].astype(str)
     # join facility names onto summary for friendlier grouping
     fac = t["facilities"][["facility_id", "facility_name", "facility_type", "region"]]
     t["patient_summary"] = t["patient_summary"].merge(

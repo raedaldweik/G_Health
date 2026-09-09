@@ -20,6 +20,8 @@ from fastapi.staticfiles import StaticFiles
 
 from routers import chat, dashboards, evals, ops
 from services import agent, audit, hie, rag
+from services import llm_client as LC
+from services import platform as P
 
 FRONTEND_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 
@@ -72,8 +74,11 @@ def _retest_loop():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     t0 = time.time()
+    print(f"· Platform: {P.COMPUTE}{' · ' + P.REGION if P.REGION else ''} · HIE backend {P.HIE_BACKEND}"
+          f"{' (' + P.PROJECT + '.' + P.BQ_DATASET + ')' if P.HIE_BACKEND == 'bigquery' else ''} · LLM {LC.describe()}", flush=True)
     t = hie.tables()
-    print(f"✓ HIE loaded: {len(t['patient_summary']):,} patients, "
+    from services import bq
+    print(f"✓ HIE loaded from {bq.STATUS['loaded_from']}: {len(t['patient_summary']):,} patients, "
           f"{len(t['observations']):,} observations, {len(t['encounters']):,} encounters "
           f"({time.time() - t0:.1f}s)", flush=True)
     rag.ensure_loaded()
@@ -109,6 +114,7 @@ def health():
             "model_switches": agent._active["switches"] if live else None,
             "model_source": agent.RESOLUTION.get("source") if live else None,
             "warmup": WARM if live else None,
+            "platform": P.info(),
             "patients": len(hie.summary())}
 
 

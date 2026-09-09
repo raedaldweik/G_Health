@@ -33,11 +33,10 @@ from services import queue_service
 
 BACKEND_DIR = str(Path(__file__).resolve().parent.parent)
 
-# Accept either env name; ADK/google-genai read GOOGLE_API_KEY.
-_KEY = (os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or "").strip()
-if _KEY and not os.getenv("GOOGLE_API_KEY"):
-    os.environ["GOOGLE_API_KEY"] = _KEY
-os.environ.setdefault("GOOGLE_GENAI_USE_VERTEXAI", "FALSE")
+from services import llm_client as LC
+from services import platform as P
+
+_KEY = P.API_KEY   # kept for readability; LC.llm_available() is the source of truth
 
 # Preference order. IDs shift monthly, so we verify against what THIS key can see.
 PREFERRED_MODELS = [
@@ -53,7 +52,7 @@ RESOLUTION: dict = {"model": None, "source": None, "visible": [], "error": None}
 
 
 def llm_enabled() -> bool:
-    return bool(_KEY)
+    return LC.llm_available()
 
 
 def _version_key(name: str) -> tuple:
@@ -71,12 +70,11 @@ def resolve_model() -> str:
     if pinned:
         RESOLUTION.update(model=pinned, source="env MODEL (unverified pin)")
         return pinned
-    if not _KEY:
+    if not LC.llm_available():
         RESOLUTION.update(model=PREFERRED_MODELS[0], source="scripted mode (no key)")
         return PREFERRED_MODELS[0]
     try:
-        from google import genai
-        client = genai.Client(api_key=_KEY)
+        client = LC.make_client()
         visible = []
         for m in client.models.list():
             name = (m.name or "").split("/")[-1]
@@ -97,8 +95,20 @@ def resolve_model() -> str:
         RESOLUTION["error"] = f"none of {PREFERRED_MODELS} visible; saw {visible[:12]}"
     except Exception as e:
         RESOLUTION["error"] = f"{type(e).__name__}: {str(e)[:300]}"
+    if P.VERTEX:      # Vertex lists publisher models differently; let the self-test verify and fall back
+        RESOLUTION.update(model=PREFERRED_MODELS[0], source="Vertex AI — verified by self-test")
+        return PREFERRED_MODELS[0]
     RESOLUTION.update(model=FALLBACK_MODEL, source="UNVERIFIED fallback — check the key")
     return FALLBACK_MODEL
+
+
+def is_model_missing(e: Exception) -> bool:
+    """404 / NOT_FOUND for the *model* — never for credentials or other 'not found' text."""
+    code = getattr(e, "code", None)
+    msg = str(e)
+    if code == 404 or "NOT_FOUND" in msg:
+        return True
+    return bool(re.search(r"(publisher )?model[^.\n]{0,80}(not found|does not exist|is not supported|not available)", msg, re.I))
 
 
 THINKING_LEVEL = (os.getenv("THINKING_LEVEL", "LOW").strip().upper() or "LOW")
@@ -185,7 +195,7 @@ def _llm(model: str):
     class NabdGemini(Gemini):
         @cached_property
         def api_client(self) -> Client:                       # noqa: D401 — ADK hook
-            return Client(api_key=_KEY, http_options=_http_options())
+            return LC.make_client(http_options=_http_options())
 
     return NabdGemini(model=model, retry_options=_retry_options())
 
@@ -193,11 +203,9 @@ def _llm(model: str):
 def self_test(model: str | None = None) -> dict:
     """One real generate_content call so the deploy log proves key + model work.
     Retries transient capacity errors and, if a model is saturated, moves to the next."""
-    if not _KEY:
+    if not LC.llm_available():
         return {"ok": False, "skipped": "no key"}
-    from google import genai
-    from google.genai import types as gtypes
-    client = genai.Client(api_key=_KEY, http_options=_http_options())
+    client = LC.make_client(http_options=_http_options())
     tried = []
     model = model or active_model()
     while True:
@@ -211,7 +219,7 @@ def self_test(model: str | None = None) -> dict:
         except Exception as e:
             err = f"{type(e).__name__}: {str(e)[:300]}"
             tried.append({"model": model, "error": err})
-            if is_capacity_error(e):
+            if is_capacity_error(e) or is_model_missing(e):
                 nxt = switch_model(err)
                 if nxt:
                     model = nxt
@@ -227,6 +235,19 @@ def describe_dataset() -> dict:
     """List every HIE table with row counts, descriptions and columns. Call this FIRST
     whenever you are unsure which column or table holds something."""
     return hie.describe_dataset()
+
+
+def query_bigquery(sql: str) -> dict:
+    """Run ONE read-only GoogleSQL SELECT against the national HIE in BigQuery (dataset
+    nabd_hie; tables: patient_summary, patients, conditions, observations, medications,
+    encounters, care_gaps, facilities — unqualified names resolve to the dataset). Use it
+    for aggregations, joins or window functions the other tools cannot express. Rows are
+    capped at 200 and bytes billed are capped; the job id and bytes processed are returned."""
+    from services import bq
+    out = bq.query(sql)
+    audit.log("BQ·QUERY", "cohort_agent", f"{out.get('bytes_processed', 0):,} B · "
+              f"{out.get('row_count', 0)} rows · {out.get('ms', 0)} ms · {sql[:120]}")
+    return out
 
 
 def describe_column(column: str, table: str = "patient_summary") -> dict:
@@ -466,11 +487,15 @@ def _build_tools_map(model_name: str | None = None):
                      "group-bys, rankings, correlations, facility benchmark, equity view, KPIs."),
         instruction=("You are the HIE data specialist. Use your tools to answer the request "
                      "with REAL numbers. If unsure about columns, call describe_dataset first. "
+                     + ("The exchange lives in BigQuery: prefer query_bigquery for aggregations, joins "
+                        "and rankings the structured tools cannot express, and quote the bytes processed. "
+                        if P.HIE_BACKEND == "bigquery" else "") +
                      "Return a compact, complete factual summary of what you found (with the "
                      "numbers); no pleasantries."),
         tools=[describe_dataset, describe_column, get_patient, patient_timeline,
                filter_cohort, groupby_aggregate, top_n, correlate, histogram,
-               cohort_kpis, facility_benchmark, equity_breakdown])
+               cohort_kpis, facility_benchmark, equity_breakdown]
+              + ([query_bigquery] if P.HIE_BACKEND == "bigquery" else []))
 
     guideline_agent = LlmAgent(
         name="guideline_agent", model=llm, generate_content_config=gen_cfg,
@@ -596,8 +621,9 @@ async def stream_chat(message: str, session_id: str, persona: str = "clinician",
                 yield ev
             return
         except Exception as e:
-            if attempt < 2 and is_capacity_error(e) and switch_model(f"{type(e).__name__}: {e}"):
-                why = "went silent" if isinstance(e, StallError) else "at capacity (503)"
+            if attempt < 2 and (is_capacity_error(e) or is_model_missing(e)) and switch_model(f"{type(e).__name__}: {e}"):
+                why = ("went silent" if isinstance(e, StallError) else "not available on this endpoint"
+                       if is_model_missing(e) else "at capacity (503)")
                 yield {"type": "reset"}
                 yield {"type": "step", "status": "done", "agent": "system", "tool": "model_fallback",
                        "detail": f"{model} {why} — re-running on {active_model()}"}

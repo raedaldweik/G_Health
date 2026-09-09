@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { getHealth } from '../services/api';
 import {
   ADRS, AVOIDED_ADMISSION_USD, COST, DATA_FLOWS, EDGES, EDGE_STYLE, FLOWS, LANES, NODES, PHASES, SCALE,
 } from '../data/architecture';
@@ -338,7 +339,17 @@ function AdrsView() {
 }
 
 /* ───────────────────────────── Phases ───────────────────────────── */
+const LIVE_RULES = {
+  Data: (p) => p?.data?.loaded_from === 'bigquery',
+  Hosting: (p) => p?.compute === 'cloud-run',
+  Agents: (p) => p?.llm === 'vertex',
+  Retrieval: (p) => p?.llm === 'vertex',
+};
+
 function PhasesView() {
+  const [plat, setPlat] = useState(null);
+  useEffect(() => { getHealth().then((h) => setPlat(h.platform || null)).catch(() => {}); }, []);
+  const live = (a) => !!(plat && LIVE_RULES[a] && LIVE_RULES[a](plat));
   return (
     <div className="flex flex-col gap-2.5">
       <Panel title="Phase 1 (Railway, running now) → Phase 2 (Google Cloud, me-central1) — same contracts, managed platform">
@@ -355,7 +366,7 @@ function PhasesView() {
                 <tr key={a} className="border-t border-[rgba(15,23,42,0.05)] align-top" style={{ color: 'var(--text-md)' }}>
                   <td className="py-1.5 pr-2 font-extrabold" style={{ color: 'var(--text)' }}>{a}</td>
                   <td className="pr-3" style={{ color: 'var(--text-dim)' }}>{b}</td>
-                  <td className="pr-3 font-semibold">{c}</td>
+                  <td className="pr-3 font-semibold">{c}{live(a) && <span className="badge badge-green ml-1.5" style={{ fontSize: 8 }}>live</span>}</td>
                   <td className="font-semibold" style={{ color: 'var(--brand)' }}>{d}</td>
                 </tr>
               ))}

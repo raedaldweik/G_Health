@@ -60,8 +60,10 @@ def document_file(name: str):
 def data_tables():
     t = hie.tables()
     dd = hie.data_dictionary()
+    from services import bq
     return {"tables": [{"name": k, "rows": len(v), "columns": list(v.columns),
-                        "description": dd.get(k, "")} for k, v in t.items()]}
+                        "description": dd.get(k, "")} for k, v in t.items()],
+            "source": bq.STATUS}
 
 
 @router.get("/api/data/{table}")
