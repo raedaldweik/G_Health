@@ -55,7 +55,7 @@ SCREEN: Nabd, the Google colours, the subtitle.
 
 SAY: The customer is the health ministry of a Gulf state with a national Health Information Exchange. They already have a diabetes registry and a predictive programme that was built on SAS Viya. I worked on that programme. What I want to show today is the next step: letting any clinician or any director ask the exchange a question and get an answer that is grounded, governed and actionable, and what that looks like on Google Cloud in Doha.
 
-NOTE: Do not name the ministry or the country's institutions on this slide. Qatar as a country and its public statistics are fine; the client is not.
+NOTE: Do not name the ministry or the country's institutions on this slide. Qatar as a country and its public statistics are fine; the client is not. The slides name no Google product anywhere; every Google service is said out loud, and the speaker notes list them slide by slide.
 
 ### Slide 2 — The problem (1:45, 60 seconds)
 
@@ -81,7 +81,7 @@ SAY: The right-hand column is what makes it usable in a clinical setting. Four c
 
 ### Slide 5 — How it works (4:30, 75 seconds)
 
-SCREEN: the question at the top, the supervisor, five specialists, the evidence strip.
+SCREEN: the question at the top, the supervisor ("a language model inside an agent framework"), five specialists, the evidence strip. No product names on the slide.
 
 SAY: One supervisor, five specialists. The supervisor is Gemini Flash on the Agent Development Kit. It plans, routes and composes; it never produces a number itself. The data specialist queries the exchange; on Google Cloud that is BigQuery through the MCP Toolbox. The guideline specialist retrieves from the national guidelines with page citations; on Google Cloud that is RAG Engine. The risk specialist runs the four models; on Google Cloud, a Vertex AI endpoint. The population-health specialist talks over the Model Context Protocol to a server we built; hold that thought. And the action specialist only drafts, into a human approval queue.
 
@@ -93,31 +93,31 @@ SCREEN: the SAS diagram.
 
 SAY: Credit where it is due. This is where the pattern was proven, at a federal health entity in the region, and I was part of that build. An orchestrating agent with guideline grounding over a vector store, and an MCP server exposing four tools: SQL over the in-memory CAS tables, a decision flow, model runs, and chart generation. The pattern is right. The question for the ministry is which platform runs it at national scale, in Doha, with managed services underneath.
 
-### Slide 7 — Reference architecture B, Google Cloud in Doha (6:45, 90 seconds)
+### Slide 7 — Reference architecture B, the cloud-native target (6:45, 90 seconds)
 
-SCREEN: ingestion subsystem left, serving subsystem right, sovereignty strip at the bottom.
+SCREEN: ingestion subsystem left, serving subsystem right, sovereignty strip at the bottom. The boxes are generic (managed FHIR store, analytical warehouse, managed retrieval, model platform, agent runtime); you name the Google service behind each one as you point at it.
 
-SAY: Read it left to right, the way Google's own RAG reference architecture is drawn. Ingestion: the FHIR exchange and the hospital feeds land in the Cloud Healthcare API, with consent enforcement, de-identification and Pub/Sub events, and stream into BigQuery. Guidelines go to Cloud Storage and into RAG Engine, which gives page-level citations without building a vector pipeline. Vertex AI trains the risk model on BigQuery data, registers it, and serves it on an endpoint.
+SAY: Read it left to right; it follows the same shape as Google's own RAG reference architecture, an ingestion subsystem and a serving subsystem. Ingestion: the FHIR exchange and the hospital feeds land in a managed FHIR store, which on Google Cloud is the Cloud Healthcare API, with consent enforcement, de-identification and an event on every new resource, and stream into the warehouse, which is BigQuery. Guidelines go to object storage and into a managed retrieval service, Vertex AI RAG Engine, which gives page-level citations without building a vector pipeline. The model platform, Vertex AI, trains the risk model on warehouse data, registers it with its card, and serves it on an endpoint.
 
-SAY: Serving: the app on Cloud Run, with Speech-to-Text and Text-to-Speech for Arabic and English. The same ADK graph on Gemini, calling four tool families: Google's MCP Toolbox for BigQuery and FHIR, our population-health MCP server, the Vertex endpoint, and RAG Engine. Actions go to the approval queue and, once signed, back to the EHR as a FHIR Task.
+SAY: Serving: the app runs serverless, on Cloud Run, with Speech-to-Text and Text-to-Speech for Arabic and English. The same supervisor and specialists, on Gemini with the Agent Development Kit, call four tool families: Google's MCP Toolbox for BigQuery and FHIR, our population-health MCP server, the Vertex AI endpoint, and RAG Engine. Actions go to the approval queue, which lives in AlloyDB, and once signed go back to the EHR as a FHIR Task through the Healthcare API.
 
-SAY: Underneath: PHI at rest in me-central1 under an Assured Workloads Qatar data boundary, VPC Service Controls, customer-managed keys. Two Doha decisions I want to name now. Gemini is served from the global endpoint, which is acceptable because the agent only ever sees pseudonymised identifiers and aggregates. And the agent runtime is Cloud Run in Doha, not Agent Engine, because Agent Engine is not yet available in me-central1 and the session state carries clinical context.
+SAY: Underneath: PHI at rest in country, which on Google Cloud means me-central1 in Doha under an Assured Workloads Qatar data boundary, VPC Service Controls, and customer-managed keys in Cloud KMS. Two Doha decisions I want to name now. Gemini is served from the global endpoint, which is acceptable because the agent only ever sees pseudonymised identifiers and aggregates. And the agent runtime is Cloud Run in Doha, not Agent Engine, because Agent Engine is not yet available in me-central1 and the session state carries clinical context.
 
 ### Slide 8 — Technical view (8:15, 75 seconds)
 
-SCREEN: three lanes: request path, data path, resilience.
+SCREEN: three lanes: request path, data path, resilience. Generic component names on the slide; the Google names are in your notes and in your mouth.
 
-SAY: For the technical questions, three lanes. The request path: one question is one synchronous path, five hops, streamed to the user, p95 under fifteen seconds. Identity-Aware Proxy in front, Cloud Run for the app, the ADK supervisor on Gemini with sessions in AlloyDB, the specialist tools, and the answer with its trace and citations; drafts go to the queue and signed items leave as FHIR Tasks.
+SAY: For the technical questions, three lanes. The request path: one question is one synchronous path, five hops, streamed to the user, p95 under fifteen seconds. Identity-Aware Proxy in front, Cloud Run for the app, the supervisor on Gemini Flash via Vertex AI with sessions in AlloyDB, the specialist tools, and the answer with its trace and citations; drafts go to the queue and signed items leave as FHIR Tasks.
 
-SAY: The data path: population numbers are batch. The FHIR store streams into BigQuery, Dataform rebuilds the marts at two in the morning, BigQuery ML re-scores every patient nightly. Only the per-patient signal is event-driven: a new HbA1c fires Pub/Sub and one patient is re-scored in seconds. Streaming the aggregates would cost many times more for numbers that move over weeks.
+SAY: The data path: population numbers are batch. The Cloud Healthcare API FHIR store streams into BigQuery, Dataform rebuilds the marts at two in the morning, BigQuery ML re-scores every patient nightly. Only the per-patient signal is event-driven: a new HbA1c fires a Pub/Sub event and one patient is re-scored in seconds through the Vertex AI endpoint. Streaming the aggregates would cost many times more for numbers that move over weeks.
 
 SAY: Resilience: every service is regional and zone-redundant inside me-central1, so a zone failure re-routes traffic with no data loss and nobody is paged. A region failure is the honest limit of in-country residency: recovery is in-region from BigQuery time travel and AlloyDB and Storage backups, with a stated RPO of twenty-four hours and RTO of four. If Gemini is saturated, the supervisor moves down a tested model list, and if no model answers, the scripted engine runs the same tools without the language model. You will see that engine exists.
 
 ### Slide 9 — The demo agenda and the service mapping (9:30, 30 seconds)
 
-SCREEN: three acts on the left, the component-to-service table on the right.
+SCREEN: three acts on the left; on the right, what each demo component becomes at national scale, in generic terms. Name the Google service for each row as you go, or leave it for Q&A.
 
-SAY: The next twenty minutes: a clinician's morning, the ministry's view, and under the hood. On the right, what each demo component is on Google Cloud, one line each, for when you ask. One rule for everything you are about to see: every number is computed live by a tool call. Nothing is pre-rendered.
+SAY: The next twenty minutes: a clinician's morning, the ministry's view, and under the hood. On the right, what each demo component becomes at national scale; on Google Cloud that is BigQuery fed by the Healthcare API, RAG Engine, a Vertex AI endpoint, the same agents on Cloud Run in Doha, AlloyDB for the queue, and the Gen AI Evaluation Service in the release pipeline. One rule for everything you are about to see: every number is computed live by a tool call. Nothing is pre-rendered.
 
 DO: Switch to the browser. Tab 1, landing page.
 

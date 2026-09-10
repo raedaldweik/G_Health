@@ -23,7 +23,7 @@ async function icon(name, color = 'FFFFFF', size = 256) {
 const pres = new pptxgen();
 pres.layout = 'LAYOUT_WIDE';            // 13.33 x 7.5
 pres.author = 'Raed Aldweik';
-pres.title = 'Nabd: diabetes population health on Google Cloud';
+pres.title = 'Nabd: agentic population health for a national diabetes registry';
 
 const T = (s, text, x, y, w, h, o = {}) => s.addText(text, {
   x, y, w, h, fontFace: FONT, fontSize: 12, color: INK, margin: 0, isTextBox: true, valign: 'top', ...o,
@@ -52,7 +52,7 @@ const headline = (s, text, sub = null) => {
   T(s, text, 0.6, 0.5, 12.1, 0.95, { fontSize: 26, bold: true, color: INK, lineSpacingMultiple: 1.05 });
   if (sub) T(s, sub, 0.6, 1.42, 12.1, 0.35, { fontSize: 13, color: GREY });
 };
-const footer = (s, n, note = 'Nabd نبض · Diabetes population health on Google Cloud · Customer Engineering') => {
+const footer = (s, n, note = 'Nabd نبض · Agentic population health for a national diabetes registry') => {
   T(s, note, 0.6, 7.05, 10, 0.25, { fontSize: 8.5, color: FAINT });
   T(s, String(n), 12.2, 7.05, 0.5, 0.25, { fontSize: 8.5, color: FAINT, align: 'right' });
 };
@@ -79,15 +79,15 @@ const numCircle = (s, n, x, y, d, fill) => {
     const s = pres.addSlide();
     s.background = { color: 'FFFFFF' };
     dots(s, 0.6, 0.62, 0.2, 0.1);
-    T(s, 'Google Cloud  ·  Customer Engineering', 1.85, 0.6, 8, 0.3, { fontSize: 11, color: GREY });
+    T(s, 'Customer Engineering', 1.85, 0.6, 8, 0.3, { fontSize: 11, color: GREY });
     T(s, 'Nabd', 0.6, 1.9, 6, 1.0, { fontSize: 54, bold: true, color: INK });
     T(s, 'نبض', 2.55, 1.98, 3, 1.0, { fontSize: 44, color: BLUE2 });
     T(s, 'Agentic population health\nfor a national diabetes registry', 0.6, 3.0, 9, 1.6, { fontSize: 32, bold: true, color: INK, lineSpacingMultiple: 1.05 });
-    T(s, 'A working demonstration and a reference architecture on Google Cloud, built for the ministry of health of a Gulf state with a national Health Information Exchange.', 0.6, 4.75, 8.6, 0.8, { fontSize: 15, color: GREY, lineSpacingMultiple: 1.15 });
+    T(s, 'A working demonstration and a reference architecture, built for the ministry of health of a Gulf state with a national Health Information Exchange.', 0.6, 4.75, 8.6, 0.8, { fontSize: 15, color: GREY, lineSpacingMultiple: 1.15 });
     T(s, 'Raed Aldweik  ·  AI Customer Engineer  ·  September 2026', 0.6, 6.55, 8, 0.3, { fontSize: 11, color: GREY });
     const cs = [[10.2, 2.2, 1.9, BLUE], [11.55, 3.55, 1.25, RED], [9.55, 4.05, 1.0, YELLOW], [10.75, 4.7, 1.55, GREEN]];
     cs.forEach(([x, y, d, c]) => s.addShape(pres.ShapeType.ellipse, { x, y, w: d, h: d, fill: { color: c, transparency: 12 }, line: { color: c, width: 0 } }));
-    s.addNotes('Open with the customer, not the product. The ministry already has a national exchange, a diabetes registry and a predictive programme. What follows is the next step: letting any clinician or director ask the exchange a question and get an answer that is grounded, governed and actionable. Set expectations: nine slides, then twenty minutes in the live product.');
+    s.addNotes('Open with the customer, not the product. The ministry already has a national exchange, a diabetes registry and a predictive programme. What follows is the next step: letting any clinician or director ask the exchange a question and get an answer that is grounded, governed and actionable. Say out loud, not on the slide: the target platform is Google Cloud in Doha, me-central1. Set expectations: nine slides, then twenty minutes in the live product.');
   }
 
   /* ───────────────────────── 2. The problem ───────────────────────── */
@@ -202,10 +202,10 @@ const numCircle = (s, n, x, y, d, fill) => {
     arrow(s, 6.67, 2.42, 6.67, 2.63);
     rect(s, 4.3, 2.65, 4.75, 0.85, BLUE);
     T(s, 'Nabd supervisor', 4.5, 2.71, 4.4, 0.35, { fontSize: 14, bold: true, color: 'FFFFFF' });
-    T(s, 'Gemini Flash on the Agent Development Kit: plans, routes and composes; never guesses a number', 4.5, 3.05, 4.4, 0.4, { fontSize: 9.5, color: 'FFFFFF' });
+    T(s, 'A language model inside an agent framework: plans, routes and composes; never guesses a number', 4.5, 3.05, 4.4, 0.4, { fontSize: 9.5, color: 'FFFFFF' });
     const specs = [
-      ['Data specialist', 'MdStorage', BLUE, 'Cohorts, timelines, group-bys over the exchange', 'HIE tables in the demo · BigQuery on Google Cloud'],
-      ['Guideline specialist', 'MdMenuBook', RED, 'Retrieval over the national guidelines with page citations', 'Hybrid search · Vertex AI RAG Engine on Google Cloud'],
+      ['Data specialist', 'MdStorage', BLUE, 'Cohorts, timelines, group-bys over the exchange', 'Typed query tools over the HIE tables'],
+      ['Guideline specialist', 'MdMenuBook', RED, 'Retrieval over the national guidelines with page citations', 'Hybrid keyword and semantic search'],
       ['Risk specialist', 'MdOutlineAutoGraph', YELLOW, 'Scores, explains, forecasts, simulates', 'XGBoost risk model (AUC 0.85) · segments · forecast'],
       ['Population-health MCP', 'MdHub', GREEN, 'Care gaps, quality measures, stratification', 'Nabd MCP server, seven tools, any MCP client'],
       ['Action specialist', 'MdOutlineAssignmentTurnedIn', GREY, 'Drafts prescriptions, recalls, referrals', 'Human-in-the-loop approval queue'],
@@ -226,7 +226,7 @@ const numCircle = (s, n, x, y, d, fill) => {
     T(s, [{ text: 'Every answer ships with its evidence: ', options: { bold: true, color: INK } }, { text: 'the tool trace, guideline citations, model drivers and any drafted action, streamed live so the user watches the agents work.', options: { color: GREY } }],
       1.2, 6.32, 11.4, 0.6, { fontSize: 10, valign: 'middle', lineSpacingMultiple: 1.1 });
     footer(s, 5);
-    s.addNotes('Walk top to bottom once: question, supervisor, specialists, tools, evidence. Pre-empt "why five agents": least privilege (the guideline agent cannot draft a prescription), independent evaluation (each specialist has its own test set), and cost (a flat agent re-reads every tool schema on every hop; the measurement is in the evaluation tab). The MCP specialist is the interesting one: Google ships MCP servers to read FHIR and to query BigQuery; none reasons about a population. We built that one.');
+    s.addNotes('Walk top to bottom once: question, supervisor, specialists, tools, evidence. Say out loud: the language model is Gemini Flash and the framework is the Agent Development Kit; on Google Cloud the data specialist is the MCP Toolbox over BigQuery, the guideline specialist is Vertex AI RAG Engine, the risk specialist is a Vertex AI endpoint. Pre-empt "why five agents": least privilege (the guideline agent cannot draft a prescription), independent evaluation (each specialist has its own test set), and cost (a flat agent re-reads every tool schema on every hop; the measurement is in the evaluation tab). The MCP specialist is the interesting one: Google ships MCP servers to read FHIR and to query BigQuery; none reasons about a population. We built that one.');
   }
 
   /* ───────────────────────── 6. Architecture A: SAS Viya ───────────────────────── */
@@ -271,60 +271,60 @@ const numCircle = (s, n, x, y, d, fill) => {
   /* ───────────────────────── 7. Architecture B: Google Cloud ───────────────────────── */
   {
     const s = pres.addSlide();
-    headline(s, 'Reference architecture B: Google Cloud, me-central1 (Doha)', 'The same pattern on managed services, following Google\'s RAG reference architecture: a data ingestion subsystem and a serving subsystem.');
+    headline(s, 'Reference architecture B: the cloud-native target, in country', 'The same pattern on managed services: a data ingestion subsystem and a serving subsystem, every component in a sovereign region.');
     dashed(s, 0.6, 1.95, 5.95, 4.35, BLUE);
     label(s, 'Data ingestion subsystem', 0.8, 2.05, 5, BLUE2);
     const srcs = [['National HIE (FHIR R4)', 'MdLocalHospital'], ['Hospital and primary-care EHRs (HL7v2)', 'MdLocalHospital'], ['Claims and pharmacy (nightly)', 'MdOutlinePayments'], ['National clinical guidelines (PDF)', 'MdOutlineDescription']];
     for (let i = 0; i < srcs.length; i++) {
       await pbox(s, 0.8, 2.35 + i * 0.66, 1.95, 0.56, srcs[i][0], null, { ic: srcs[i][1], icColor: GREY, fs: 8.5 });
     }
-    await pbox(s, 3.05, 2.35, 1.6, 1.22, 'Cloud Healthcare API', 'FHIR store · consent · de-identification · Pub/Sub events', { fill: LBLUE, line: LBLUE, fs: 9.5, subFs: 7.5 });
-    await pbox(s, 4.9, 2.35, 1.45, 1.22, 'BigQuery', 'streaming export · curated marts · BigQuery ML', { fill: BLUE2, line: BLUE2, titleColor: 'FFFFFF', fs: 10, subFs: 7.5 });
+    await pbox(s, 3.05, 2.35, 1.6, 1.22, 'Managed FHIR store', 'consent enforcement · de-identification · an event on every new resource', { fill: LBLUE, line: LBLUE, fs: 9.5, subFs: 7.5 });
+    await pbox(s, 4.9, 2.35, 1.45, 1.22, 'Analytical warehouse', 'streaming export · curated marts · in-warehouse ML', { fill: BLUE2, line: BLUE2, titleColor: 'FFFFFF', fs: 10, subFs: 7.5 });
     [2.63, 3.29].forEach((y) => arrow(s, 2.75, y, 3.05, y, GREY));
     arrow(s, 2.75, 3.95, 3.3, 3.95, GREY, 'dash'); arrow(s, 3.3, 3.95, 3.3, 3.57, GREY, 'dash');
     arrow(s, 4.65, 2.96, 4.9, 2.96, GREY);
-    await pbox(s, 3.05, 4.35, 1.6, 0.56, 'Cloud Storage', 'versioned corpus', { fs: 9, subFs: 7.5 });
-    await pbox(s, 4.9, 4.0, 1.45, 1.25, 'RAG Engine', 'embeddings · vector index · page-level citations', { fill: LBLUE, line: LBLUE, fs: 9.5, subFs: 7.5 });
+    await pbox(s, 3.05, 4.35, 1.6, 0.56, 'Object storage', 'versioned corpus', { fs: 9, subFs: 7.5 });
+    await pbox(s, 4.9, 4.0, 1.45, 1.25, 'Managed retrieval', 'embeddings · vector index · page-level citations', { fill: LBLUE, line: LBLUE, fs: 9.5, subFs: 7.5 });
     arrow(s, 2.75, 4.61, 3.05, 4.61, GREY); arrow(s, 4.65, 4.61, 4.9, 4.61, GREY);
-    await pbox(s, 0.8, 5.05, 5.55, 0.98, 'Vertex AI: models', 'Pipelines train the XGBoost risk model on BigQuery data, register it in Model Registry, and serve it on an online endpoint for point-of-care scoring, with batch prediction for the nightly cohort; drift monitoring in region.', { fill: LYELLOW, line: LYELLOW, fs: 9.5, subFs: 7.5 });
+    await pbox(s, 0.8, 5.05, 5.55, 0.98, 'Model platform', 'Pipelines train the risk model on warehouse data, register it with its card and version, and serve it on an online endpoint for point-of-care scoring, with batch prediction for the nightly cohort; drift monitoring in region.', { fill: LYELLOW, line: LYELLOW, fs: 9.5, subFs: 7.5 });
     dashed(s, 6.8, 1.95, 5.9, 4.35, GREEN);
     label(s, 'Serving subsystem', 7.0, 2.05, 5, '1E8E3E');
     await pbox(s, 7.0, 2.35, 1.65, 1.0, 'Users', 'clinicians · health leaders · web, tablet, voice', { ic: 'MdOutlineGroups', icColor: GREY, fs: 9.5, subFs: 7.5 });
-    await pbox(s, 8.9, 2.35, 1.7, 1.0, 'Cloud Run: Nabd app', 'React + API · Speech-to-Text / Text-to-Speech (Arabic, English)', { fs: 9.5, subFs: 7.5 });
-    await pbox(s, 10.85, 2.35, 1.65, 1.0, 'Agent runtime', 'ADK graph · Gemini Flash · sessions · traces', { fill: '1E8E3E', line: '1E8E3E', titleColor: 'FFFFFF', fs: 9.5, subFs: 7.5 });
+    await pbox(s, 8.9, 2.35, 1.7, 1.0, 'Nabd app (serverless)', 'web app and API · speech-to-text and text-to-speech, Arabic and English', { fs: 9.5, subFs: 7.5 });
+    await pbox(s, 10.85, 2.35, 1.65, 1.0, 'Agent runtime', 'supervisor and specialists · language model · sessions · traces', { fill: '1E8E3E', line: '1E8E3E', titleColor: 'FFFFFF', fs: 9.5, subFs: 7.5 });
     arrow(s, 8.65, 2.85, 8.9, 2.85, GREY); arrow(s, 10.6, 2.85, 10.85, 2.85, GREY);
     label(s, 'Tools the agent calls', 7.0, 3.55, 4, GREY);
-    const tls = [['MCP Toolbox', 'BigQuery · FHIR (Google)'], ['Nabd pop-health MCP', 'care gaps · measures · simulation'], ['Vertex AI endpoint', 'risk score + drivers'], ['RAG Engine retrieval', 'cited guideline passages']];
+    const tls = [['Data tools (MCP)', 'warehouse SQL · FHIR reads'], ['Nabd pop-health MCP', 'care gaps · measures · simulation'], ['Model endpoint', 'risk score and drivers'], ['Guideline retrieval', 'cited passages']];
     for (let i = 0; i < tls.length; i++) {
       const x = 7.0 + (i % 2) * 2.85, y = 3.8 + Math.floor(i / 2) * 0.66;
       await pbox(s, x, y, 2.7, 0.56, tls[i][0], tls[i][1], { fill: LGREEN, line: LGREEN, fs: 9, subFs: 7.5 });
     }
     arrow(s, 11.67, 3.35, 11.67, 3.78, GREY);
     await pbox(s, 7.0, 5.2, 2.7, 0.83, 'Human approval queue', 'drafts signed by a named clinician', { ic: 'MdOutlineHowToReg', icColor: GREEN, fs: 9, subFs: 7.5 });
-    await pbox(s, 9.85, 5.2, 2.7, 0.83, 'Write-back', 'approved items posted as FHIR Task to the EHR via Healthcare API', { ic: 'MdOutlineAssignmentTurnedIn', icColor: GREEN, fs: 9, subFs: 7.5 });
+    await pbox(s, 9.85, 5.2, 2.7, 0.83, 'Write-back', 'approved items posted to the EHR as FHIR Tasks through the FHIR store', { ic: 'MdOutlineAssignmentTurnedIn', icColor: GREEN, fs: 9, subFs: 7.5 });
     arrow(s, 9.7, 5.6, 9.85, 5.6, GREY);
     arrow(s, 6.55, 4.35, 6.8, 4.35, BLUE2, 'dash');
     T(s, 'data and models', 6.3, 3.88, 0.95, 0.2, { fontSize: 7, color: BLUE2, align: 'center' });
     rect(s, 0.6, 6.45, 12.1, 0.5, CARD);
     s.addImage({ data: await icon('MdOutlineLock', GREY), x: 0.78, y: 6.56, w: 0.28, h: 0.28 });
-    T(s, [{ text: 'Sovereignty and operations: ', options: { bold: true, color: INK } }, { text: 'PHI at rest in me-central1 under an Assured Workloads Qatar data boundary · VPC Service Controls · CMEK · least-privilege service accounts · Cloud Audit Logs · Gemini served from the global endpoint on pseudonymised prompts only.', options: { color: GREY } }],
+    T(s, [{ text: 'Sovereignty and operations: ', options: { bold: true, color: INK } }, { text: 'PHI at rest in country under a compliance boundary · customer-managed encryption keys · a network perimeter around the data services · least-privilege service identities · audit logs on every access · the language model sees pseudonymised prompts only.', options: { color: GREY } }],
       1.15, 6.45, 11.5, 0.5, { fontSize: 9, valign: 'middle', lineSpacingMultiple: 1.05 });
-    footer(s, 7, 'Pattern: Google Cloud Architecture Center, "RAG infrastructure for generative AI using Gemini Enterprise and Agent Platform"');
-    s.addNotes('Read it left to right like Google\'s own reference: ingestion on the left (Healthcare API to BigQuery; guidelines to RAG Engine; Vertex AI trains and serves the risk model), serving on the right (Cloud Run app, the ADK agent on Gemini, the four tool families, the human queue, FHIR write-back). Two Doha-specific decisions to name: Gemini is served from the global endpoint, acceptable because the agent only ever sees pseudonymised identifiers and aggregates; and the agent runtime is Cloud Run in Doha until Agent Engine is available in me-central1. Both are decisions, not accidents.');
+    footer(s, 7);
+    s.addNotes('Read it left to right. Say the Google services out loud, box by box: the managed FHIR store is the Cloud Healthcare API; the warehouse is BigQuery with BigQuery ML; object storage is Cloud Storage; managed retrieval is Vertex AI RAG Engine; the model platform is Vertex AI (pipelines, Model Registry, online endpoint); the serverless app is Cloud Run; the agent runtime is the Agent Development Kit on Gemini, on Cloud Run in Doha until Agent Engine is available in me-central1; the data tools are the MCP Toolbox for BigQuery and FHIR; the queue lives in AlloyDB; write-back is a FHIR Task through the Healthcare API. Sovereignty: Assured Workloads with the Qatar data boundary, Cloud KMS keys, VPC Service Controls, Cloud Audit Logs; Gemini on the global endpoint on pseudonymised prompts only. This follows Google\'s own RAG reference architecture: an ingestion subsystem and a serving subsystem.');
   }
 
   /* ───────────────────────── 8. Technical architecture ───────────────────────── */
   {
     const s = pres.addSlide();
-    headline(s, 'Technical view: the request path, the data path, and how it fails safely', 'Synchronous per question; batch per population; every component regional in me-central1 and zone-redundant.');
+    headline(s, 'Technical view: the request path, the data path, and how it fails safely', 'Synchronous per question; batch per population; every component regional, in country, and zone-redundant.');
     // Lane A: request path
     dashed(s, 0.6, 1.9, 12.1, 1.6, BLUE);
     label(s, 'Request path: one question, synchronous, p95 under 15 seconds', 0.8, 2.0, 8, BLUE2);
     const reqSteps = [
-      ['User', 'web or voice · Arabic / English · Identity-Aware Proxy in front', 'MdRecordVoiceOver'],
-      ['Cloud Run: app + API', 'React front end · FastAPI · streams the trace as NDJSON', 'MdWeb'],
-      ['ADK supervisor', 'Gemini Flash via Vertex AI · low thinking on routing turns · session in AlloyDB', 'MdSmartToy'],
-      ['Specialist tools', 'MCP Toolbox (BigQuery) · Nabd MCP (Cloud Run) · Vertex endpoint · RAG Engine', 'MdHub'],
+      ['User', 'web or voice · Arabic / English · identity-aware access in front', 'MdRecordVoiceOver'],
+      ['App and API (serverless)', 'web front end · API · streams the agent trace to the browser', 'MdWeb'],
+      ['Agent supervisor', 'language model with low thinking on routing turns · session in a managed database', 'MdSmartToy'],
+      ['Specialist tools', 'warehouse SQL tools · Nabd MCP server · model endpoint · guideline retrieval', 'MdHub'],
       ['Answer and action', 'trace + citations to the user · drafts to the queue · signed items as FHIR Task', 'MdOutlineAssignmentTurnedIn'],
     ];
     for (let i = 0; i < reqSteps.length; i++) {
@@ -337,11 +337,11 @@ const numCircle = (s, n, x, y, d, fill) => {
     dashed(s, 0.6, 3.65, 12.1, 1.6, YELLOW);
     label(s, 'Data path: nightly batch for the population, events for the patient', 0.8, 3.75, 8, 'B06000');
     const dataSteps = [
-      ['Healthcare API FHIR store', 'HL7v2 and FHIR ingestion · consent · de-identification · Pub/Sub on every new resource', 'MdLocalHospital'],
-      ['BigQuery streaming export', 'FHIR resources land as tables within seconds · time travel and snapshots for recovery', 'MdStorage'],
-      ['Curated marts (Dataform)', 'patient_summary · care gaps · quality measures · equity views, rebuilt at 02:00', 'MdDataObject'],
-      ['BigQuery ML batch scoring', 'every patient re-scored nightly · scores and drivers written back for the tools', 'MdOutlineAutoGraph'],
-      ['Event path', 'a new HbA1c fires Pub/Sub · Cloud Run scorer calls the Vertex endpoint · one patient in seconds', 'MdBolt'],
+      ['Managed FHIR store', 'HL7v2 and FHIR ingestion · consent · de-identification · an event on every new resource', 'MdLocalHospital'],
+      ['Streaming export to the warehouse', 'FHIR resources land as tables within seconds · time travel and snapshots for recovery', 'MdStorage'],
+      ['Curated marts', 'patient summary · care gaps · quality measures · equity views, rebuilt at 02:00 as versioned SQL', 'MdDataObject'],
+      ['Nightly batch scoring', 'every patient re-scored in the warehouse · scores and drivers written back for the tools', 'MdOutlineAutoGraph'],
+      ['Event path', 'a new HbA1c fires an event · a small scorer calls the model endpoint · one patient in seconds', 'MdBolt'],
     ];
     for (let i = 0; i < dataSteps.length; i++) {
       const [t, sub, ic] = dataSteps[i]; const x = 0.8 + i * 2.42;
@@ -352,17 +352,17 @@ const numCircle = (s, n, x, y, d, fill) => {
     dashed(s, 0.6, 5.4, 12.1, 1.55, GREEN);
     label(s, 'Resilience and operations', 0.8, 5.5, 6, '1E8E3E');
     const ops = [
-      ['A zone fails', 'Cloud Run, BigQuery, Healthcare API and AlloyDB are zone-redundant inside me-central1. Traffic re-routes, no data loss, nobody is paged.'],
-      ['The region fails', 'Residency rules keep data in country, so recovery is in-region: BigQuery time travel, AlloyDB and Storage backups. Stated RPO 24 h, RTO 4 h.'],
-      ['Gemini is saturated', 'The supervisor moves down a tested model list; if no model answers, the scripted engine runs the same tools without the language model.'],
-      ['Delivery and observability', 'Terraform · Cloud Build · Artifact Registry · Cloud Logging, Trace and Monitoring with SLOs on first token and answer time.'],
+      ['A zone fails', 'Every managed service is regional and zone-redundant: app, warehouse, FHIR store, database. Traffic re-routes, no data loss, nobody is paged.'],
+      ['The region fails', 'Residency rules keep data in country, so recovery is in-region: warehouse time travel, database and storage backups. Stated RPO 24 h, RTO 4 h.'],
+      ['The language model is saturated', 'The supervisor moves down a tested model list; if no model answers, the scripted engine runs the same tools without the language model.'],
+      ['Delivery and observability', 'infrastructure as code · CI with the evalset as a release gate · container registry · logs, traces and SLOs on first token and answer time.'],
     ];
     for (let i = 0; i < ops.length; i++) {
       const [t, sub] = ops[i]; const x = 0.8 + i * 2.98;
       await pbox(s, x, 5.78, 2.8, 1.08, t, sub, { fill: LGREEN, line: LGREEN, fs: 9.5, subFs: 7.5 });
     }
     footer(s, 8);
-    s.addNotes('This slide exists for the technical questions. Top lane: one question is one synchronous path, five hops, streamed. Middle lane: the population numbers are batch, rebuilt nightly, because they move over weeks; only the per-patient signal is event-driven. Bottom lane: a zone failure is invisible by construction because every service is regional and zone-redundant; a region failure is the honest limit of in-country residency, so recovery is in-region with a stated RPO and RTO; Gemini saturation degrades to the scripted engine, which the demo can show; and delivery is Terraform plus Cloud Build with SLOs on first token and answer time.');
+    s.addNotes('This slide exists for the technical questions. Say the Google names out loud: Identity-Aware Proxy in front, Cloud Run for the app and the agent, Gemini Flash via Vertex AI, sessions in AlloyDB, the MCP Toolbox over BigQuery, a Vertex AI endpoint, RAG Engine; the Cloud Healthcare API FHIR store, Pub/Sub events, BigQuery streaming export, Dataform marts, BigQuery ML batch scoring; Terraform, Cloud Build, Artifact Registry, Cloud Logging, Cloud Trace, Cloud Monitoring. Top lane: one question is one synchronous path, five hops, streamed. Middle lane: population numbers are batch, rebuilt nightly, because they move over weeks; only the per-patient signal is event-driven. Bottom lane: a zone failure is invisible by construction because every service is regional and zone-redundant in me-central1; a region failure is the honest limit of in-country residency, so recovery is in-region with a stated RPO and RTO; Gemini saturation degrades to the scripted engine, which the demo can show.');
   }
 
   /* ───────────────────────── 9. Demo agenda and service mapping ───────────────────────── */
@@ -382,16 +382,16 @@ const numCircle = (s, n, x, y, d, fill) => {
       T(s, d, 1.3, y + 0.45, 5.7, 0.95, { fontSize: 10.5, color: GREY, lineSpacingMultiple: 1.2 });
     }
     rect(s, 7.6, 1.95, 5.1, 4.55, CARD);
-    T(s, 'What each demo component is on Google Cloud', 7.85, 2.1, 4.7, 0.3, { fontSize: 12, bold: true, color: INK });
+    T(s, 'What each demo component becomes at national scale', 7.85, 2.1, 4.7, 0.3, { fontSize: 12, bold: true, color: INK });
     const map = [
-      ['HIE tables', 'BigQuery, streamed from the Cloud Healthcare API FHIR store'],
-      ['Guideline retrieval', 'Vertex AI RAG Engine over a Cloud Storage corpus'],
-      ['Risk model', 'BigQuery ML or Vertex AI training; online endpoint for scoring'],
-      ['Agents', 'ADK on Cloud Run in Doha; Agent Engine when available in region'],
-      ['Population-health MCP', 'Cloud Run service, alongside Google\'s MCP Toolbox'],
-      ['Approval queue', 'AlloyDB; signed items written back as FHIR Task'],
-      ['Voice', 'Speech-to-Text and Text-to-Speech, Arabic and English'],
-      ['Evaluation', 'Gen AI Evaluation Service with Gemini Pro as judge, in Cloud Build'],
+      ['HIE tables', 'an analytical warehouse fed by a managed FHIR store'],
+      ['Guideline retrieval', 'a managed retrieval service over a versioned corpus'],
+      ['Risk model', 'in-warehouse training; an online endpoint for scoring'],
+      ['Agents', 'the same supervisor and specialists on a managed runtime, in country'],
+      ['Population-health MCP', 'a small service beside the platform\'s own MCP tools'],
+      ['Approval queue', 'a managed database; signed items written back as FHIR Tasks'],
+      ['Voice', 'managed speech-to-text and text-to-speech, Arabic and English'],
+      ['Evaluation', 'the evalset in the release pipeline with a stronger model as judge'],
     ];
     for (let i = 0; i < map.length; i++) {
       const [k, v] = map[i]; const y = 2.5 + i * 0.48;
@@ -400,9 +400,9 @@ const numCircle = (s, n, x, y, d, fill) => {
       if (i < map.length - 1) s.addShape(pres.ShapeType.line, { x: 7.85, y: y + 0.45, w: 4.7, h: 0, line: { color: LINE, width: 0.5 } });
     }
     footer(s, 9);
-    s.addNotes('Close the deck by making the demo the proof: three acts, twenty minutes, every number computed live. The right-hand table is for the question "what would this be on Google Cloud": each demo component has a named managed service, and the mapping is one sentence each. Then switch to the browser.');
+    s.addNotes('Close the deck by making the demo the proof: three acts, twenty minutes, every number computed live. The right-hand table is where you name the Google services out loud, one per row: BigQuery fed by the Cloud Healthcare API; Vertex AI RAG Engine; BigQuery ML or Vertex AI training with an online endpoint; ADK on Cloud Run in Doha, Agent Engine when it is available in region; Cloud Run beside the MCP Toolbox; AlloyDB and FHIR Tasks through the Healthcare API; Speech-to-Text and Text-to-Speech; the Gen AI Evaluation Service with Gemini Pro as judge in Cloud Build. Then switch to the browser.');
   }
 
-  await pres.writeFile({ fileName: 'Nabd_Google_Cloud.pptx' });
+  await pres.writeFile({ fileName: 'Nabd.pptx' });
   console.log('written');
 })().catch((e) => { console.error(e); process.exit(1); });

@@ -9,7 +9,7 @@ server that any MCP client can use.
 
 All patient data is synthetic: a 4,000-patient national diabetes registry with 36 months of
 longitudinal, coded records and a FHIR R4 export sample. Built as a Google Cloud AI Customer
-Engineer demonstration. The deck (`deck/Nabd_Google_Cloud.pptx`) carries the Google Cloud
+Engineer demonstration. The deck (`deck/Nabd.pptx`) carries the Google Cloud
 reference architecture; the app runs on one container today and maps component by component to
 managed services in me-central1 (Doha).
 
