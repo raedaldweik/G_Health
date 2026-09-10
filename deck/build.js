@@ -279,7 +279,7 @@ const numCircle = (s, n, x, y, d, fill) => {
       await pbox(s, 0.8, 2.35 + i * 0.66, 1.95, 0.56, srcs[i][0], null, { ic: srcs[i][1], icColor: GREY, fs: 8.5 });
     }
     await pbox(s, 3.05, 2.35, 1.6, 1.22, 'Managed FHIR store', 'consent enforcement · de-identification · an event on every new resource', { fill: LBLUE, line: LBLUE, fs: 9.5, subFs: 7.5 });
-    await pbox(s, 4.9, 2.35, 1.45, 1.22, 'Analytical warehouse', 'streaming export · curated marts · in-warehouse ML', { fill: BLUE2, line: BLUE2, titleColor: 'FFFFFF', fs: 10, subFs: 7.5 });
+    await pbox(s, 4.9, 2.35, 1.45, 1.22, 'Warehouse', 'analytical store · streaming export · curated marts · in-warehouse ML', { fill: BLUE2, line: BLUE2, titleColor: 'FFFFFF', fs: 10, subFs: 7.5 });
     [2.63, 3.29].forEach((y) => arrow(s, 2.75, y, 3.05, y, GREY));
     arrow(s, 2.75, 3.95, 3.3, 3.95, GREY, 'dash'); arrow(s, 3.3, 3.95, 3.3, 3.57, GREY, 'dash');
     arrow(s, 4.65, 2.96, 4.9, 2.96, GREY);
@@ -304,7 +304,6 @@ const numCircle = (s, n, x, y, d, fill) => {
     await pbox(s, 9.85, 5.2, 2.7, 0.83, 'Write-back', 'approved items posted to the EHR as FHIR Tasks through the FHIR store', { ic: 'MdOutlineAssignmentTurnedIn', icColor: GREEN, fs: 9, subFs: 7.5 });
     arrow(s, 9.7, 5.6, 9.85, 5.6, GREY);
     arrow(s, 6.55, 4.35, 6.8, 4.35, BLUE2, 'dash');
-    T(s, 'data and models', 6.3, 3.88, 0.95, 0.2, { fontSize: 7, color: BLUE2, align: 'center' });
     rect(s, 0.6, 6.45, 12.1, 0.5, CARD);
     s.addImage({ data: await icon('MdOutlineLock', GREY), x: 0.78, y: 6.56, w: 0.28, h: 0.28 });
     T(s, [{ text: 'Sovereignty and operations: ', options: { bold: true, color: INK } }, { text: 'PHI at rest in country under a compliance boundary · customer-managed encryption keys · a network perimeter around the data services · least-privilege service identities · audit logs on every access · the language model sees pseudonymised prompts only.', options: { color: GREY } }],
@@ -322,7 +321,7 @@ const numCircle = (s, n, x, y, d, fill) => {
     label(s, 'Request path: one question, synchronous, p95 under 15 seconds', 0.8, 2.0, 8, BLUE2);
     const reqSteps = [
       ['User', 'web or voice · Arabic / English · identity-aware access in front', 'MdRecordVoiceOver'],
-      ['App and API (serverless)', 'web front end · API · streams the agent trace to the browser', 'MdWeb'],
+      ['App and API', 'serverless web front end and API · streams the agent trace to the browser', 'MdWeb'],
       ['Agent supervisor', 'language model with low thinking on routing turns · session in a managed database', 'MdSmartToy'],
       ['Specialist tools', 'warehouse SQL tools · Nabd MCP server · model endpoint · guideline retrieval', 'MdHub'],
       ['Answer and action', 'trace + citations to the user · drafts to the queue · signed items as FHIR Task', 'MdOutlineAssignmentTurnedIn'],
@@ -338,7 +337,7 @@ const numCircle = (s, n, x, y, d, fill) => {
     label(s, 'Data path: nightly batch for the population, events for the patient', 0.8, 3.75, 8, 'B06000');
     const dataSteps = [
       ['Managed FHIR store', 'HL7v2 and FHIR ingestion · consent · de-identification · an event on every new resource', 'MdLocalHospital'],
-      ['Streaming export to the warehouse', 'FHIR resources land as tables within seconds · time travel and snapshots for recovery', 'MdStorage'],
+      ['Warehouse export', 'FHIR resources land as tables within seconds · time travel and snapshots for recovery', 'MdStorage'],
       ['Curated marts', 'patient summary · care gaps · quality measures · equity views, rebuilt at 02:00 as versioned SQL', 'MdDataObject'],
       ['Nightly batch scoring', 'every patient re-scored in the warehouse · scores and drivers written back for the tools', 'MdOutlineAutoGraph'],
       ['Event path', 'a new HbA1c fires an event · a small scorer calls the model endpoint · one patient in seconds', 'MdBolt'],
