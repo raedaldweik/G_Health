@@ -40,7 +40,7 @@ RULE: Check the clock at 18:00 and at 24:00. More than two minutes behind at 18:
 - [ ] Open Simulator once, press Reset. Kamal is preselected. Confirm the two presets read "Inputs at guideline targets" and "Poorer control inputs" and the footer reads "Predictive sensitivity analysis: association, not causal treatment effect."
 - [ ] Dashboards: open Registry, click a bar once (for example "High" in the registry tiers) and clear it, so the cross-filter is warm and you remember where the Clear button sits. Open Cost & Variation once. If you intend to use Geography as the second dashboard, open it once so the map tiles are cached.
 - [ ] Evaluation tab: open Agent evalset once and confirm the last run reads 11 of 11.
-- [ ] Documents tab: the retrieval line should read hybrid. If it says the semantic index is pending, run `python -m scripts.embed_corpus` locally with your key and commit the cache file before the day (see the README).
+- [ ] Documents tab: the status pill is green and reads 8 documents, the page count and 445 indexed passages. Open one citation chip from a rehearsal answer so you have seen the source passage open.
 - [ ] Deck open in PowerPoint presenter view. Notes on your screen only. Slide 1 showing.
 - [ ] Browser at 100% zoom, window at least 1,400 px wide. Close every other tab. Notifications off.
 - [ ] Phone hotspot ready as a second network. Water within reach. A clock you can see.

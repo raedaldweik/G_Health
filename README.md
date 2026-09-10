@@ -22,7 +22,7 @@ managed services in me-central1 (Doha).
 | Data | 8-table relational HIE (patients, encounters, conditions, medications, observations, care gaps, facilities, patient summary) plus a FHIR R4 sample bundle | Cloud Healthcare API FHIR store, streaming export to BigQuery, Dataform marts |
 | ML | XGBoost deterioration model with monotonic clinical constraints (held-out AUC 0.854 vs 0.809 for the registry's rule-based score), SHAP-style drivers; KMeans segments; patient similarity; seasonal demand forecast | BigQuery ML BOOSTED_TREE_CLASSIFIER, Vertex AI Model Registry and online endpoint, BigQuery AI.FORECAST (TimesFM), VECTOR_SEARCH |
 | Agents | ADK supervisor plus five specialists (data, guidelines, risk, population-health MCP, actions) on a hosted function-calling model (provider-agnostic: Anthropic API by default, Gemini optional), with a tested fallback chain and a direct tool runner that runs the same tools without the language model | Same graph on Cloud Run in me-central1 with sessions in AlloyDB; Agent Engine when available in region |
-| Retrieval | Hybrid BM25 plus gemini-embedding-001 over the national guideline PDFs, cached once, page-level citations | Vertex AI RAG Engine over a Cloud Storage corpus |
+| Retrieval | Page-anchored passages from the national guideline PDFs, indexed once and cached, page-level citations, no external call | Vertex AI RAG Engine over a Cloud Storage corpus |
 | MCP | `pophealth_mcp`: population snapshot, cohorts, care gaps, quality measures, stratification, predictive risk scenarios, draft-only interventions (review tasks, recalls, referrals; never a prescription) | Cloud Run service beside Google's MCP Toolbox for BigQuery and FHIR |
 | Simulation | Patient risk sensitivity analysis with live re-scoring, attribution, rule-based gaps and a narrated explanation; predictive population risk scenarios (re-score a cohort with one input changed; never events prevented or savings) | ML.PREDICT over counterfactual rows |
 | Safety | Consent enforcement at the tool layer, human approval queue, audit trail, numbers only from tools, citations on every clinical claim | FHIR consent enforcement, Model Armor, Cloud Audit Logs, Cloud Trace |
@@ -37,7 +37,7 @@ cd backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 python -m scripts.train_models          # trains the 4 models from the committed HIE data (~30s)
-cp .env.example .env                    # add ANTHROPIC_API_KEY for the live multi-agent mode (GEMINI_API_KEY for embeddings)
+cp .env.example .env                    # add ANTHROPIC_API_KEY for the live multi-agent mode
 uvicorn main:app --reload --port 8000
 
 # 2) Frontend (second terminal)
@@ -57,27 +57,19 @@ automatically falls back to the direct tool runner.
 Regenerate the synthetic HIE from scratch (deterministic, seeded):
 `python -m scripts.generate_hie_data`.
 
-## Guideline retrieval and the semantic index
+## Guideline retrieval
 
-Guideline PDFs are chunked once (cached in `backend/data/runtime/ragchunks-*.json`, committed).
-The semantic index (`gemini-embedding-001`, 768 dimensions) is also computed once and cached as
-`backend/data/runtime/ragembed-<corpus hash>-gemini-embedding-001.npz`. Build it locally with a
-key that has embedding quota and commit the file, so deployments load it instead of embedding:
-
-```bash
-cd backend && GEMINI_API_KEY=... python -m scripts.embed_corpus
-git add backend/data/runtime/ragembed-*.npz && git commit -m "Add the guideline semantic index"
-```
-
-Without the cache, retrieval is BM25 keyword search until the background build succeeds; the
-Documents tab says which mode is active. The map basemap is OpenFreeMap (no API key). Set
-`VITE_BASEMAP_STYLE` at build time to use a different MapLibre style.
+The guideline PDFs are split once into page-anchored, overlapping passages and cached in
+`backend/data/runtime/ragchunks-<corpus hash>.json` (committed). Retrieval indexes those
+passages in memory at startup and needs no key and no external call; every hit carries the
+document and page so the assistant cites it and the Documents tab opens the passage. Drop a new
+PDF into `backend/data/guidelines/` and it is indexed on the next start.
 
 ## Deploy to Railway
 
 Push to GitHub → Railway → **New Project → Deploy from GitHub repo**. The
 `Dockerfile` builds the frontend, installs the backend, **trains the models at image
-build time**, and serves everything on one `$PORT`. Set `ANTHROPIC_API_KEY` (and optionally `GEMINI_API_KEY` for the embeddings) in the
+build time**, and serves everything on one `$PORT`. Set `ANTHROPIC_API_KEY` in the
 service Variables tab. Health check: `/api/health`.
 
 ## The population-health MCP server ★
@@ -104,7 +96,7 @@ backend/
   services/
     hie.py               the HIE query engine (single source of truth for chat + dashboards)
     ml.py                model scoring, SHAP drivers, similarity, segments, predictive risk scenarios
-    rag.py               hybrid retrieval over guideline PDFs (BM25 + gemini-embedding cache)
+    rag.py               cited retrieval over the guideline PDFs (page-anchored passages, cached)
     agent.py             ADK multi-agent graph + NDJSON event streaming
     scenarios.py         direct tool runner for the chips (same services, real numbers, demo-day failover)
     queue_service.py     human-in-the-loop approval queue

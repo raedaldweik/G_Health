@@ -205,7 +205,7 @@ const numCircle = (s, n, x, y, d, fill) => {
     T(s, 'A language model inside an agent framework: plans, routes and composes; never guesses a number', 4.5, 3.05, 4.4, 0.4, { fontSize: 9.5, color: 'FFFFFF' });
     const specs = [
       ['Data specialist', 'MdStorage', BLUE, 'Cohorts, timelines, group-bys over the exchange', 'Typed query tools over the HIE tables'],
-      ['Guideline specialist', 'MdMenuBook', RED, 'Retrieval over the national guidelines with page citations', 'Hybrid keyword and semantic search'],
+      ['Guideline specialist', 'MdMenuBook', RED, 'Retrieval over the national guidelines with page citations', 'Cited passages, opened in the UI'],
       ['Risk specialist', 'MdOutlineAutoGraph', YELLOW, 'Scores, explains, forecasts, runs risk scenarios', 'XGBoost risk model (AUC 0.85, synthetic held-out) · segments · forecast'],
       ['Population-health MCP', 'MdHub', GREEN, 'Care gaps, quality measures, stratification', 'Nabd MCP server, seven tools, any MCP client'],
       ['Action specialist', 'MdOutlineAssignmentTurnedIn', GREY, 'Drafts review tasks, recalls, referrals', 'Human-in-the-loop approval queue'],

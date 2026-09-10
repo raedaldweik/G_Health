@@ -82,7 +82,7 @@ Data quality is treated as a care gap. An HbA1c that is overdue is either a clin
 
 ## 3. The AI models
 
-There are four trained models, one embedding model, and the language model. Each has a model card in the product with its version, task, training data, intended use, constraints and limitations. One caveat applies to every metric below and is printed on the deterioration model's card: the models are trained and evaluated on synthetic data, so held-out performance demonstrates the evaluation methodology, not clinical validation. Clinical validation and a fairness audit on real data are preconditions for any production use.
+There are four trained models and the language model. Each has a model card in the product with its version, task, training data, intended use, constraints and limitations. One caveat applies to every metric below and is printed on the deterioration model's card: the models are trained and evaluated on synthetic data, so held-out performance demonstrates the evaluation methodology, not clinical validation. Clinical validation and a fairness audit on real data are preconditions for any production use.
 
 ### Deterioration risk (XGBoost, v2.2.0)
 
@@ -120,9 +120,9 @@ A k-nearest-neighbour index over twelve standardised clinical features. It answe
 
 Trend plus month-of-year seasonality over thirty-six months of encounter volumes, with an 80 percent interval. It forecasts about 5 percent growth in outpatient and telehealth visits over the next twelve months and picks up the summer dip and the Ramadan pattern. It is the weakest model and the least surprising insight, and if something had to be cut this would be it. On Google Cloud it is one SQL call: AI.FORECAST in BigQuery, on the TimesFM foundation model, with no training step.
 
-### Guideline retrieval (BM25 plus gemini-embedding-001)
+### Guideline retrieval
 
-The national clinical guideline PDFs are chunked once into 445 overlapping passages of about 1,400 characters, cached on disk. Retrieval is hybrid: a BM25 keyword index that always works, plus a semantic index from gemini-embedding-001 at 768 dimensions (Matryoshka truncation of the 3,072-dimension model, which keeps quality and cuts storage four-fold). Scores are blended 45 percent lexical, 55 percent semantic. The embedding matrix is computed once, cached to disk, and committed, so a deployment never re-embeds and never hits an embedding quota at start-up. Every hit carries document, page and the passage, which is what the citation chip shows. For Kamal Miah the hit is the MOPH national guideline for type 2 diabetes in adults and the elderly, page 14, the therapy intensification passage. On Google Cloud this layer is Vertex AI RAG Engine over a Cloud Storage corpus.
+The national clinical guideline PDFs are split once into 445 overlapping, page-anchored passages of about 1,400 characters, cached on disk and committed. Retrieval is a BM25 keyword index over those passages, built in memory at start-up: no key, no external call, nothing to warm up and nothing that can fail on the day. In the demo it is described as cited guideline retrieval, which is exactly what it is; if asked how retrieval works, say lexical retrieval over page-anchored passages, and that on Google Cloud the same search contract is served by Vertex AI RAG Engine over a managed corpus, where embeddings and hybrid ranking come with the service. Every hit carries document, page and the passage, which is what the citation chip shows. For Kamal Miah the hit is the MOPH national guideline for type 2 diabetes in adults and the elderly, page 14, the therapy intensification passage. On Google Cloud this layer is Vertex AI RAG Engine over a Cloud Storage corpus.
 
 ### Gemini
 
@@ -237,7 +237,7 @@ The risk model is an XGBoost booster, about a millisecond per patient on a CPU. 
 
 The population numbers are batch on purpose. Stratification, care gaps, quality measures and the variation views move over weeks; recomputing them on every question would cost many times more for no clinical benefit. Only the per-patient signal is event-driven: a new HbA1c resource in the FHIR store fires Pub/Sub, a Cloud Run scorer calls the endpoint, and that one patient is re-scored in seconds.
 
-Language-model inference runs on the endpoint agreed with the ministry's DPO and security team (section 6), on prompts whose permitted content is agreed at the same time. Embeddings are computed once per corpus and cached. Nothing on the request path trains anything.
+Language-model inference runs on the endpoint agreed with the ministry's DPO and security team (section 6), on prompts whose permitted content is agreed at the same time. Guideline retrieval makes no external call. Nothing on the request path trains anything.
 
 ## 9. Running it on Google Cloud
 
