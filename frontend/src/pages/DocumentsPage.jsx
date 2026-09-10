@@ -33,7 +33,7 @@ export default function DocumentsPage() {
               : d.status.semantic_index === 'failed' ? (d.status.reason === 'quota'
                   ? `BM25 keyword retrieval; semantic index pending (embedding quota exhausted, retrying in the background)`
                   : `BM25 keyword retrieval; semantic index unavailable`)
-              : 'BM25 keyword retrieval (no Gemini key)'}
+              : 'BM25 keyword retrieval; semantic index not built on this deployment'}
           </span>
         </div>
         <p className="text-[11px] mb-5" style={{ color: 'var(--text-dim)' }}>

@@ -160,8 +160,8 @@ export default function AssistantPage() {
           </div>
           <p className="text-[9.5px] mt-2 leading-snug" style={{ color: 'var(--text-faint)' }}>
             {llmInfo?.enabled
-              ? <>Live multi-agent · <b style={{ color: 'var(--text-dim)' }}>{llmInfo.model}</b> · MCP over stdio</>
-              : <>Scripted engine on live data. Set GEMINI_API_KEY for free-form chat</>}
+              ? <>Live multi-agent · <b style={{ color: 'var(--text-dim)' }}>function-calling supervisor</b> · MCP over stdio</>
+              : <>Direct tool runs on live data. Free-form chat needs the model credentials on the server</>}
           </p>
         </div>
       </div>

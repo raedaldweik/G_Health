@@ -110,7 +110,12 @@ export default function DashboardMap() {
         </div>
 
         <div className="col-span-2">
-          <Panel title={sel ? `${sel.name}: profile` : 'Open care gaps per 100 patients: by region'}>
+          <Panel title={sel ? `${sel.name}: profile` : 'Open care gaps per 100 patients: by region'}
+            right={sel && (
+              <button className="filter-clear" onClick={() => setSelected(null)} title="Back to the regions chart">
+                Clear selection
+              </button>
+            )}>
             {sel ? (
               <div className="h-full overflow-y-auto px-2 py-1 grid grid-cols-3 gap-x-3 gap-y-1.5 content-start">
                 {[['Patients', sel.patients], ['Region', sel.region], ['Type', sel.type],

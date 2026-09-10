@@ -1,7 +1,7 @@
 """
 Nabd, the multi-agent system (Google Agent Development Kit).
 
-A supervisor LlmAgent (Gemini) orchestrates five specialists, each wrapped as an
+A supervisor LlmAgent orchestrates five specialists, each wrapped as an
 AgentTool so every hop is visible in the event stream and rendered as a trace:
 
   cohort_agent      structured queries over the HIE (the fhir/BigQuery stand-in)
@@ -36,14 +36,16 @@ BACKEND_DIR = str(Path(__file__).resolve().parent.parent)
 from services import llm_client as LC
 from services import platform as P
 
-_KEY = P.API_KEY   # kept for readability; LC.llm_available() is the source of truth
+PROVIDER = LC.provider()          # anthropic | gemini | none, fixed for the life of the process
 
-# Preference order. IDs shift monthly, so we verify against what THIS key can see.
-PREFERRED_MODELS = [
+# Preference order per provider. IDs shift, so we verify against what THIS key can see.
+ANTHROPIC_MODELS = ["claude-sonnet-4-6", "claude-sonnet-4-5", "claude-haiku-4-5"]
+GEMINI_MODELS = [
     "gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash",
     "gemini-3.1-flash", "gemini-2.5-flash",
 ]
-FALLBACK_MODEL = "gemini-2.5-flash"
+PREFERRED_MODELS = ANTHROPIC_MODELS if PROVIDER == "anthropic" else GEMINI_MODELS
+FALLBACK_MODEL = PREFERRED_MODELS[0] if PROVIDER == "anthropic" else "gemini-2.5-flash"
 MODEL_CANDIDATES = [m for m in [os.getenv("MODEL", "").strip() or None, *PREFERRED_MODELS] if m]
 
 # How the model was chosen, surfaced on /api/health and in the deploy log so a wrong
@@ -60,19 +62,39 @@ def _version_key(name: str) -> tuple:
     return (int(m.group(1)), int(m.group(2) or 0)) if m else (0, 0)
 
 
+def _resolve_anthropic() -> str:
+    """First preferred model this key can see. models.list() returns dated ids as well as
+    aliases, so a preferred alias counts as visible when any listed id starts with it."""
+    try:
+        client = LC.make_anthropic_client(async_client=False, timeout_s=20.0, max_retries=1)
+        visible = [m.id for m in client.models.list(limit=100)]
+        RESOLUTION["visible"] = visible
+        for cand in PREFERRED_MODELS:
+            if any(v == cand or v.startswith(cand + "-") for v in visible):
+                RESOLUTION.update(model=cand, source="verified via models.list")
+                return cand
+        RESOLUTION["error"] = f"none of {PREFERRED_MODELS} visible; saw {visible[:12]}"
+    except Exception as e:
+        RESOLUTION["error"] = f"{type(e).__name__}: {str(e)[:300]}"
+    RESOLUTION.update(model=PREFERRED_MODELS[0], source="preferred model, verified by self-test")
+    return PREFERRED_MODELS[0]
+
+
 @lru_cache(maxsize=1)
 def resolve_model() -> str:
-    """Pick the newest Gemini Flash this key can actually see.
+    """Pick the model to run the graph on.
 
-    Order: explicit MODEL env → first preferred ID present in models.list() → newest
+    Order: explicit MODEL env → first preferred ID present in models.list() → (Gemini) newest
     visible non-lite Flash → unverified fallback (logged loudly)."""
     pinned = os.getenv("MODEL", "").strip()
     if pinned:
         RESOLUTION.update(model=pinned, source="env MODEL (unverified pin)")
         return pinned
     if not LC.llm_available():
-        RESOLUTION.update(model=PREFERRED_MODELS[0], source="scripted mode (no key)")
+        RESOLUTION.update(model=PREFERRED_MODELS[0], source="no LLM credentials (direct tool mode)")
         return PREFERRED_MODELS[0]
+    if PROVIDER == "anthropic":
+        return _resolve_anthropic()
     try:
         client = LC.make_client()
         visible = []
@@ -105,8 +127,9 @@ def resolve_model() -> str:
 def is_model_missing(e: Exception) -> bool:
     """404 / NOT_FOUND for the *model*, never for credentials or other 'not found' text."""
     code = getattr(e, "code", None)
+    status = getattr(e, "status_code", None)
     msg = str(e)
-    if code == 404 or "NOT_FOUND" in msg:
+    if code == 404 or status == 404 or "NOT_FOUND" in msg or type(e).__name__ == "NotFoundError":
         return True
     return bool(re.search(r"(publisher )?model[^.\n]{0,80}(not found|does not exist|is not supported|not available)", msg, re.I))
 
@@ -117,8 +140,12 @@ THINKING_LEVEL = (os.getenv("THINKING_LEVEL", "LOW").strip().upper() or "LOW")
 def generation_config(model: str):
     """Per-hop generation settings. Gemini 3.x thinks at HIGH by default, which costs
     5–15 s of first-token latency on every one of the ~4–8 LLM calls a question needs.
-    Tool routing and summarising need LOW. Override with THINKING_LEVEL=MEDIUM|HIGH."""
+    Tool routing and summarising need LOW. Override with THINKING_LEVEL=MEDIUM|HIGH.
+    The Anthropic models run without extended thinking on the hot path: tool routing is
+    fastest that way and the supervisor's answers are grounded in tool output, not reasoning."""
     from google.genai import types as gtypes
+    if model.startswith("claude"):
+        return None
     if model.startswith("gemini-3"):
         return gtypes.GenerateContentConfig(
             thinking_config=gtypes.ThinkingConfig(thinking_level=THINKING_LEVEL))
@@ -128,7 +155,7 @@ def generation_config(model: str):
 
 
 # The model actually serving traffic. Starts as resolve_model(); moves down the preference
-# list when Gemini answers 503/429 ("high demand") so the demo never stalls on one model.
+# list when the provider answers 503/529/429 (overloaded) so the demo never stalls on one model.
 _active: dict = {"model": None, "switches": []}
 MODEL_STATE = Path(BACKEND_DIR) / "data" / "runtime" / "model_state.json"
 MODEL_STATE_TTL_S = int(os.getenv("MODEL_STATE_TTL_S", str(6 * 3600)))   # forget a burnt model after 6 h
@@ -157,9 +184,20 @@ def _save_model_state():
 
 
 def pretty_model(name: str) -> str:
-    """gemini-3.8-flash -> Gemini 3.8 Flash"""
+    """gemini-3.8-flash -> Gemini 3.8 Flash (deploy log and Gemini-provider labels)."""
     parts = (name or "").replace("-preview", "").split("-")
     return " ".join(w.capitalize() if not w[:1].isdigit() else w for w in parts)
+
+
+def display_model(name: str | None = None) -> str:
+    """What the UI shows for the model behind the graph. The demonstration names the
+    framework and the graph, not the vendor; MODEL_LABEL overrides it."""
+    label = os.getenv("MODEL_LABEL", "").strip()
+    if label:
+        return label
+    if PROVIDER == "gemini" and name:
+        return pretty_model(name)
+    return "live agent graph"
 
 
 def active_model() -> str:
@@ -182,12 +220,18 @@ def fallback_candidates(current: str) -> list[str]:
 
 
 def is_capacity_error(e: Exception) -> bool:
+    """Transient provider trouble: quota, overload (Gemini 503, Anthropic 529), 5xx, a stall
+    or a dropped connection. Credentials and bad requests are never capacity errors."""
     code = getattr(e, "code", None) or getattr(getattr(e, "status", None), "code", None)
+    status = getattr(e, "status_code", None)
     msg = str(e)
     if isinstance(e, (StallError, asyncio.TimeoutError, TimeoutError)):
         return True
-    return code in (429, 500, 502, 503, 504) or any(
-        k in msg for k in ("UNAVAILABLE", "RESOURCE_EXHAUSTED", "high demand", "overloaded", " 503", " 429"))
+    if type(e).__name__ in ("RateLimitError", "OverloadedError", "InternalServerError", "ServiceUnavailableError",
+                            "APIConnectionError", "APITimeoutError", "_AnthropicRateLimitError"):
+        return True
+    return code in (429, 500, 502, 503, 504, 529) or status in (429, 500, 502, 503, 504, 529) or any(
+        k in msg for k in ("UNAVAILABLE", "RESOURCE_EXHAUSTED", "high demand", "overloaded", " 503", " 429", " 529"))
 
 
 def switch_model(reason: str) -> str | None:
@@ -197,11 +241,11 @@ def switch_model(reason: str) -> str | None:
         _active["model"] = nxt
         _active["switches"].append({"from": cur, "to": nxt, "reason": reason[:160], "at": time.time()})
         _save_model_state()
-        print(f"⚠ Gemini capacity error on {cur}, switching to {nxt}: {reason[:160]}", flush=True)
+        print(f"⚠ Model capacity error on {cur}, switching to {nxt}: {reason[:160]}", flush=True)
     return nxt
 
 
-HTTP_TIMEOUT_MS = int(os.getenv("GEMINI_HTTP_TIMEOUT_MS", "45000"))   # per HTTP request
+HTTP_TIMEOUT_MS = int(os.getenv("LLM_HTTP_TIMEOUT_MS") or os.getenv("GEMINI_HTTP_TIMEOUT_MS") or "45000")   # per HTTP request
 STALL_SECONDS = float(os.getenv("AGENT_STALL_SECONDS", "40"))          # no event from the graph
 TURN_DEADLINE_SECONDS = float(os.getenv("AGENT_TURN_DEADLINE_SECONDS", "150"))
 
@@ -222,9 +266,17 @@ def _http_options():
 
 
 def _llm(model: str):
-    """ADK Gemini connection with a hard HTTP timeout and client-side retries on 429/5xx.
-    Without the timeout a stalled streaming response during a 'high demand' incident
-    hangs the turn forever; ADK's own client sets none."""
+    """ADK model connection with a hard HTTP timeout and client-side retries on 429/5xx.
+    Without the timeout a stalled streaming response during a capacity incident hangs
+    the turn forever; ADK's own clients set none.
+
+    Anthropic: ADK's AnthropicLlm adapter over the Anthropic SDK (native tool use, streaming,
+    usage accounting) with our own configured client. Gemini: ADK's Gemini class with a
+    google-genai client from llm_client."""
+    if model.startswith("claude"):
+        from google.adk.models.anthropic_llm import AnthropicLlm
+        return AnthropicLlm(model=model, max_tokens=4096,
+                            client=LC.make_anthropic_client(timeout_s=HTTP_TIMEOUT_MS / 1000, max_retries=3))
     from functools import cached_property
     from google.adk.models.google_llm import Gemini
     from google.genai import Client
@@ -237,20 +289,29 @@ def _llm(model: str):
     return NabdGemini(model=model, retry_options=_retry_options())
 
 
+def _one_reply(model: str, prompt: str = "Reply with the single word OK.") -> str:
+    """A single non-streaming generation on the configured provider (self-test and evals)."""
+    if model.startswith("claude"):
+        client = LC.make_anthropic_client(async_client=False, timeout_s=HTTP_TIMEOUT_MS / 1000, max_retries=1)
+        msg = client.messages.create(model=model, max_tokens=16,
+                                     messages=[{"role": "user", "content": prompt}])
+        return "".join(b.text for b in msg.content if b.type == "text").strip()
+    client = LC.make_client(http_options=_http_options())
+    r = client.models.generate_content(model=model, contents=prompt, config=generation_config(model))
+    return (r.text or "").strip()
+
+
 def self_test(model: str | None = None) -> dict:
-    """One real generate_content call so the deploy log proves key + model work.
+    """One real generation so the deploy log proves key + model work.
     Retries transient capacity errors and, if a model is saturated, moves to the next."""
     if not LC.llm_available():
         return {"ok": False, "skipped": "no key"}
-    client = LC.make_client(http_options=_http_options())
     tried = []
     model = model or active_model()
     while True:
         t0 = time.time()
         try:
-            r = client.models.generate_content(model=model, contents="Reply with the single word OK.",
-                                               config=generation_config(model))
-            text = (r.text or "").strip()
+            text = _one_reply(model)
             return {"ok": bool(text), "model": model, "reply": text[:40],
                     "ms": int((time.time() - t0) * 1000), "tried": tried or None}
         except Exception as e:
@@ -665,8 +726,8 @@ def _summarise_result(tool: str, resp: Any) -> str:
 async def stream_chat(message: str, session_id: str, persona: str = "clinician",
                       ) -> AsyncGenerator[dict, None]:
     """Run the multi-agent system, yielding live step events then the final payload.
-    If Gemini answers 503/429 for the active model (after client retries), the request is
-    re-run once on the next model in the preference list."""
+    If the provider answers 503/529/429 for the active model (after client retries), the
+    request is re-run on the next model in the preference list."""
     for attempt in range(3):
         model = active_model()
         try:
@@ -679,7 +740,7 @@ async def stream_chat(message: str, session_id: str, persona: str = "clinician",
                        if is_model_missing(e) else "is busy")
                 yield {"type": "reset"}
                 yield {"type": "step", "status": "done", "agent": "system", "tool": "model_fallback",
-                       "detail": f"{pretty_model(model)} {why}; continuing on {pretty_model(active_model())}"}
+                       "detail": f"the primary model {why}; continuing on the standby model"}
                 continue
             raise
 
@@ -806,5 +867,6 @@ async def _stream_once(message: str, session_id: str, persona: str, model: str,
            "answer": final_text or "I wasn't able to produce an answer for that query.",
            "trace": trace, "charts": charts, "citations": uniq, "actions": actions,
            "usage": {**usage, "wall_ms": int((time.time() - t_start) * 1000),
-                     "first_token_ms": first_token_ms, "thinking_level": THINKING_LEVEL},
-           "model": model}
+                     "first_token_ms": first_token_ms,
+                     "thinking_level": THINKING_LEVEL if model.startswith("gemini") else "off"},
+           "model": display_model(model)}

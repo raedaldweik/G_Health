@@ -43,7 +43,7 @@ export async function streamChat({ message, sessionId, persona, scenarioId }, on
     });
   } catch (e) {
     clearTimeout(idle);
-    throw new Error(e.name === 'AbortError' ? 'no response from the agent for 75 s, Gemini may be saturated; try again or use a scenario chip' : e.message);
+    throw new Error(e.name === 'AbortError' ? 'no response from the agent for 75 s, the model may be saturated; try again or use a scenario chip' : e.message);
   }
   if (!res.ok || !res.body) { clearTimeout(idle); throw new Error(`chat failed: ${res.status}`); }
   const reader = res.body.getReader();
@@ -53,7 +53,7 @@ export async function streamChat({ message, sessionId, persona, scenarioId }, on
     let chunk;
     try { chunk = await reader.read(); } catch (e) {
       clearTimeout(idle);
-      throw new Error(e.name === 'AbortError' ? 'the agent went silent for 75 s, Gemini may be saturated; try again or use a scenario chip' : e.message);
+      throw new Error(e.name === 'AbortError' ? 'the agent went silent for 75 s, the model may be saturated; try again or use a scenario chip' : e.message);
     }
     const { done, value } = chunk;
     if (done) { clearTimeout(idle); break; }
@@ -91,7 +91,7 @@ export const postSimulate = (patientId, overrides, signal) =>
     body: JSON.stringify({ patient_id: patientId, overrides }), signal,
   }).then(json);
 
-/** Stream the Gemini explanation of a what-if: NDJSON {type:meta|token|final}. */
+/** Stream the language-model explanation of a what-if: NDJSON {type:meta|token|final}. */
 export async function streamExplain({ patientId, overrides, actor }, onEvent, signal) {
   const res = await fetch('/api/simulate/explain', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },

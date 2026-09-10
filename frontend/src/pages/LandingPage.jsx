@@ -65,8 +65,8 @@ function Constellation() {
       ))}
       <g className="cst-node">
         <circle cx={cx} cy={cy} r="50" className="cst-core" />
-        <text x={cx} y={cy - 4} className="cst-core-text">Gemini</text>
-        <text x={cx} y={cy + 11} className="cst-core-sub">SUPERVISOR · ADK</text>
+        <text x={cx} y={cy - 4} className="cst-core-text">Supervisor</text>
+        <text x={cx} y={cy + 11} className="cst-core-sub">LLM · ADK</text>
       </g>
       {nodes.map((n) => (
         <g key={n.id} className="cst-node">
@@ -138,7 +138,7 @@ export default function LandingPage({ go }) {
             </h1>
             <p className="hero-lede mt-5 reveal d3">
               Nabd sits on Qatar's Health Information Exchange. Clinicians and ministry leaders ask questions in
-              plain language; a Gemini supervisor routes each question to specialist agents that query the exchange,
+              plain language; a supervisor agent routes each question to specialist agents that query the exchange,
               cite the national diabetes guidelines, run the deterioration-risk model and draft actions for a clinician
               to approve. Every answer is traceable to the data row and the guideline page.
             </p>
@@ -147,7 +147,7 @@ export default function LandingPage({ go }) {
               <button className="btn-secondary" onClick={() => go('overview')}>Registry dashboards</button>
             </div>
             <p className="text-[11px] mt-5 reveal d5" style={{ color: 'var(--text-faint)' }}>
-              Gemini · Agent Development Kit · Model Context Protocol · gemini-embedding-001 · Target platform: Google Cloud, me-central1 (Doha)
+              Agent Development Kit · Model Context Protocol · hybrid guideline retrieval · Target platform: Google Cloud, me-central1 (Doha)
             </p>
           </div>
 
@@ -315,11 +315,11 @@ export default function LandingPage({ go }) {
         {/* ── BUILT ON GOOGLE ── */}
         <section className="landing-section pb-8">
           <div className="section-eyebrow">Built on Google Cloud</div>
-          <h2 className="section-title">Google AI in this demonstration, and the Google Cloud services it maps to in Doha.</h2>
+          <h2 className="section-title">The agent stack in this demonstration, and the Google Cloud services it maps to in Doha.</h2>
           <div className="text-[10px] font-bold uppercase tracking-[0.14em] mt-4 mb-1.5" style={{ color: 'var(--text-faint)' }}>In this demonstration</div>
           <div className="flex flex-wrap gap-2">
-            {[['Gemini Flash', '#8A1538'], ['Agent Development Kit', '#8A1538'], ['Model Context Protocol', '#b8862e'],
-              ['gemini-embedding-001', '#8A1538'], ['Web Speech · EN/AR', '#8a6a4e']].map(([n, c]) => (
+            {[['Agent Development Kit', '#8A1538'], ['Model Context Protocol', '#b8862e'], ['Function-calling LLM supervisor', '#8A1538'],
+              ['Hybrid retrieval · BM25 + embeddings', '#8A1538'], ['XGBoost risk model · v2.1.0', '#8a6a4e'], ['Web Speech · EN/AR', '#8a6a4e']].map(([n, c]) => (
               <span key={n} className="gcloud-chip"><span className="dot" style={{ background: c }} />{n}</span>
             ))}
           </div>

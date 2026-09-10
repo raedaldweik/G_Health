@@ -130,6 +130,8 @@ The resolver verifies the model against the key's model list at start-up and run
 
 The prompt only ever carries pseudonymous identifiers and aggregates. That is what makes serving Gemini from the global endpoint acceptable for a Doha customer.
 
+What the demonstration itself runs. The live backend serves the graph on claude-sonnet-4-6 through the Agent Development Kit's Anthropic adapter, because the Gemini endpoint returned capacity errors on several rehearsal days and the demo cannot depend on that. Nothing else changes: the same ADK graph, the same six agents, the same tool schemas, the same MCP server, the same evalset and guardrails; the provider is a one-line configuration (`LLM_PROVIDER`, `ANTHROPIC_API_KEY` or a Gemini credential), which is itself the point of building on a model-agnostic framework. The UI names the framework and the graph, never the vendor, and the LLM & cost tab is labelled as the production plan on Google Cloud. If asked directly which model is serving, say so plainly: a non-Google frontier model for reliability today, Gemini 3.8 Flash on Vertex AI in production, chosen on the evalset for the reasons above.
+
 ## 4. The agent architecture
 
 ### What runs
@@ -175,9 +177,9 @@ A watchdog aborts a turn if the graph is silent for forty seconds or exceeds a h
 
 The Model Context Protocol makes a tool a service any client can call: the ADK agent, Gemini CLI, Gemini Enterprise, a partner's agent. Google ships more than fifty managed MCP servers. The MCP Toolbox has a Cloud Healthcare source that reads FHIR, one patient and one store at a time, and the Agent Platform exposes an MCP endpoint that calls a model. What does not exist in that catalogue is a server that lets an agent reason about a population: quality measures, care gaps, cohorts, model-backed stratification, counterfactual programme simulation, and a safe way to act. Nabd's server has those seven tools, runs over stdio for any client, and is the asset the ministry keeps if it changes agent frameworks. It is also the gap memo a customer engineer would send to product in the first month.
 
-### The scripted engine
+### The direct tool runner
 
-Every scenario chip has a scripted runner that calls the same tools in the same order and composes the same kind of answer without the language model. It exists for two reasons. Resilience: the demo cannot depend on a third-party model being available at 10 a.m. Evaluation: the scripted runner is the ground truth the evalset compares the live graph against. Nothing in it is a canned number; every figure is computed from the tables at click time.
+Every scenario chip has a direct runner that calls the same tools in the same order and composes the same kind of answer without the language model. In the UI it is called a direct tool run, never a script, because nothing in it is canned: every number is computed at click time. It exists for two reasons. Resilience: the demo cannot depend on a third-party model being available at 10 a.m. Evaluation: the scripted runner is the ground truth the evalset compares the live graph against. Nothing in it is a canned number; every figure is computed from the tables at click time.
 
 ## 5. Guardrails
 

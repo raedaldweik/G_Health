@@ -1,7 +1,7 @@
 """
 Nabd (نبض), National Population Health Intelligence.
 
-FastAPI backend: multi-agent chat (Google ADK + Gemini), dashboards, HITL queue,
+FastAPI backend: multi-agent chat (Google ADK, provider-agnostic model), dashboards, HITL queue,
 audit trail, guideline documents, HIE data browser. Serves the built React
 frontend from frontend/dist in production (single container, Railway-ready).
 """
@@ -28,7 +28,7 @@ FRONTEND_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 
 # Warm-up state, the agent graph and model resolution happen in the background so the
 # process answers /api/health within seconds of boot (Railway's healthcheck must not wait on
-# the Gemini API). Chat requests that arrive before warm-up completes simply build the runner.
+# the model provider). Chat requests that arrive before warm-up completes simply build the runner.
 WARM = {"ready": False, "error": None, "seconds": None, "self_test": None}
 
 
@@ -54,16 +54,16 @@ def _record_self_test(test: dict, t0: float):
     WARM["seconds"] = round(time.time() - t0, 1)
     WARM["ready"] = bool(test.get("ok"))
     if test.get("ok"):
-        print(f"✓ Multi-agent mode ready in {WARM['seconds']}s: Gemini · model {test['model']} answered in "
+        print(f"✓ Multi-agent mode ready in {WARM['seconds']}s: {LC.describe()} · model {test['model']} answered in "
               f"{test['ms']} ms (ADK supervisor + 5 specialists + MCP)"
               + (f" · after falling back from {test['tried'][0]['model']}" if test.get("tried") else ""), flush=True)
     else:
-        print(f"✗ Gemini self-test FAILED for {test.get('model')}: {test.get('error') or test}, "
+        print(f"✗ Model self-test FAILED for {test.get('model')}: {test.get('error') or test}, "
               f"{'capacity error, will re-test every minute' if test.get('capacity') else 'check the key'}", flush=True)
 
 
 def _retest_loop():
-    """Gemini 503 'high demand' is transient: keep testing every minute until it clears."""
+    """Provider overload (503 / 529) is transient: keep testing every minute until it clears."""
     for _ in range(120):
         time.sleep(60)
         if WARM["ready"]:
@@ -84,12 +84,12 @@ async def lifespan(app: FastAPI):
     rag.ensure_loaded()
     print(f"✓ Guideline corpus: {rag.status()}", flush=True)
     if agent.llm_enabled():
-        print("✓ GEMINI_API_KEY present, warming the agent graph in the background", flush=True)
+        print(f"✓ Model credentials present ({LC.describe()}), warming the agent graph in the background", flush=True)
         threading.Thread(target=_warm_up, name="nabd-warmup", daemon=True).start()
     else:
-        print("✓ Scripted mode: no GEMINI_API_KEY, scenario chips run on live data; free-form chat disabled", flush=True)
+        print("✓ Direct tool mode: no model credentials, scenario chips run on live data; free-form chat disabled", flush=True)
     audit.log("SYSTEM·START", "nabd",
-              f"Backend started, mode={'multi-agent' if agent.llm_enabled() else 'scripted'}")
+              f"Backend started, mode={'multi-agent' if agent.llm_enabled() else 'direct-tools'}")
     print(f"✓ Startup complete in {time.time() - t0:.1f}s · listening on port {os.getenv('PORT', '8000')}", flush=True)
     yield
 
@@ -110,8 +110,8 @@ app.include_router(simulate.router)
 def health():
     live = agent.llm_enabled()
     return {"status": "ok", "app": "nabd",
-            "mode": "multi-agent" if live else "scripted",
-            "model": (agent.active_model() if WARM["ready"] else "warming") if live else None,
+            "mode": "multi-agent" if live else "direct-tools",
+            "model": (agent.display_model(agent.active_model()) if WARM["ready"] else "warming") if live else None,
             "model_switches": agent._active["switches"] if live else None,
             "model_source": agent.RESOLUTION.get("source") if live else None,
             "warmup": WARM if live else None,

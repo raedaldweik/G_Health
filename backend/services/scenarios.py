@@ -1,12 +1,12 @@
 """
-Nabd, scripted demo scenarios (resilience layer).
+Nabd, direct tool runs for the suggestion chips (resilience layer).
 
 Each suggestion chip has a deterministic executor that calls the SAME services the
 agent uses (HIE queries, RAG, ML scoring, the counterfactual simulator, the HITL
 queue) and streams the same event shape as the live agent. Nothing here is a
 canned number, the figures are computed from the data at click time.
 
-Used when no GEMINI_API_KEY is configured, when FORCE_SCENARIOS=true, or as an
+Used when no LLM credentials are configured, when FORCE_SCENARIOS=true, or as an
 automatic fallback if a live agent run fails mid-demo.
 """
 from __future__ import annotations
@@ -103,7 +103,7 @@ The model expects **≈{strat['expected_events_12m']:.0f} deterioration events**
                        "subtitle": "Live count from the HIE care-gap engine",
                        "data": gap_rows, "xKey": "gap",
                        "yKeys": [{"key": "patients", "label": "Patients"}]}],
-           "citations": [], "actions": [], "usage": None, "model": "scripted·live-data"}
+           "citations": [], "actions": [], "usage": None, "model": "direct tool run · live data"}
 
 
 async def sc_patient_deepdive(persona: str):
@@ -167,7 +167,7 @@ async def sc_patient_deepdive(persona: str):
                           "snippet": h["snippet"]} for h in hits],
            "actions": [{"draft_id": item["id"], "tool": "draft_prescription",
                         "status": "pending_human_approval"}],
-           "usage": None, "model": "scripted·live-data"}
+           "usage": None, "model": "direct tool run · live data"}
 
 
 async def sc_intensification_gap(persona: str):
@@ -215,7 +215,7 @@ The national guideline recommends adding one of these agents when HbA1c remains 
                           "snippet": h["snippet"]} for h in hits],
            "actions": [{"draft_id": item["id"], "tool": "draft_recall",
                         "status": "pending_human_approval"}],
-           "usage": None, "model": "scripted·live-data"}
+           "usage": None, "model": "direct tool run · live data"}
 
 
 async def sc_screening_recall(persona: str):
@@ -269,7 +269,7 @@ The national guideline calls for a dilated retinal examination at diagnosis and 
                           "snippet": h["snippet"]} for h in hits],
            "actions": [{"draft_id": item["id"], "tool": "draft_recall",
                         "status": "pending_human_approval"}],
-           "usage": None, "model": "scripted·live-data"}
+           "usage": None, "model": "direct tool run · live data"}
 
 
 # ─────────────────────────── executive scenarios ───────────────────────────
@@ -315,7 +315,7 @@ Mean HbA1c is **{kpi['mean_hba1c']}%** ({'down' if yoy<0 else 'up'} {abs(yoy):.2
                           .replace(" Hospital", " H."), "controlled": f["pct_controlled"]}
                          for f in fac],
                 "xKey": "facility", "yKeys": [{"key": "controlled", "label": "% controlled"}]}],
-           "citations": [], "actions": [], "usage": None, "model": "scripted·live-data"}
+           "citations": [], "actions": [], "usage": None, "model": "direct tool run · live data"}
 
 
 async def sc_cost(persona: str):
@@ -354,7 +354,7 @@ The '{segs[0]['segment']}' segment is where case-management pays for itself; the
                 "data": [{"segment": x["segment"], "spend": round(x["total_cost"] / 1e6, 2)}
                          for x in segs],
                 "xKey": "segment", "yKeys": [{"key": "spend", "label": "QAR (M)"}]}],
-           "citations": [], "actions": [], "usage": None, "model": "scripted·live-data"}
+           "citations": [], "actions": [], "usage": None, "model": "direct tool run · live data"}
 
 
 async def sc_policy_sim(persona: str):
@@ -392,7 +392,7 @@ async def sc_policy_sim(persona: str):
                                  "net_qar_m": round(s["net_benefit_qar"] / 1e6, 2)} for s in sims],
                        "xKey": "intervention",
                        "yKeys": [{"key": "net_qar_m", "label": "Net benefit (QAR M)"}]}],
-           "citations": [], "actions": [], "usage": None, "model": "scripted·live-data"}
+           "citations": [], "actions": [], "usage": None, "model": "direct tool run · live data"}
 
 
 async def sc_equity(persona: str):
@@ -413,7 +413,7 @@ The pattern tracks healthcare access, not biology: the largest gaps sit in expat
                        "data": [{"nationality": e["nationality"], "HbA1c": e["mean_hba1c"]}
                                 for e in eq],
                        "xKey": "nationality", "yKeys": [{"key": "HbA1c", "label": "Mean HbA1c %"}]}],
-           "citations": [], "actions": [], "usage": None, "model": "scripted·live-data"}
+           "citations": [], "actions": [], "usage": None, "model": "direct tool run · live data"}
 
 
 async def sc_forecast(persona: str):
@@ -440,7 +440,7 @@ On Google Cloud this question is one SQL call: `AI.FORECAST` in BigQuery, powere
                        "yKeys": [{"key": "Actual", "label": "Actual"},
                                  {"key": "Forecast", "label": "Forecast"}],
                        "footnote": "Seasonal model over HIE encounters; 80% interval computed"}],
-           "citations": [], "actions": [], "usage": None, "model": "scripted·live-data"}
+           "citations": [], "actions": [], "usage": None, "model": "direct tool run · live data"}
 
 
 async def sc_quality(persona: str):
@@ -474,7 +474,7 @@ The measures furthest from target are {focus}. Each unmet measure is available a
                        "xKey": "measure",
                        "yKeys": [{"key": "rate", "label": "Current rate %"},
                                  {"key": "target", "label": "Target %"}]}],
-           "citations": [], "actions": [], "usage": None, "model": "scripted·live-data"}
+           "citations": [], "actions": [], "usage": None, "model": "direct tool run · live data"}
 
 
 SCENARIOS = {

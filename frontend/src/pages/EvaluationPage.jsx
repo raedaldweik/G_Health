@@ -282,7 +282,7 @@ function AgentsView() {
   const byId = Object.fromEntries(rows.map((x) => [x.id, x]));
   const running = !!status?.running;
   const progress = running && status.total ? Math.round((status.progress / status.total) * 100) : 0;
-  const live = r && r.mode !== 'scripted';
+  const live = r && r.mode === 'live';
 
   return (
     <div className="flex flex-col gap-2.5">
@@ -303,7 +303,7 @@ function AgentsView() {
             right={
               <div className="flex items-center gap-2">
                 <div className="seg-track" style={{ padding: 2 }}>
-                  {[['auto', 'Auto'], ['live', 'Live Gemini'], ['scripted', 'Scripted']].map(([k, l]) => (
+                  {[['auto', 'Auto'], ['live', 'Live agent'], ['direct', 'Direct tools']].map(([k, l]) => (
                     <button key={k} className={`seg-pill ${mode === k ? 'active' : ''}`} style={{ fontSize: 10, padding: '4px 9px' }}
                       onClick={() => setMode(k)}>{l}</button>
                   ))}
@@ -394,7 +394,7 @@ function AgentsView() {
             {r && (
               <p className="text-[9.5px] px-2 pt-1.5" style={{ color: 'var(--text-dim)' }}>
                 Last run {new Date(r.run_at).toLocaleString()} · mode <b>{r.mode}</b>
-                {live ? ` · total $${r.total_cost_usd?.toFixed(4)} for ${rows.length} questions` : ' · scripted engine executes the same tools without an LLM, so trajectory and faithfulness are real but tokens and cost are not measured'}
+                {live ? ` · total $${r.total_cost_usd?.toFixed(4)} for ${rows.length} questions` : ' · the direct tool run executes the same tools without the language model, so trajectory and faithfulness are real but tokens and cost are not measured'}
               </p>
             )}
           </Panel>
@@ -448,16 +448,19 @@ function LlmView() {
   return (
     <div className="flex flex-col gap-2.5">
       <KpiStrip items={[
-        { icon: 'coins', tone: 'maroon', label: `Gemini cost / month · supervisor + specialists (${ac.questions_per_day.toLocaleString()} q/day)`, value: `$${ac.monthly_cost_hierarchical_usd.toLocaleString()}` },
+        { icon: 'coins', tone: 'maroon', label: `Production LLM cost / month on Google Cloud · supervisor + specialists (${ac.questions_per_day.toLocaleString()} q/day)`, value: `$${ac.monthly_cost_hierarchical_usd.toLocaleString()}` },
         { icon: 'coins', tone: 'gold', label: 'Same traffic · one flat agent carrying every tool', value: `$${ac.monthly_cost_flat_usd.toLocaleString()}`, trend: `+$${saving.toLocaleString()}/mo`, trendDir: 'down' },
         { icon: 'coins', tone: 'violet', label: 'Same traffic · Gemini 3.1 Pro everywhere', value: `$${ac.monthly_cost_hierarchical_pro_usd.toLocaleString()}`, trend: `${(ac.monthly_cost_hierarchical_pro_usd / ac.monthly_cost_hierarchical_usd).toFixed(1)}×`, trendDir: 'down' },
         { icon: 'activity', tone: 'sand', label: 'Budget after intro pricing ends (Jan 2027)', value: `$${ac.monthly_cost_hierarchical_usd_2027.toLocaleString()}` },
         { icon: 'gauge', tone: 'green', label: 'Prompt tokens read per hop: specialist vs flat', value: `${ac.hierarchical_supervisor_schema_tokens} / ${ac.flat_single_agent_schema_tokens}` },
       ]} />
+      <p className="text-[10px] px-1 -mt-1" style={{ color: 'var(--text-dim)' }}>
+        Model plan and cost projection for the Google Cloud deployment, at list prices. The demonstration runs the same agent graph, tools and evalset; the projection is what the production traffic would cost on the chosen models.
+      </p>
 
       <div className="grid grid-cols-12 gap-2.5">
         <div className="col-span-7">
-          <Panel title="Model matrix: list prices per 1M tokens (Agent Platform / Gemini API price pages)"
+          <Panel title="Production model plan on Google Cloud: list prices per 1M tokens (Vertex AI / Gemini API price pages)"
             right={<span className="text-[9.5px]" style={{ color: 'var(--text-faint)' }}>as of {d.prices_as_of}</span>}>
             <div className="px-1">
               <table className="w-full text-[10px]">
@@ -518,7 +521,7 @@ function LlmView() {
             'Price per question at 3 hops: Flash 3.8 ≈ 0.6¢, Flash 3.5 ≈ 1.3¢, Pro 3.1 ≈ 1.9¢, and quality on structured tool tasks was indistinguishable.',
             'Lifecycle: 2.5 Flash retires Oct 2026; 3.1 Pro is still preview. Default must be GA and at least a year from deprecation.',
             'Latency: clinicians tolerate ~5 s for a briefing; Flash keeps p95 there with 3 hops, Pro does not.',
-            'Region & residency: Gemini is called with pseudonymised, aggregated payloads only, so the endpoint region is a latency question, not a PHI question.',
+            'Region & residency: the model is called with pseudonymised, aggregated payloads only, so the endpoint region is a latency question, not a PHI question.',
           ]],
           ['Where Pro is used deliberately', [
             'LLM-as-judge in evaluation: grading needs depth; it runs offline and on 10 cases, so cost is irrelevant.',

@@ -176,12 +176,12 @@ function Header({ tab, setTab }) {
           <div className="status-pill">
             <span className={`w-2 h-2 rounded-full ${ok && !warming && !keyBad ? '' : 'animate-pulse'}`}
               style={{ background: !ok ? (health ? 'var(--red)' : 'var(--amber)') : keyBad ? 'var(--red)' : 'var(--amber)' }} />
-            <span title={keyBad ? selfTest.error : undefined}>
+            <span>
               {health == null ? 'Connecting'
                 : !ok ? 'Backend offline'
                 : warming ? 'Warming up'
-                : selfTest?.capacity ? 'Gemini at capacity, retrying every minute. Scenario chips still work.'
-                : 'Gemini key rejected. Scenario chips still work.'}
+                : selfTest?.capacity ? 'Model at capacity, retrying every minute. Scenario chips still work.'
+                : 'Model credentials rejected. Scenario chips still work.'}
             </span>
           </div>
         )}

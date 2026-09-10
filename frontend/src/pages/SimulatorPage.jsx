@@ -14,7 +14,7 @@ import { Panel, Spinner } from '../components/ui';
  * What-if simulator, one patient, the deployed deterioration-risk model, live.
  *   Left    · the levers a clinician can move (record values marked, changes in gold)
  *   Centre  · baseline vs simulated risk: gauge, band, registry percentile, cost, gaps closed
- *   Right   · which features moved the estimate (model attribution) and Gemini's explanation
+ *   Right   · which features moved the estimate (model attribution) and the narrated explanation
  * Every number comes from the backend: the model is re-scored on each change (debounced).
  */
 
@@ -242,7 +242,7 @@ export default function SimulatorPage() {
             Risk Simulator: what changes one patient's deterioration risk
           </h1>
           <p className="text-[10.5px] mt-1" style={{ color: 'var(--text-dim)' }}>
-            Move a lever and the deployed model re-scores the patient. The attribution shows which inputs moved the estimate; Gemini explains it in clinical language. Decision support, not a treatment recommendation.
+            Move a lever and the deployed model re-scores the patient. The attribution shows which inputs moved the estimate; the assistant explains it in clinical language. Decision support, not a treatment recommendation.
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -403,11 +403,11 @@ export default function SimulatorPage() {
                 <div className="flex items-center gap-1.5">
                   {explain.mode && (
                     <span className="badge badge-blue" title={explain.mode}>
-                      {explain.mode === 'gemini' ? explain.model : explain.mode === 'scripted' ? 'templated · no LLM key' : `fallback · ${explain.model || ''}`}
+                      {explain.mode === 'live' ? 'live explanation' : explain.mode === 'deterministic' ? 'deterministic narrative' : 'fallback narrative'}
                     </span>
                   )}
                   <button className={`sim-chip ${!explain.text || explain.stale ? 'active' : ''}`} onClick={runExplain} disabled={explain.running || !result}>
-                    <GIcon /> {explain.running ? 'Explaining…' : explain.text ? 'Explain again' : 'Explain with Gemini'}
+                    <GIcon /> {explain.running ? 'Explaining…' : explain.text ? 'Explain again' : 'Explain the change'}
                   </button>
                 </div>
               }>
@@ -419,17 +419,17 @@ export default function SimulatorPage() {
                       {explain.running && <span className="sim-cursor" />}
                     </div>
                   ) : explain.running ? (
-                    <div className="flex items-center gap-2 text-[11px]" style={{ color: 'var(--text-dim)' }}><span className="sim-cursor" /> Gemini is reading the model output…</div>
+                    <div className="flex items-center gap-2 text-[11px]" style={{ color: 'var(--text-dim)' }}><span className="sim-cursor" /> Reading the model output…</div>
                   ) : (
                     <div className="text-[11px]" style={{ color: 'var(--text-dim)' }}>
                       {changed
-                        ? 'Ask Gemini to explain why the estimate moved. It is given the before-and-after scores, the attribution and the gaps closed, and asked to narrate them for the treating clinician.'
-                        : 'Move a lever, then ask Gemini to explain the change. The explanation is grounded in the model output shown on this page; Gemini adds no numbers of its own.'}
+                        ? 'Ask the assistant to explain why the estimate moved. It is given the before-and-after scores, the attribution and the gaps closed, and asked to narrate them for the treating clinician.'
+                        : 'Move a lever, then ask the assistant to explain the change. The explanation is grounded in the model output shown on this page; the language model adds no numbers of its own.'}
                     </div>
                   )}
                 </div>
                 <div className="flex items-center justify-between gap-2 pt-1.5 mt-1 border-t border-[rgba(15,23,42,0.06)] text-[9.5px]" style={{ color: 'var(--text-faint)' }}>
-                  <span>{explain.stale ? 'Levers changed since this explanation.' : explain.error ? `Gemini unavailable (${explain.error}); templated explanation shown.` : `Deterioration-risk model v${base.model_version || '2.1.0'} · association, not a causal treatment effect · logged to the audit trail`}</span>
+                  <span>{explain.stale ? 'Levers changed since this explanation.' : explain.error ? `Language model unavailable (${explain.error}); deterministic narrative shown.` : `Deterioration-risk model v${base.model_version || '2.1.0'} · association, not a causal treatment effect · logged to the audit trail`}</span>
                 </div>
               </div>
             </Panel>

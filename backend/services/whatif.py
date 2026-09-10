@@ -11,9 +11,9 @@ SAME deployed deterioration-risk model re-scores the patient. Nothing here is ca
     recall gap or starting an SGLT2 inhibitor is reflected in the gap list and in
     care_gap_count (which is itself a model feature).
 
-Gemini's role is explanation only: it is handed the numbers and asked to narrate them.
-Without an LLM key a templated explanation is produced from the same numbers, so the
-simulator works in scripted mode too.
+The language model's role is explanation only: it is handed the numbers and asked to
+narrate them. Without LLM credentials a deterministic narrative is produced from the same
+numbers, so the simulator works in direct tool mode too.
 """
 from __future__ import annotations
 
@@ -380,7 +380,7 @@ def _explanation_context(patient_id: str, overrides: dict, result: dict) -> str:
     return "\n".join(lines)
 
 
-def scripted_explanation(result: dict) -> str:
+def deterministic_explanation(result: dict) -> str:
     """Deterministic narrative from the numbers, used when no LLM is configured."""
     b, s, d = result["baseline"], result["simulated"], result["delta"]
     if not result["changed"]:
@@ -423,20 +423,31 @@ async def explain(patient_id: str, overrides: dict | None, actor: str = "clinici
         return
 
     if not LC.llm_available():
-        text = scripted_explanation(result)
-        audit_svc.log("SIM·EXPLAIN", actor, f"What-if explanation (scripted), risk {result['baseline']['probability']*100:.1f}% → "
+        text = deterministic_explanation(result)
+        audit_svc.log("SIM·EXPLAIN", actor, f"What-if explanation (deterministic), risk {result['baseline']['probability']*100:.1f}% → "
                       f"{result['simulated']['probability']*100:.1f}%", patient_id, "info")
-        yield {"type": "meta", "mode": "scripted", "model": None}
+        yield {"type": "meta", "mode": "deterministic", "model": None}
         for chunk in text.split(" "):
             yield {"type": "token", "text": chunk + " "}
-        yield {"type": "final", "text": text, "mode": "scripted", "model": None}
+        yield {"type": "final", "text": text, "mode": "deterministic", "model": None}
         return
 
-    from google.genai import types as gtypes
     context = _explanation_context(patient_id, overrides or {}, result)
     prompt = ("Explain the change in the model's estimate to the treating clinician.\n\n" + context)
 
     async def run(model: str):
+        if model.startswith("claude"):
+            # Anthropic SDK streaming helper: text deltas as they arrive, the SDK retries
+            # 429/5xx and connection drops before we ever see an exception.
+            client = LC.make_anthropic_client(timeout_s=agent.HTTP_TIMEOUT_MS / 1000, max_retries=2)
+            async with client.messages.stream(
+                model=model, max_tokens=700, temperature=0.3, system=SYSTEM_INSTRUCTION,
+                messages=[{"role": "user", "content": prompt}],
+            ) as stream:
+                async for piece in stream.text_stream:
+                    yield piece
+            return
+        from google.genai import types as gtypes
         client = LC.make_client(http_options=agent._http_options())
         cfg = agent.generation_config(model) or gtypes.GenerateContentConfig()
         cfg.system_instruction = SYSTEM_INSTRUCTION
@@ -447,8 +458,9 @@ async def explain(patient_id: str, overrides: dict | None, actor: str = "clinici
                 yield ev.text
 
     model = agent.active_model()
+    label = agent.display_model(model)
     text, started = "", time.time()
-    yield {"type": "meta", "mode": "gemini", "model": model}
+    yield {"type": "meta", "mode": "live", "model": label}
     try:
         async for piece in run(model):
             text += piece
@@ -457,26 +469,26 @@ async def explain(patient_id: str, overrides: dict | None, actor: str = "clinici
         if agent.is_capacity_error(e) and not text:
             nxt = agent.switch_model(str(e))
             if nxt:
-                yield {"type": "meta", "mode": "gemini", "model": nxt, "switched_from": model}
+                yield {"type": "meta", "mode": "live", "model": label, "switched": True}
                 model = nxt
                 try:
                     async for piece in run(model):
                         text += piece
                         yield {"type": "token", "text": piece}
                 except Exception as e2:
-                    text = text or scripted_explanation(result)
-                    yield {"type": "final", "text": text, "mode": "scripted-fallback", "model": model, "error": str(e2)[:200]}
+                    text = text or deterministic_explanation(result)
+                    yield {"type": "final", "text": text, "mode": "fallback", "model": label, "error": type(e2).__name__}
                     return
         else:
-            text = text or scripted_explanation(result)
-            yield {"type": "final", "text": text, "mode": "scripted-fallback", "model": model, "error": str(e)[:200]}
+            text = text or deterministic_explanation(result)
+            yield {"type": "final", "text": text, "mode": "fallback", "model": label, "error": type(e).__name__}
             return
     audit_svc.log("SIM·EXPLAIN", actor,
                   f"What-if explanation by {model} in {time.time()-started:.1f}s, risk "
                   f"{result['baseline']['probability']*100:.1f}% → {result['simulated']['probability']*100:.1f}%; "
                   f"levers: {', '.join(FEATURE_LABELS.get(k, k) for k in result['changed']) or 'none'}",
                   patient_id, "info")
-    yield {"type": "final", "text": text, "mode": "gemini", "model": model}
+    yield {"type": "final", "text": text, "mode": "live", "model": label}
 
 
 def tool_simulate(patient_id: str, overrides_json: str = "") -> dict:

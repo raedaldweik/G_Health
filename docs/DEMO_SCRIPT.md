@@ -28,10 +28,11 @@ RULE: Check the clock at 18:00 and at 26:00. More than two minutes behind at 18:
 
 ## 2. Pre-flight, thirty minutes before
 
-- [ ] Tab 1: the Railway URL. The header shows no warning pill. If it shows "Warming up", wait; it takes under a minute. If it shows a key or capacity warning, the scenario chips still run on the scripted engine with live data; only free-form questions need the key.
+- [ ] Tab 1: the Railway URL. The header shows no warning pill. If it shows "Warming up", wait; it takes under a minute. If it shows a credentials or capacity warning, the scenario chips still run the same tools directly on live data; only free-form questions and the simulator's narrated explanation need the model.
+- [ ] Know what is behind the graph. The live backend runs claude-sonnet-4-6 through the Agent Development Kit's Anthropic adapter (ANTHROPIC_API_KEY on Railway); the ADK graph, tools, MCP server, evalset and guardrails are identical whichever model serves it. The UI names the framework and the graph, never the vendor, and the LLM & cost tab is explicitly the production plan on Google Cloud. If the director asks directly which model is serving the demo, answer straight: "ADK is model-agnostic; today's demo runs on a non-Google frontier model for reliability, and the production plan on Vertex AI is Gemini 3.8 Flash for the reasons on this tab." Never claim the live model is Gemini.
 - [ ] Tab 2: the same URL, already loaded. This is the parachute if tab 1 misbehaves.
 - [ ] Persona set to Dr. Amal Al-Mansoori (clinician) in tab 1.
-- [ ] Run "Patient review + draft prescription" once. Confirm the hero is Kamal Miah at about 33%. This also warms Gemini.
+- [ ] Run "Patient review + draft prescription" once. Confirm the hero is Kamal Miah at about 33%. This also warms the model connection.
 - [ ] Queue tab: approve or reject anything left over from rehearsal so the panel sees only today's draft.
 - [ ] Open Dashboards → Geography once so the map tiles are cached.
 - [ ] Open Simulator once, press Reset. Kamal is preselected.
@@ -111,7 +112,7 @@ SAY: For the technical questions, three lanes. The request path: one question is
 
 SAY: The data path: population numbers are batch. The Cloud Healthcare API FHIR store streams into BigQuery, Dataform rebuilds the marts at two in the morning, BigQuery ML re-scores every patient nightly. Only the per-patient signal is event-driven: a new HbA1c fires a Pub/Sub event and one patient is re-scored in seconds through the Vertex AI endpoint. Streaming the aggregates would cost many times more for numbers that move over weeks.
 
-SAY: Resilience: every service is regional and zone-redundant inside me-central1, so a zone failure re-routes traffic with no data loss and nobody is paged. A region failure is the honest limit of in-country residency: recovery is in-region from BigQuery time travel and AlloyDB and Storage backups, with a stated RPO of twenty-four hours and RTO of four. If Gemini is saturated, the supervisor moves down a tested model list, and if no model answers, the scripted engine runs the same tools without the language model. You will see that engine exists.
+SAY: Resilience: every service is regional and zone-redundant inside me-central1, so a zone failure re-routes traffic with no data loss and nobody is paged. A region failure is the honest limit of in-country residency: recovery is in-region from BigQuery time travel and AlloyDB and Storage backups, with a stated RPO of twenty-four hours and RTO of four. If the model endpoint is saturated, the supervisor moves down a tested model list, and if no model answers, the same tools run directly without the language model. You will see that path exists.
 
 ### Slide 9 — The demo agenda and the service mapping (9:30, 30 seconds)
 
@@ -197,9 +198,9 @@ SCREEN: 3.0%, Low band. The registry percentile drops from the 90th to the mid 5
 
 SAY: Add the drug the guideline asked for: three percent, the Low band, one care gap closed, about five and a half thousand riyals of expected episode cost avoided in a year.
 
-DO: Press "Explain with Gemini".
+DO: Press "Explain the change".
 
-SAY: (while it streams) Gemini is handed the before-and-after scores, the attribution and the gaps closed, and asked to narrate them for the clinician. It adds no numbers of its own; every figure in that paragraph is on this screen.
+SAY: (while it streams) The language model is handed the before-and-after scores, the attribution and the gaps closed, and asked to narrate them for the clinician. It adds no numbers of its own; every figure in that paragraph is on this screen.
 
 SAY: One engineering detail I am proud of. The model is monotonic by construction. It cannot tell you that lowering blood pressure raises risk, or that better adherence makes things worse. That is a constraint applied at training time, not a filter on the output. When we retrained with those clinical priors the held-out accuracy went up, not down.
 
@@ -418,11 +419,11 @@ A: Three things. Agent Engine, Model Armor and Model Monitoring in me-central1, 
 
 | If | Then |
 |---|---|
-| Gemini errors mid-scenario | Nothing to do. The backend falls back to the scripted engine automatically and says so in the trace. Keep talking. |
-| The header shows a key or capacity error | Every scenario chip still runs on live data. Only free-form questions need the key. Say: "the scripted engine is the same tools without the language model in the loop." |
+| The model errors mid-scenario | Nothing to do. The backend runs the same tools directly, automatically, and says so in the trace. Keep talking. |
+| The header shows a credentials or capacity error | Every scenario chip still runs on live data. Only free-form questions need the model. Say: "the chips run the same tools without the language model in the loop." |
 | A free-form question goes sideways | "Let me show you the trace of why." The details view turns a miss into a transparency beat. Then run a chip. |
-| The Explain button in the simulator returns the templated text | It is grounded in the same numbers. Say so and move on. |
-| Wi-Fi dies | Switch to the hotspot. The scripted engine needs no external call after the page has loaded. |
+| The Explain button in the simulator returns the deterministic narrative | It is grounded in the same numbers. Say so and move on. |
+| Wi-Fi dies | Switch to the hotspot. The direct tool runs need no external call after the page has loaded. |
 | A number differs from this script | Read the screen. "The screen is the truth; that is the point of the product." |
 | They interrupt with a deep question | Answer it, then say "and that is exactly what the next click shows". Every act has a natural re-entry. |
 | You lose your place | The Simulator tab is a safe harbour from anywhere: Kamal, one slider, one explanation, one minute. |

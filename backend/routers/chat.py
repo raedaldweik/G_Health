@@ -37,9 +37,9 @@ def _ndjson(gen):
 
 
 NO_KEY_NOTICE = (
-    "**Free-form questions need a Gemini API key.** The suggested scenario chips run fully "
-    "against the live data without one. To enable the full multi-agent experience, set "
-    "`GEMINI_API_KEY` in the backend environment and restart."
+    "**Free-form questions need the language-model credentials configured on the server.** "
+    "The suggested scenario chips run fully against the live data without them. To enable "
+    "free-form chat, add the model credentials to the backend environment (see the README) and restart."
 )
 
 
@@ -63,12 +63,12 @@ async def chat(req: ChatRequest):
             async for ev in agent.stream_chat(req.message, req.session_id, req.persona):
                 yield ev
         except Exception as e:
-            # Live agent failed mid-demo: fall back to the scripted runner when we
+            # Live agent failed mid-demo: fall back to the direct tool runner when we
             # have one, else surface a clean error.
             fb = scenarios.get_runner(req.scenario_id) if req.scenario_id else None
             if fb:
                 yield {"type": "step", "status": "done", "agent": "system", "tool": "fallback",
-                       "detail": f"live agent unavailable ({e.__class__.__name__}), scripted engine engaged"}
+                       "detail": f"live agent unavailable ({e.__class__.__name__}); running the same tools directly"}
                 async for ev in fb(req.persona):
                     yield ev
             else:

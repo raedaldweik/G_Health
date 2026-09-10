@@ -4,11 +4,12 @@ Nabd, grounded retrieval over the national clinical guideline corpus.
 Hybrid retrieval:
   • BM25 keyword index, always available, zero external dependencies.
   • gemini-embedding-001 semantic index, built lazily in the background when a
-    GEMINI_API_KEY is present, cached to disk. Hybrid score = BM25 ⊕ cosine.
+    Gemini credential is present (independent of which model runs the agent graph),
+    cached to disk. Hybrid score = BM25 ⊕ cosine.
 
 Every hit carries document, page and a snippet so the agent can cite
 "MOPH T2DM guideline, p. 44" and the UI can open the source passage.
-Phase 2: swap for Vertex AI RAG Engine (managed corpus), same search contract.
+On Google Cloud: Vertex AI RAG Engine (managed corpus), same search contract.
 """
 from __future__ import annotations
 
@@ -145,8 +146,9 @@ def _build_embeddings_async(retry: int = 0):
     from services import llm_client as LC
     if _load_cached_embeddings():
         return
-    if not LC.llm_available():
+    if not LC.gemini_available():
         _state["embed_status"] = "disabled"
+        _state["embed_reason"] = "no embedding credential"
         return
     _state["embed_status"] = "building"
 

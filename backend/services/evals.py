@@ -9,12 +9,13 @@ Two evaluation surfaces, both computed from real artefacts (never hand-typed):
      subgroup fairness (AUC, TPR, FPR, flag rate by nationality group, gender, age band).
 
   2. Agent evaluation, a golden evalset (data/evals/agent_evalset.json) executed through
-     the live Gemini agent (when a key is present) or the scripted engine, scored on:
+     the live agent graph (when model credentials are present) or the direct tool
+     runner, scored on:
        • tool-trajectory recall (expected tools ⊆ observed tools),
        • groundedness (a citation is present whenever the case is clinical),
        • action safety (drafts go to the approval queue, never executed),
        • numeric faithfulness (the answer quotes the true registry numbers),
-       • latency, tokens and cost (live mode; priced from the Gemini price list).
+       • latency, tokens and cost (live mode; priced from the provider's price list).
 
   Plus the LLM-selection matrix and a quantitative single-vs-multi-agent prompt-size
   comparison derived by introspecting the actual tool schemas.
@@ -57,6 +58,13 @@ PRICES = {
     "gemini-2.5-flash":      {"in": 0.30, "out": 2.50,
                               "note": "retiring Oct 2026, do not build on it"},
     "gemini-embedding-001":  {"in": 0.15, "out": 0.0,   "note": "embeddings (input only)"},
+}
+# The demonstration backend's provider (list prices, USD per 1M tokens), used only to cost a
+# live evalset run. Not part of the model matrix, which is the Google Cloud production plan.
+LIVE_PRICES = {
+    "claude-sonnet-4-6": {"in": 3.00, "out": 15.00},
+    "claude-sonnet-4-5": {"in": 3.00, "out": 15.00},
+    "claude-haiku-4-5":  {"in": 1.00, "out": 5.00},
 }
 PRICES_AS_OF = "2026-09-07"
 
@@ -215,7 +223,10 @@ def _score_case(case: dict, final: dict, latency_ms: int, facts: dict) -> dict:
     model = final.get("model") or ""
     cost = None
     if usage and usage.get("total_tokens"):
-        price = PRICES.get(model) or PRICES.get("gemini-3.5-flash")
+        from services import agent
+        served = agent.active_model()          # the payload carries the display label, price the real id
+        price = PRICES.get(served) or LIVE_PRICES.get(served) or LIVE_PRICES.get(
+            next((k for k in LIVE_PRICES if served.startswith(k)), ""), PRICES["gemini-3.5-flash"])
         cost = round(usage.get("prompt_tokens", 0) / 1e6 * price["in"]
                      + usage.get("completion_tokens", 0) / 1e6 * price["out"], 5)
     passed = traj_recall >= 0.75 and grounded and action_ok and faithful
@@ -253,7 +264,7 @@ def run_agent_evals(mode: str = "auto") -> None:
     from services import agent
     if _state["running"]:
         return
-    resolved = "live" if (mode in ("auto", "live") and agent.llm_enabled()) else "scripted"
+    resolved = "live" if (mode in ("auto", "live") and agent.llm_enabled()) else "direct"
     cases = evalset()["cases"]
     _state.update({"running": True, "progress": 0, "total": len(cases), "mode": resolved,
                    "started": datetime.now(timezone.utc).isoformat()})
