@@ -39,7 +39,7 @@ export default function DocumentsPage() {
         <p className="text-[11px] mb-5" style={{ color: 'var(--text-dim)' }}>
           The agent never answers clinical questions from memory. It retrieves from these documents at
           query time and cites document + page. Drop a new PDF in and it's indexed on restart, no retraining.
-          Phase 2: this layer becomes Vertex AI RAG Engine (managed corpus, gemini-embedding-001).
+          On Google Cloud this layer is Vertex AI RAG Engine (managed corpus, gemini-embedding-001).
         </p>
 
         <div className="grid grid-cols-2 gap-3">

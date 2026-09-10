@@ -383,7 +383,7 @@ async def sc_policy_sim(persona: str):
 
 **All five combined: ≈{comb['expected_events_avoided']:.0f} deterioration events avoided and a net {_fmt_qar(comb['net_benefit_qar'])}** over 24 months (episodes costed at QAR {ml.EVENT_COST_QAR:,}).
 
-**Reading the table:** {best['label'].split(':')[0]} delivers the largest net benefit; {most_events['label'].split(':')[0].lower()} avoids the most events. {worst['label'].split(':')[0]} does not pay back within 24 months on cost alone, its case rests on clinical outcomes, which this model does not price. Phase 2 runs the same simulation as BigQuery `ML.PREDICT` over the counterfactual cohort.
+**Reading the table:** {best['label'].split(':')[0]} delivers the largest net benefit; {most_events['label'].split(':')[0].lower()} avoids the most events. {worst['label'].split(':')[0]} does not pay back within 24 months on cost alone, its case rests on clinical outcomes, which this model does not price. On Google Cloud the same simulation is BigQuery `ML.PREDICT` over the counterfactual cohort.
 """
     yield {"type": "final", "answer": answer, "trace": _trace(ev),
            "charts": [{"type": "bar",
@@ -429,7 +429,7 @@ async def sc_forecast(persona: str):
 
 The model (trend + month-of-year seasonality over 36 months of encounter history) captures the recurring summer dip and Ramadan pattern, so the growth figure is structural, not seasonal noise. Capacity planning should target the Q4 ramp.
 
-Phase 2 note: this exact question becomes one SQL call, `AI.FORECAST` in BigQuery, powered by the TimesFM foundation model, no training step at all.
+On Google Cloud this question is one SQL call: `AI.FORECAST` in BigQuery, powered by the TimesFM foundation model, with no training step.
 """
     data = ([{"month": h["month"], "Actual": h["visits"]} for h in fc["history"]]
             + [{"month": f["month"], "Forecast": f["visits"], "lo": f["lo"], "hi": f["hi"]}

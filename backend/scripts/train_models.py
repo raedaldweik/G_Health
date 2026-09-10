@@ -234,12 +234,12 @@ def main():
         {"model_id": "complication_risk", "name": "Diabetes Deterioration Risk",
          "version": MODEL_VERSION, "trained": today, "framework": "XGBoost (gradient-boosted trees, monotonic constraints)",
          "task": "Binary classification, P(diabetes deterioration event within 12 months: admission for hypo/hyperglycaemia, DKA/HHS, foot infection or AKI, or progression to HbA1c ≥ 10%)",
-         "training_data": f"{risk_metrics['train_rows']} patients (held-out test: {risk_metrics['test_rows']}), synthetic QHIE cohort",
+         "training_data": f"{risk_metrics['train_rows']} patients (held-out test: {risk_metrics['test_rows']}), synthetic national HIE cohort",
          "features": RISK_FEATURES, "metrics": risk_metrics,
          "intended_use": "Panel prioritisation for the diabetes programme, care-gap targeting, counterfactual programme simulation. Decision support only, never autonomous treatment decisions.",
          "constraints": ("Monotonic constraints encode clinical priors: the estimate cannot fall as HbA1c, systolic BP, urine ACR, BMI, smoking, admissions, ED visits, monitoring delay or open care gaps rise, and cannot rise as eGFR, adherence, metformin, SGLT2i/GLP-1 RA or RAAS therapy improve. Insulin is deliberately unconstrained, in the registry it marks advanced disease rather than a treatment effect."),
          "limitations": "Trained on synthetic data; requires clinical validation and bias audit before any production use. Programme counterfactuals assume guideline-average effect sizes. What-if estimates are associations, not causal treatment effects.",
-         "phase2": "Retrain as BigQuery ML BOOSTED_TREE_CLASSIFIER, register to Vertex AI Model Registry, serve on an online endpoint, score via the official Agent Platform /mcp/predict toolset."},
+         "phase2": "BigQuery ML BOOSTED_TREE_CLASSIFIER trained on the streamed FHIR export, registered in Vertex AI Model Registry, served on an online endpoint and scored through the Agent Platform /mcp/predict toolset."},
         {"model_id": "cohort_segments", "name": "Population Segmentation",
          "version": "1.0.1", "trained": today, "framework": "scikit-learn KMeans (k=4)",
          "task": "Unsupervised segmentation over cost, model risk, age, care gaps, admissions",
@@ -254,7 +254,7 @@ def main():
          "training_data": "4,000 patients", "features": SIM_FEATURES, "metrics": sim_metrics,
          "intended_use": "'Patients like this one' clinical context and cohort matching.",
          "limitations": "Feature-space similarity, not outcome-matched controls.",
-         "phase2": "gemini-embedding-001 patient embeddings + BigQuery VECTOR_SEARCH."},
+         "phase2": "gemini-embedding-001 patient embeddings with BigQuery VECTOR_SEARCH."},
         {"model_id": "visit_forecast", "name": "Ambulatory Demand Forecast",
          "version": "1.1.0", "trained": today, "framework": "Ridge regression (trend + seasonality)",
          "task": "12-month monthly outpatient/telehealth visit forecast with 80% interval",
@@ -262,7 +262,7 @@ def main():
          "metrics": fc_metrics,
          "intended_use": "Capacity planning and the executive demand narrative.",
          "limitations": "Univariate; no exogenous drivers (campaigns, epidemics).",
-         "phase2": "BigQuery AI.FORECAST (TimesFM foundation model), zero-training forecasting in one SQL call."},
+         "phase2": "BigQuery AI.FORECAST (TimesFM foundation model): forecasting in one SQL call with no training step."},
     ]
     (OUT / "model_cards.json").write_text(json.dumps(cards, indent=2))
     print(f"\n✓ artifacts + model_cards.json written to {OUT}")

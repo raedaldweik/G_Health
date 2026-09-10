@@ -1,6 +1,6 @@
-/* Nabd — customer-engineering deck. Google Cloud visual language: white canvas, big left-aligned
+/* Nabd customer-engineering deck. Google Cloud visual language: white canvas, big left-aligned
    headlines, four-colour icon circles as the motif, light-grey cards, architecture boxes with
-   thin outlines grouped in dashed regions. 8 slides + speaker notes. */
+   thin outlines grouped in dashed regions. Nine slides with speaker notes. */
 const pptxgen = require('pptxgenjs');
 const React = require('react');
 const RDS = require('react-dom/server');
@@ -23,7 +23,7 @@ async function icon(name, color = 'FFFFFF', size = 256) {
 const pres = new pptxgen();
 pres.layout = 'LAYOUT_WIDE';            // 13.33 x 7.5
 pres.author = 'Raed Aldweik';
-pres.title = 'Nabd — Diabetes population health on Google Cloud';
+pres.title = 'Nabd: diabetes population health on Google Cloud';
 
 const T = (s, text, x, y, w, h, o = {}) => s.addText(text, {
   x, y, w, h, fontFace: FONT, fontSize: 12, color: INK, margin: 0, isTextBox: true, valign: 'top', ...o,
@@ -52,7 +52,7 @@ const headline = (s, text, sub = null) => {
   T(s, text, 0.6, 0.5, 12.1, 0.95, { fontSize: 26, bold: true, color: INK, lineSpacingMultiple: 1.05 });
   if (sub) T(s, sub, 0.6, 1.42, 12.1, 0.35, { fontSize: 13, color: GREY });
 };
-const footer = (s, n, note = 'Nabd نبض · Ministry of Public Health, Qatar · Google Cloud Customer Engineering') => {
+const footer = (s, n, note = 'Nabd نبض · Diabetes population health on Google Cloud · Customer Engineering') => {
   T(s, note, 0.6, 7.05, 10, 0.25, { fontSize: 8.5, color: FAINT });
   T(s, String(n), 12.2, 7.05, 0.5, 0.25, { fontSize: 8.5, color: FAINT, align: 'right' });
 };
@@ -68,6 +68,10 @@ async function pbox(s, x, y, w, h, title, sub, { fill = 'FFFFFF', line = LINE, i
   if (sub) T(s, sub, x + 0.12, y + 0.36, w - 0.2, Math.max(h - 0.4, 0.2), { fontSize: subFs, color: titleColor === 'FFFFFF' ? 'FFFFFF' : GREY, lineSpacingMultiple: 1.05 });
 }
 const label = (s, text, x, y, w, color = GREY) => T(s, text.toUpperCase(), x, y, w, 0.22, { fontSize: 8.5, bold: true, color, charSpacing: 1.5 });
+const numCircle = (s, n, x, y, d, fill) => {
+  circle(s, x, y, d, fill);
+  T(s, String(n), x, y, d, d, { fontSize: 10, bold: true, color: 'FFFFFF', align: 'center', valign: 'middle' });
+};
 
 (async () => {
   /* ───────────────────────── 1. Title ───────────────────────── */
@@ -78,23 +82,22 @@ const label = (s, text, x, y, w, color = GREY) => T(s, text.toUpperCase(), x, y,
     T(s, 'Google Cloud  ·  Customer Engineering', 1.85, 0.6, 8, 0.3, { fontSize: 11, color: GREY });
     T(s, 'Nabd', 0.6, 1.9, 6, 1.0, { fontSize: 54, bold: true, color: INK });
     T(s, 'نبض', 2.55, 1.98, 3, 1.0, { fontSize: 44, color: BLUE2 });
-    T(s, 'Diabetes population health,\nmade intelligible.', 0.6, 3.0, 9, 1.6, { fontSize: 34, bold: true, color: INK, lineSpacingMultiple: 1.05 });
-    T(s, 'From the diabetes registry to agentic AI on Google Cloud — a proposal for the Ministry of Public Health, Qatar', 0.6, 4.75, 8.6, 0.7, { fontSize: 15, color: GREY, lineSpacingMultiple: 1.15 });
+    T(s, 'Agentic population health\nfor a national diabetes registry', 0.6, 3.0, 9, 1.6, { fontSize: 32, bold: true, color: INK, lineSpacingMultiple: 1.05 });
+    T(s, 'A working demonstration and a reference architecture on Google Cloud, built for the ministry of health of a Gulf state with a national Health Information Exchange.', 0.6, 4.75, 8.6, 0.8, { fontSize: 15, color: GREY, lineSpacingMultiple: 1.15 });
     T(s, 'Raed Aldweik  ·  AI Customer Engineer  ·  September 2026', 0.6, 6.55, 8, 0.3, { fontSize: 11, color: GREY });
-    // motif: a soft four-colour "pulse" of circles on the right
     const cs = [[10.2, 2.2, 1.9, BLUE], [11.55, 3.55, 1.25, RED], [9.55, 4.05, 1.0, YELLOW], [10.75, 4.7, 1.55, GREEN]];
     cs.forEach(([x, y, d, c]) => s.addShape(pres.ShapeType.ellipse, { x, y, w: d, h: d, fill: { color: c, transparency: 12 }, line: { color: c, width: 0 } }));
-    s.addNotes('Open with the customer, not the product. "MOPH already has a diabetes registry and a predictive program. What I want to show is the next step: letting any clinician or director ask the exchange a question and get an answer that is grounded, governed and actionable." Then set expectations: 8 slides, then 20 minutes in the live product.');
+    s.addNotes('Open with the customer, not the product. The ministry already has a national exchange, a diabetes registry and a predictive programme. What follows is the next step: letting any clinician or director ask the exchange a question and get an answer that is grounded, governed and actionable. Set expectations: nine slides, then twenty minutes in the live product.');
   }
 
   /* ───────────────────────── 2. The problem ───────────────────────── */
   {
     const s = pres.addSlide();
-    headline(s, 'Qatar carries one of the world\'s heaviest diabetes burdens — and the system still sees it one patient at a time.');
+    headline(s, 'Qatar carries one of the heaviest diabetes burdens in the world, and the system still sees it one patient at a time');
     const stats = [
       ['Top 5', 'global diabetes prevalence among adults (IDF Diabetes Atlas)', BLUE],
-      ['QR 1.8bn → 5bn', 'annual cost of diabetes care, 2015 → 2035 projection (National Diabetes Strategy)', RED],
-      ['50%', 'of all dialysis in Qatar is attributable to diabetes; ~70% of stroke patients have diabetes or pre-diabetes', YELLOW],
+      ['QR 1.8bn to 5bn', 'annual cost of diabetes care, 2015 to 2035 projection (National Diabetes Strategy)', RED],
+      ['50%', 'of all dialysis in Qatar is attributable to diabetes; about 70% of stroke patients have diabetes or pre-diabetes', YELLOW],
     ];
     stats.forEach(([n, d, c], i) => {
       const x = 0.6 + i * 4.1;
@@ -102,9 +105,9 @@ const label = (s, text, x, y, w, color = GREY) => T(s, text.toUpperCase(), x, y,
       T(s, n, x + 0.25, 1.9, 3.5, 0.65, { fontSize: n.length > 6 ? 26 : 34, bold: true, color: c, valign: 'middle' });
       T(s, d, x + 0.25, 2.6, 3.45, 0.62, { fontSize: 10.5, color: GREY, lineSpacingMultiple: 1.1 });
     });
-    label(s, 'What clinicians and the ministry told us', 0.6, 3.65, 6);
+    label(s, 'What clinicians and health leaders told us', 0.6, 3.65, 6);
     const pains = [
-      ['MdOutlineGroups', BLUE, 'The patient story is fragmented', '18+ facilities, an HIE with eight relational tables, and guidelines in PDFs. A 360° view exists only after someone builds it.'],
+      ['MdOutlineGroups', BLUE, 'The patient story is fragmented', 'Eighteen or more facilities, an exchange with eight relational tables, and guidelines in PDFs. A complete view of one patient exists only after someone assembles it.'],
       ['MdOutlineWarningAmber', RED, 'Care is reactive', 'Risk is recognised at the admission, not before it. The registry can describe the population; it cannot yet tell a nurse who to call this morning.'],
       ['MdOutlineChat', GREEN, 'Insight is slow and rationed', 'A director\'s question becomes an analyst\'s week. A clinician cannot ask at all. Dashboards answer the questions someone anticipated.'],
     ];
@@ -114,23 +117,23 @@ const label = (s, text, x, y, w, color = GREY) => T(s, text.toUpperCase(), x, y,
       T(s, h, x + 0.72, 4.02, 3.2, 0.3, { fontSize: 14, bold: true, color: INK });
       T(s, d, x, 4.72, 3.85, 1.6, { fontSize: 11.5, color: GREY, lineSpacingMultiple: 1.2 });
     }
-    T(s, 'Sources: IDF Diabetes Atlas country profile (Qatar); Qatar National Diabetes Strategy 2016–2022 and MOPH cost projections reported by Gulf Times.', 0.6, 6.6, 12, 0.3, { fontSize: 8.5, color: FAINT });
+    T(s, 'Sources: IDF Diabetes Atlas country profile (Qatar); Qatar National Diabetes Strategy 2016 to 2022 and national cost projections as reported by Gulf Times.', 0.6, 6.6, 12, 0.3, { fontSize: 8.5, color: FAINT });
     footer(s, 2);
-    s.addNotes('Anchor on three numbers, then move quickly to the three pains — those are the customer\'s words, not ours. The key line: "the registry can describe the population; it cannot yet tell a nurse who to call this morning." That sentence is the gap the rest of the deck closes.');
+    s.addNotes('Anchor on three numbers, then move quickly to the three pains, which are the customer\'s words. The line to underline: the registry can describe the population; it cannot yet tell a nurse who to call this morning. That sentence is the gap the rest of the deck closes.');
   }
 
-  /* ───────────────────────── 3. From registry to intelligence ───────────────────────── */
+  /* ───────────────────────── 3. From registry to agentic ───────────────────────── */
   {
     const s = pres.addSlide();
-    headline(s, 'The journey MOPH is already on — and the step we propose', 'Each stage keeps what the previous one built. Nothing is thrown away.');
+    headline(s, 'From registry, to predictive programme, to agentic assistant', 'Each stage builds on the previous one. The registry and the models become tools the agent calls.');
     const stages = [
       ['01', 'Registry', 'Describe', BLUE, 'MdOutlineDashboard',
-        'Diabetic patient summary, geography of visits, cohorts by nationality and age — the North Carolina and Emirates Health Services pattern.',
+        'Diabetic patient summary, geography of visits, cohorts by nationality and age. The pattern used by state registries in the United States and by Emirates Health Services.',
         ['Who: analysts, planners', 'Answers: how many, where, who']],
-      ['02', 'Predictive program', 'Anticipate', YELLOW, 'MdOutlineAutoGraph',
-        'Deterioration prediction, high- vs low-risk profiles, visit forecasting with confidence bands, cost impact — the SAS Viya diabetes program.',
+      ['02', 'Predictive programme', 'Anticipate', YELLOW, 'MdOutlineAutoGraph',
+        'Deterioration prediction, high versus low risk profiles, visit forecasting with confidence bands, cost impact. Built on SAS Viya.',
         ['Who: care managers, finance', 'Answers: who will deteriorate, what it will cost']],
-      ['03', 'Agentic', 'Ask and act', GREEN, 'MdSmartToy',
+      ['03', 'Agentic assistant', 'Ask and act', GREEN, 'MdSmartToy',
         'Any clinician or director asks in plain language. Agents query the exchange, cite the national guideline, run the models, and draft actions a human signs.',
         ['Who: every clinician, every director', 'Answers: the question nobody anticipated']],
     ];
@@ -145,21 +148,21 @@ const label = (s, text, x, y, w, color = GREY) => T(s, text.toUpperCase(), x, y,
       T(s, meta.map((m, k) => ({ text: m, options: { breakLine: k < meta.length - 1 } })), x + 0.25, 4.75, 3.4, 0.7, { fontSize: 10.5, color: INK, lineSpacingMultiple: 1.3 });
       if (i < 2) arrow(s, x + 3.92, 3.75, x + 4.08, 3.75, GREY);
     }
-    T(s, [{ text: 'What changes: ', options: { bold: true, color: INK } }, { text: 'from dashboards people must find, to answers people can ask for — with the same rigour, the same models, and a human signature on every action.', options: { color: GREY } }],
+    T(s, [{ text: 'What changes: ', options: { bold: true, color: INK } }, { text: 'from dashboards people must find, to answers people can ask for, with the same rigour, the same models, and a human signature on every action.', options: { color: GREY } }],
       0.6, 5.9, 12.1, 0.5, { fontSize: 12.5 });
     footer(s, 3);
-    s.addNotes('This is the "we respect what you built" slide. Stage 1 and 2 are literally what the panel saw in the SAS program: patient summary, prediction, risk profiles, visit forecasts. Stage 3 is the proposal. Stress "nothing is thrown away": the models and the registry become tools the agent calls.');
+    s.addNotes('This is the "we respect what you built" slide. Stages one and two are what the predictive programme already delivers: patient summary, prediction, risk profiles, visit forecasts. Stage three is the proposal. The models and the registry are not replaced; they become tools the agent calls.');
   }
 
   /* ───────────────────────── 4. Solution overview ───────────────────────── */
   {
     const s = pres.addSlide();
-    headline(s, 'Nabd: one conversation over the HIE, the guidelines and the models', 'The same four capabilities as the diabetes program — now available to anyone who can ask.');
+    headline(s, 'Nabd: one conversation over the exchange, the guidelines and the models', 'The same four capabilities as the predictive programme, available to anyone who can ask.');
     const caps = [
-      ['MdPerson', BLUE, 'Diabetic patient 360', 'Summary, HbA1c trajectory, comorbidities, medications, open care gaps — assembled on request, with consent enforced.'],
-      ['MdOutlineAutoGraph', YELLOW, 'Risk stratification & visit prediction', 'Explainable risk of a 12-month complication, cohort bands, similar patients, and demand forecasts for planning.'],
-      ['MdMenuBook', RED, 'Guideline-grounded decision support', 'Recommendations retrieved from MOPH national guidelines and cited to the page. No clinical claim without a source.'],
-      ['MdQueryStats', GREEN, 'Population & cost simulation', 'Control rates, care gaps and cost by facility and nationality; what-if simulation of interventions before money is spent.'],
+      ['MdPerson', BLUE, 'Diabetic patient 360', 'Summary, HbA1c trajectory, comorbidities, medications, open care gaps, assembled on request with consent enforced.'],
+      ['MdOutlineAutoGraph', YELLOW, 'Risk stratification and visit prediction', 'Explainable 12-month deterioration risk, cohort bands, similar patients, and demand forecasts for planning.'],
+      ['MdMenuBook', RED, 'Guideline-grounded decision support', 'Recommendations retrieved from the national clinical guidelines and cited to the page. No clinical claim without a source.'],
+      ['MdQueryStats', GREEN, 'Population and cost simulation', 'Control rates, care gaps and cost by facility and nationality; what-if simulation of programmes before money is spent.'],
     ];
     for (let i = 0; i < caps.length; i++) {
       const [ic, c, h, d] = caps[i]; const x = 0.6 + (i % 2) * 3.55, y = 1.95 + Math.floor(i / 2) * 2.2;
@@ -168,9 +171,8 @@ const label = (s, text, x, y, w, color = GREY) => T(s, text.toUpperCase(), x, y,
       T(s, h, x + 0.85, y + 0.24, 2.4, 0.5, { fontSize: 12.5, bold: true, color: INK, lineSpacingMultiple: 1.0 });
       T(s, d, x + 0.22, y + 0.85, 2.95, 1.1, { fontSize: 10.5, color: GREY, lineSpacingMultiple: 1.2 });
     }
-    // right: trust column
     rect(s, 8.0, 1.95, 4.7, 4.2, LBLUE);
-    T(s, 'Trustworthy by design', 8.3, 2.15, 4.2, 0.35, { fontSize: 14, bold: true, color: BLUE2 });
+    T(s, 'Controls, enforced in code', 8.3, 2.15, 4.2, 0.35, { fontSize: 14, bold: true, color: BLUE2 });
     const rules = [
       ['MdOutlineFactCheck', 'Numbers only from tools', 'the model narrates; it never invents a value'],
       ['MdOutlineDescription', 'Claims only with a citation', 'document and page from the national guideline'],
@@ -184,29 +186,28 @@ const label = (s, text, x, y, w, color = GREY) => T(s, text.toUpperCase(), x, y,
       T(s, h, 8.75, y, 3.9, 0.28, { fontSize: 11.5, bold: true, color: INK });
       T(s, d, 8.75, y + 0.28, 3.9, 0.3, { fontSize: 10, color: GREY });
     }
-    T(s, [{ text: 'Focus for this engagement: ', options: { bold: true, color: INK } }, { text: 'type 2 diabetes, 4,000-patient synthetic exchange shaped like QHIE (FHIR R4 export, LOINC / ICD-10 / ATC coded, 36 months). Zero PHI.', options: { color: GREY } }],
+    T(s, [{ text: 'Scope of this build: ', options: { bold: true, color: INK } }, { text: 'type 2 diabetes, a 4,000-patient synthetic exchange shaped like the national HIE (FHIR R4 export, LOINC / ICD-10 / ATC coded, 36 months). Zero PHI.', options: { color: GREY } }],
       0.6, 6.4, 12.1, 0.45, { fontSize: 11 });
     footer(s, 4);
-    s.addNotes('Map each tile to something the panel saw in the SAS program so it feels like continuity. Then the right column is the answer to "is this AI garbage?": four rules, all enforced in code, all visible in the demo (trace, citations, queue, audit).');
+    s.addNotes('Map each tile to something the panel saw in the predictive programme so it reads as continuity. The right column answers the question everyone is thinking, which is whether the assistant can be trusted clinically: four rules, all enforced in code, all visible in the demo (trace, citations, queue, audit).');
   }
 
   /* ───────────────────────── 5. How it works ───────────────────────── */
   {
     const s = pres.addSlide();
-    headline(s, 'How it works: one supervisor, five specialists', 'Each specialist carries only the tools it needs; the supervisor plans and composes but never invents a number.');
-    // user → supervisor
+    headline(s, 'How it works: one supervisor, five specialists', 'Each specialist carries only the tools it needs. The supervisor plans and composes; it never produces a number itself.');
     rect(s, 4.9, 1.9, 3.55, 0.5, CARD2);
     s.addImage({ data: await icon('MdRecordVoiceOver', GREY), x: 5.05, y: 2.01, w: 0.28, h: 0.28 });
     T(s, '"Who on my panel needs attention today?"', 5.42, 1.9, 3.0, 0.5, { fontSize: 10.5, color: INK, valign: 'middle', italic: true });
     arrow(s, 6.67, 2.42, 6.67, 2.63);
     rect(s, 4.3, 2.65, 4.75, 0.85, BLUE);
     T(s, 'Nabd supervisor', 4.5, 2.71, 4.4, 0.35, { fontSize: 14, bold: true, color: 'FFFFFF' });
-    T(s, 'Gemini 3.8 Flash on the Agent Development Kit — plans, routes, composes; never guesses a number', 4.5, 3.05, 4.4, 0.4, { fontSize: 9.5, color: 'FFFFFF' });
+    T(s, 'Gemini Flash on the Agent Development Kit: plans, routes and composes; never guesses a number', 4.5, 3.05, 4.4, 0.4, { fontSize: 9.5, color: 'FFFFFF' });
     const specs = [
-      ['Data specialist', 'MdStorage', BLUE, 'Cohorts, timelines, group-bys over the exchange', 'HIE tables today · BigQuery in phase 2'],
-      ['Guideline specialist', 'MdMenuBook', RED, 'Retrieval over MOPH guidelines with page citations', 'Hybrid search · RAG Engine in phase 2'],
-      ['Risk specialist', 'MdOutlineAutoGraph', YELLOW, 'Scores, explains, forecasts, simulates', 'XGBoost risk (AUC 0.85) · segments · forecast'],
-      ['Population-health MCP', 'MdHub', GREEN, 'Care gaps, quality measures, stratification', 'Nabd MCP server — the gap in Google\'s catalogue'],
+      ['Data specialist', 'MdStorage', BLUE, 'Cohorts, timelines, group-bys over the exchange', 'HIE tables in the demo · BigQuery on Google Cloud'],
+      ['Guideline specialist', 'MdMenuBook', RED, 'Retrieval over the national guidelines with page citations', 'Hybrid search · Vertex AI RAG Engine on Google Cloud'],
+      ['Risk specialist', 'MdOutlineAutoGraph', YELLOW, 'Scores, explains, forecasts, simulates', 'XGBoost risk model (AUC 0.85) · segments · forecast'],
+      ['Population-health MCP', 'MdHub', GREEN, 'Care gaps, quality measures, stratification', 'Nabd MCP server, seven tools, any MCP client'],
       ['Action specialist', 'MdOutlineAssignmentTurnedIn', GREY, 'Drafts prescriptions, recalls, referrals', 'Human-in-the-loop approval queue'],
     ];
     for (let i = 0; i < specs.length; i++) {
@@ -220,71 +221,62 @@ const label = (s, text, x, y, w, color = GREY) => T(s, text.toUpperCase(), x, y,
       T(s, does, x + 0.15, 5.0, w - 0.3, 0.65, { fontSize: 10, color: INK, lineSpacingMultiple: 1.15 });
       T(s, via, x + 0.15, 5.62, w - 0.3, 0.5, { fontSize: 9, color: c === YELLOW ? 'B06000' : c, bold: true, lineSpacingMultiple: 1.1 });
     }
-    // result strip
     rect(s, 0.6, 6.3, 12.1, 0.62, LGREEN);
     s.addImage({ data: await icon('MdVerifiedUser', GREEN), x: 0.8, y: 6.46, w: 0.3, h: 0.3 });
-    T(s, [{ text: 'Every answer ships with its evidence: ', options: { bold: true, color: INK } }, { text: 'the tool trace, guideline citations, model drivers and any drafted action — streamed live so the user watches the agents work. Specialists also mean least privilege (the guideline agent cannot draft a prescription) and ~30% fewer tokens per question than one flat agent.', options: { color: GREY } }],
+    T(s, [{ text: 'Every answer ships with its evidence: ', options: { bold: true, color: INK } }, { text: 'the tool trace, guideline citations, model drivers and any drafted action, streamed live so the user watches the agents work.', options: { color: GREY } }],
       1.2, 6.32, 11.4, 0.6, { fontSize: 10, valign: 'middle', lineSpacingMultiple: 1.1 });
     footer(s, 5);
-    s.addNotes('Walk top to bottom once: question → supervisor → specialists → tools → evidence. Pre-empt "why five agents": least privilege, independent evaluation, cheaper per question — measured in the evaluation tab. Mention that the MCP specialist is the reveal for later: Google ships MCP servers to read FHIR and query BigQuery, but none that reasons about a population; we built that one.');
+    s.addNotes('Walk top to bottom once: question, supervisor, specialists, tools, evidence. Pre-empt "why five agents": least privilege (the guideline agent cannot draft a prescription), independent evaluation (each specialist has its own test set), and cost (a flat agent re-reads every tool schema on every hop; the measurement is in the evaluation tab). The MCP specialist is the interesting one: Google ships MCP servers to read FHIR and to query BigQuery; none reasons about a population. We built that one.');
   }
 
-  /* ───────────────────────── 6. Architecture A — SAS ───────────────────────── */
+  /* ───────────────────────── 6. Architecture A: SAS Viya ───────────────────────── */
   {
     const s = pres.addSlide();
-    headline(s, 'Reference architecture A — SAS Viya, the federal-entity MVP', 'What was built and proven first: agentic retrieval over guidelines, structured data in CAS, tools behind an MCP server.');
-    // unstructured region
+    headline(s, 'Reference architecture A: SAS Viya, the first working version', 'What was built and proven first: agentic retrieval over guidelines, structured data in CAS, tools behind an MCP server.');
     dashed(s, 0.6, 1.95, 3.1, 2.85, BLUE);
     label(s, 'Unstructured data', 0.8, 2.05, 2.8, BLUE2);
-    await pbox(s, 0.8, 2.3, 2.7, 0.78, 'Clinical guidelines & policy', 'national guidelines · care protocols · policy frameworks', { ic: 'MdOutlineDescription', icColor: GREY });
+    await pbox(s, 0.8, 2.3, 2.7, 0.78, 'Clinical guidelines and policy', 'national guidelines · care protocols · policy frameworks', { ic: 'MdOutlineDescription', icColor: GREY });
     arrow(s, 2.15, 3.08, 2.15, 3.28);
     await pbox(s, 0.8, 3.3, 2.7, 0.42, 'Embedding model', null, { fill: LBLUE, line: LBLUE });
     arrow(s, 2.15, 3.72, 2.15, 3.92);
     await pbox(s, 0.8, 3.94, 2.7, 0.66, 'Vector store (RAG)', 'agentic retrieval at question time', { fill: BLUE2, line: BLUE2, titleColor: 'FFFFFF' });
-    // structured region
     dashed(s, 0.6, 5.0, 3.1, 1.45, BLUE);
     label(s, 'Structured data', 0.8, 5.1, 2.8, BLUE2);
     await pbox(s, 0.8, 5.35, 2.7, 0.95, 'National HIE', 'patients · encounters · diagnoses · facilities (tabular)', { ic: 'MdStorage', icColor: GREY });
-    // CAS
     await pbox(s, 4.3, 5.35, 2.7, 0.95, 'CAS table (SAS Viya)', 'in-memory analytics tables · read by the SQL tool', { ic: 'MdDataObject', icColor: BLUE2, fill: CARD, line: CARD });
     arrow(s, 3.5, 5.82, 4.3, 5.82, GREY, 'dash');
-    // agent
     rect(s, 4.3, 1.95, 3.0, 2.8, BLUE);
     T(s, 'Health Analytics Agent', 4.5, 2.1, 2.7, 0.35, { fontSize: 13, bold: true, color: 'FFFFFF' });
-    T(s, 'Patient-level queries, population insights, cost forecasting, policy simulation — with traceable, cited reasoning', 4.5, 2.5, 2.7, 0.9, { fontSize: 9.5, color: 'FFFFFF', lineSpacingMultiple: 1.15 });
+    T(s, 'Patient-level queries, population insights, cost forecasting, policy simulation, with traceable, cited reasoning', 4.5, 2.5, 2.7, 0.9, { fontSize: 9.5, color: 'FFFFFF', lineSpacingMultiple: 1.15 });
     rect(s, 4.5, 3.5, 2.6, 1.05, 'FFFFFF');
     T(s, [{ text: 'Orchestrator', options: { bullet: true, breakLine: true } }, { text: 'Guideline grounding', options: { bullet: true, breakLine: true } }, { text: 'Audit log', options: { bullet: true } }], 4.6, 3.58, 2.4, 0.9, { fontSize: 10, color: INK, paraSpaceAfter: 2 });
     arrow(s, 3.7, 3.3, 4.3, 3.3, BLUE2);
-    // MCP server
     await pbox(s, 7.75, 2.7, 1.55, 1.3, 'MCP server', 'tool gateway', { fill: LBLUE, line: LBLUE, ic: 'MdHub', icColor: BLUE2, titleColor: BLUE2 });
     arrow(s, 7.3, 3.35, 7.75, 3.35, BLUE2);
-    // tools
     label(s, 'Tools', 9.75, 1.98, 3, BLUE2);
-    const tools = [['Run & build ML model', 'forecasting · simulation', CARD2], ['Run decision flow', 'SAS Intelligent Decisioning', LBLUE], ['Generate charts', 'for the answer', LBLUE], ['Query data (SQL)', 'over the CAS tables', BLUE2]];
+    const tools = [['Run and build ML model', 'forecasting · simulation', CARD2], ['Run decision flow', 'SAS Intelligent Decisioning', LBLUE], ['Generate charts', 'for the answer', LBLUE], ['Query data (SQL)', 'over the CAS tables', BLUE2]];
     for (let i = 0; i < tools.length; i++) {
       const [t, sub, f] = tools[i]; const y = 2.25 + i * 0.7;
       await pbox(s, 9.75, y, 2.95, 0.6, t, sub, { fill: f, line: f, titleColor: f === BLUE2 ? 'FFFFFF' : INK, subFs: 8, fs: 10 });
       arrow(s, 9.3, 3.35, 9.75, y + 0.3, BLUE2);
     }
-    // delivered
     rect(s, 7.75, 5.2, 4.95, 1.25, CARD);
     T(s, 'What it delivered', 7.95, 5.28, 4.5, 0.3, { fontSize: 11.5, bold: true, color: INK });
-    T(s, [{ text: 'Natural-language questions → governed analytics, cohorts and charts', options: { bullet: true, breakLine: true } }, { text: 'ML scoring, forecasting and policy simulation on demand', options: { bullet: true, breakLine: true } }, { text: 'Every answer cites national guidelines and shows its tool calls', options: { bullet: true } }],
+    T(s, [{ text: 'Natural-language questions answered with governed analytics, cohorts and charts', options: { bullet: true, breakLine: true } }, { text: 'ML scoring, forecasting and policy simulation on demand', options: { bullet: true, breakLine: true } }, { text: 'Traceable reasoning: every answer carries its tool calls and sources', options: { bullet: true } }],
       7.95, 5.58, 4.6, 0.85, { fontSize: 9.5, color: GREY, paraSpaceAfter: 2 });
-    footer(s, 6, 'Reference: SAS Health Analytics Platform, agentic AI MVP at a federal health entity (GCC), 2025');
-    s.addNotes('Credit the SAS build honestly: this is where the pattern was proven — an orchestrating agent, guideline grounding, an MCP server exposing SQL, models, decision flows and charts. Then the pivot sentence for the next slide: "the pattern is right; the question for MOPH is which platform runs it at national scale, in Doha, with managed services underneath."');
+    footer(s, 6, 'Reference: agentic AI MVP on SAS Viya at a federal health entity in the GCC, 2025');
+    s.addNotes('Credit the first version honestly: this is where the pattern was proven. An orchestrating agent, guideline grounding, an MCP server exposing SQL, models, decision flows and charts. Then the pivot sentence: the pattern is right; the question for the ministry is which platform runs it at national scale, in Doha, with managed services underneath.');
   }
 
-  /* ───────────────────────── 7. Architecture B — Google Cloud ───────────────────────── */
+  /* ───────────────────────── 7. Architecture B: Google Cloud ───────────────────────── */
   {
     const s = pres.addSlide();
-    headline(s, 'Reference architecture B — Google Cloud, me-central1 (Doha)', 'The same pattern on managed services, structured as Google\'s RAG reference architecture: a data ingestion subsystem and a serving subsystem.');
-    // ingestion region
+    headline(s, 'Reference architecture B: Google Cloud, me-central1 (Doha)', 'The same pattern on managed services, following Google\'s RAG reference architecture: a data ingestion subsystem and a serving subsystem.');
     dashed(s, 0.6, 1.95, 5.95, 4.35, BLUE);
     label(s, 'Data ingestion subsystem', 0.8, 2.05, 5, BLUE2);
-    const srcs = [['QHIE — FHIR R4', 'MdLocalHospital'], ['HMC · PHCC EHRs (HL7v2)', 'MdLocalHospital'], ['Claims · pharmacy (nightly)', 'MdOutlinePayments'], ['MOPH guidelines (PDF)', 'MdOutlineDescription']];
+    const srcs = [['National HIE (FHIR R4)', 'MdLocalHospital'], ['Hospital and primary-care EHRs (HL7v2)', 'MdLocalHospital'], ['Claims and pharmacy (nightly)', 'MdOutlinePayments'], ['National clinical guidelines (PDF)', 'MdOutlineDescription']];
     for (let i = 0; i < srcs.length; i++) {
-      await pbox(s, 0.8, 2.35 + i * 0.66, 1.95, 0.56, srcs[i][0], null, { ic: srcs[i][1], icColor: GREY, fs: 9 });
+      await pbox(s, 0.8, 2.35 + i * 0.66, 1.95, 0.56, srcs[i][0], null, { ic: srcs[i][1], icColor: GREY, fs: 8.5 });
     }
     await pbox(s, 3.05, 2.35, 1.6, 1.22, 'Cloud Healthcare API', 'FHIR store · consent · de-identification · Pub/Sub events', { fill: LBLUE, line: LBLUE, fs: 9.5, subFs: 7.5 });
     await pbox(s, 4.9, 2.35, 1.45, 1.22, 'BigQuery', 'streaming export · curated marts · BigQuery ML', { fill: BLUE2, line: BLUE2, titleColor: 'FFFFFF', fs: 10, subFs: 7.5 });
@@ -294,13 +286,12 @@ const label = (s, text, x, y, w, color = GREY) => T(s, text.toUpperCase(), x, y,
     await pbox(s, 3.05, 4.35, 1.6, 0.56, 'Cloud Storage', 'versioned corpus', { fs: 9, subFs: 7.5 });
     await pbox(s, 4.9, 4.0, 1.45, 1.25, 'RAG Engine', 'embeddings · vector index · page-level citations', { fill: LBLUE, line: LBLUE, fs: 9.5, subFs: 7.5 });
     arrow(s, 2.75, 4.61, 3.05, 4.61, GREY); arrow(s, 4.65, 4.61, 4.9, 4.61, GREY);
-    await pbox(s, 0.8, 5.05, 5.55, 0.98, 'Vertex AI — models', 'Pipelines train the XGBoost risk model on BigQuery data → Model Registry → online endpoint for point-of-care scoring, batch prediction for the nightly cohort; drift monitoring', { fill: CARD2, line: CARD2, ic: 'MdOutlineAutoGraph', icColor: BLUE2, fs: 9.5, subFs: 7.5 });
-    // serving region
+    await pbox(s, 0.8, 5.05, 5.55, 0.98, 'Vertex AI: models', 'Pipelines train the XGBoost risk model on BigQuery data, register it in Model Registry, and serve it on an online endpoint for point-of-care scoring, with batch prediction for the nightly cohort; drift monitoring in region.', { fill: LYELLOW, line: LYELLOW, fs: 9.5, subFs: 7.5 });
     dashed(s, 6.8, 1.95, 5.9, 4.35, GREEN);
     label(s, 'Serving subsystem', 7.0, 2.05, 5, '1E8E3E');
-    await pbox(s, 7.0, 2.35, 1.65, 1.0, 'Users', 'clinicians · MOPH directors · web, tablet, voice', { ic: 'MdOutlineGroups', icColor: GREY, fs: 9.5, subFs: 7.5 });
-    await pbox(s, 8.9, 2.35, 1.7, 1.0, 'Cloud Run — Nabd app', 'React + API · Speech-to-Text / TTS (Arabic, English)', { fs: 9.5, subFs: 7.5 });
-    await pbox(s, 10.85, 2.35, 1.65, 1.0, 'Agent runtime', 'ADK graph · Gemini 3.8 Flash · sessions · traces', { fill: '1E8E3E', line: '1E8E3E', titleColor: 'FFFFFF', fs: 9.5, subFs: 7.5 });
+    await pbox(s, 7.0, 2.35, 1.65, 1.0, 'Users', 'clinicians · health leaders · web, tablet, voice', { ic: 'MdOutlineGroups', icColor: GREY, fs: 9.5, subFs: 7.5 });
+    await pbox(s, 8.9, 2.35, 1.7, 1.0, 'Cloud Run: Nabd app', 'React + API · Speech-to-Text / Text-to-Speech (Arabic, English)', { fs: 9.5, subFs: 7.5 });
+    await pbox(s, 10.85, 2.35, 1.65, 1.0, 'Agent runtime', 'ADK graph · Gemini Flash · sessions · traces', { fill: '1E8E3E', line: '1E8E3E', titleColor: 'FFFFFF', fs: 9.5, subFs: 7.5 });
     arrow(s, 8.65, 2.85, 8.9, 2.85, GREY); arrow(s, 10.6, 2.85, 10.85, 2.85, GREY);
     label(s, 'Tools the agent calls', 7.0, 3.55, 4, GREY);
     const tls = [['MCP Toolbox', 'BigQuery · FHIR (Google)'], ['Nabd pop-health MCP', 'care gaps · measures · simulation'], ['Vertex AI endpoint', 'risk score + drivers'], ['RAG Engine retrieval', 'cited guideline passages']];
@@ -312,53 +303,106 @@ const label = (s, text, x, y, w, color = GREY) => T(s, text.toUpperCase(), x, y,
     await pbox(s, 7.0, 5.2, 2.7, 0.83, 'Human approval queue', 'drafts signed by a named clinician', { ic: 'MdOutlineHowToReg', icColor: GREEN, fs: 9, subFs: 7.5 });
     await pbox(s, 9.85, 5.2, 2.7, 0.83, 'Write-back', 'approved items posted as FHIR Task to the EHR via Healthcare API', { ic: 'MdOutlineAssignmentTurnedIn', icColor: GREEN, fs: 9, subFs: 7.5 });
     arrow(s, 9.7, 5.6, 9.85, 5.6, GREY);
-    // ingestion → serving link
     arrow(s, 6.55, 4.35, 6.8, 4.35, BLUE2, 'dash');
-    T(s, 'data & models', 6.35, 4.05, 0.85, 0.25, { fontSize: 7, color: BLUE2, align: 'center' });
-    // cross-cutting
+    T(s, 'data and models', 6.3, 3.88, 0.95, 0.2, { fontSize: 7, color: BLUE2, align: 'center' });
     rect(s, 0.6, 6.45, 12.1, 0.5, CARD);
     s.addImage({ data: await icon('MdOutlineLock', GREY), x: 0.78, y: 6.56, w: 0.28, h: 0.28 });
-    T(s, [{ text: 'Sovereignty & operations: ', options: { bold: true, color: INK } }, { text: 'PHI at rest in me-central1 under an Assured Workloads Qatar Data Boundary · VPC Service Controls · CMEK · least-privilege service accounts · Cloud Logging & Trace · Gen AI evaluation as a release gate · the LLM only ever sees pseudonymised, aggregated data.', options: { color: GREY } }],
+    T(s, [{ text: 'Sovereignty and operations: ', options: { bold: true, color: INK } }, { text: 'PHI at rest in me-central1 under an Assured Workloads Qatar data boundary · VPC Service Controls · CMEK · least-privilege service accounts · Cloud Audit Logs · Gemini served from the global endpoint on pseudonymised prompts only.', options: { color: GREY } }],
       1.15, 6.45, 11.5, 0.5, { fontSize: 9, valign: 'middle', lineSpacingMultiple: 1.05 });
-    footer(s, 7, 'Pattern: Google Cloud Architecture Center — "RAG infrastructure for generative AI using Gemini Enterprise and Agent Platform"');
-    s.addNotes('Read it left to right like Google\'s own reference: ingestion on the left (Healthcare API → BigQuery; guidelines → RAG Engine; Vertex trains and serves the risk model), serving on the right (Cloud Run app, the ADK agent on Gemini, the four tool families, the human queue, FHIR write-back). Two Doha-specific decisions to name if asked: Gemini is served from the global endpoint, acceptable because the agent only ever sees pseudonymised aggregates; and the agent runtime is Cloud Run in Doha until Agent Engine reaches me-central1. Both are architecture decisions, not accidents.');
+    footer(s, 7, 'Pattern: Google Cloud Architecture Center, "RAG infrastructure for generative AI using Gemini Enterprise and Agent Platform"');
+    s.addNotes('Read it left to right like Google\'s own reference: ingestion on the left (Healthcare API to BigQuery; guidelines to RAG Engine; Vertex AI trains and serves the risk model), serving on the right (Cloud Run app, the ADK agent on Gemini, the four tool families, the human queue, FHIR write-back). Two Doha-specific decisions to name: Gemini is served from the global endpoint, acceptable because the agent only ever sees pseudonymised identifiers and aggregates; and the agent runtime is Cloud Run in Doha until Agent Engine is available in me-central1. Both are decisions, not accidents.');
   }
 
-  /* ───────────────────────── 8. Roadmap + demo agenda ───────────────────────── */
+  /* ───────────────────────── 8. Technical architecture ───────────────────────── */
   {
     const s = pres.addSlide();
-    headline(s, 'Phased delivery — value at every step, and what you will see in the next 20 minutes');
-    const phases = [
-      ['Phase 1 · today', 'Proof of concept', BLUE, 'Running now on a 4,000-patient synthetic exchange: the agent graph, four models, the population-health MCP server, guideline RAG, the approval queue, voice, and an evaluation harness that grades the models and the agents on held-out data.'],
-      ['Phase 2 · 8–12 weeks', 'Google Cloud, Doha', YELLOW, 'Same container on Cloud Run in me-central1; the exchange in BigQuery; Gemini and embeddings through Vertex AI with service-account auth; risk model on a Vertex endpoint; a QHIE test feed through the Cloud Healthcare API. Pilot at four sites.'],
-      ['Phase 3 · national', 'Scale and integrate', GREEN, 'FHIR streaming from all facilities, HL7v2 bridges for legacy sites, Looker for governed KPIs, MedGemma for clinical notes, Agent Engine when it lands in Qatar, evaluation gates in CI, MOPH SSO and write-back to the EHR.'],
+    headline(s, 'Technical view: the request path, the data path, and how it fails safely', 'Synchronous per question; batch per population; every component regional in me-central1 and zone-redundant.');
+    // Lane A: request path
+    dashed(s, 0.6, 1.9, 12.1, 1.6, BLUE);
+    label(s, 'Request path: one question, synchronous, p95 under 15 seconds', 0.8, 2.0, 8, BLUE2);
+    const reqSteps = [
+      ['User', 'web or voice · Arabic / English · Identity-Aware Proxy in front', 'MdRecordVoiceOver'],
+      ['Cloud Run: app + API', 'React front end · FastAPI · streams the trace as NDJSON', 'MdWeb'],
+      ['ADK supervisor', 'Gemini Flash via Vertex AI · low thinking on routing turns · session in AlloyDB', 'MdSmartToy'],
+      ['Specialist tools', 'MCP Toolbox (BigQuery) · Nabd MCP (Cloud Run) · Vertex endpoint · RAG Engine', 'MdHub'],
+      ['Answer and action', 'trace + citations to the user · drafts to the queue · signed items as FHIR Task', 'MdOutlineAssignmentTurnedIn'],
     ];
-    for (let i = 0; i < phases.length; i++) {
-      const [when, name, c, d] = phases[i]; const x = 0.6 + i * 4.1;
-      rect(s, x, 1.6, 3.9, 2.55, CARD);
-      T(s, when, x + 0.25, 1.75, 3.4, 0.25, { fontSize: 9.5, bold: true, color: c === YELLOW ? 'B06000' : c, charSpacing: 1.5 });
-      T(s, name, x + 0.25, 2.0, 3.4, 0.4, { fontSize: 16, bold: true, color: INK });
-      T(s, d, x + 0.25, 2.45, 3.4, 1.65, { fontSize: 10.5, color: GREY, lineSpacingMultiple: 1.2 });
-      if (i < 2) arrow(s, x + 3.92, 2.9, x + 4.08, 2.9, GREY);
+    for (let i = 0; i < reqSteps.length; i++) {
+      const [t, sub, ic] = reqSteps[i]; const x = 0.8 + i * 2.42;
+      numCircle(s, i + 1, x, 2.32, 0.26, BLUE2);
+      await pbox(s, x + 0.32, 2.3, 1.95, 1.08, t, sub, { ic, icColor: BLUE2, fs: 9.5, subFs: 7.5 });
+      if (i < reqSteps.length - 1) arrow(s, x + 2.27, 2.84, x + 2.42, 2.84, GREY);
     }
-    label(s, 'Demo agenda', 0.6, 4.5, 4);
-    const acts = [
-      ['1', BLUE, 'The clinician\'s morning', 'Dr. Amal asks for her briefing. One patient: 360 view, explained risk, the guideline passage, a draft prescription that waits for her signature.'],
-      ['2', RED, 'The ministry\'s view', 'Dr. Khalid asks for the national picture: control rates, care gaps by facility and nationality, cost concentration, and a simulation of closing the SGLT2 / GLP-1 treatment gap before any money is spent.'],
-      ['3', GREEN, 'Under the hood', 'The population-health MCP server answering another client, the live agent trace, and the evaluation tab: held-out model accuracy, agent evalset, cost per question.'],
+    // Lane B: data path
+    dashed(s, 0.6, 3.65, 12.1, 1.6, YELLOW);
+    label(s, 'Data path: nightly batch for the population, events for the patient', 0.8, 3.75, 8, 'B06000');
+    const dataSteps = [
+      ['Healthcare API FHIR store', 'HL7v2 and FHIR ingestion · consent · de-identification · Pub/Sub on every new resource', 'MdLocalHospital'],
+      ['BigQuery streaming export', 'FHIR resources land as tables within seconds · time travel and snapshots for recovery', 'MdStorage'],
+      ['Curated marts (Dataform)', 'patient_summary · care gaps · quality measures · equity views, rebuilt at 02:00', 'MdDataObject'],
+      ['BigQuery ML batch scoring', 'every patient re-scored nightly · scores and drivers written back for the tools', 'MdOutlineAutoGraph'],
+      ['Event path', 'a new HbA1c fires Pub/Sub · Cloud Run scorer calls the Vertex endpoint · one patient in seconds', 'MdBolt'],
     ];
-    for (let i = 0; i < acts.length; i++) {
-      const [n, c, h, d] = acts[i]; const x = 0.6 + i * 4.1;
-      circle(s, x, 4.85, 0.5, c);
-      T(s, n, x, 4.85, 0.5, 0.5, { fontSize: 16, bold: true, color: 'FFFFFF', align: 'center', valign: 'middle' });
-      T(s, h, x + 0.65, 4.9, 3.2, 0.4, { fontSize: 13.5, bold: true, color: INK });
-      T(s, d, x, 5.5, 3.85, 1.3, { fontSize: 10.5, color: GREY, lineSpacingMultiple: 1.2 });
+    for (let i = 0; i < dataSteps.length; i++) {
+      const [t, sub, ic] = dataSteps[i]; const x = 0.8 + i * 2.42;
+      await pbox(s, x, 4.05, 2.27, 1.08, t, sub, { ic, icColor: 'B06000', fs: 9.5, subFs: 7.5 });
+      if (i < dataSteps.length - 2) arrow(s, x + 2.27, 4.59, x + 2.42, 4.59, GREY);
     }
-    T(s, 'Every number in the demo is computed live from the exchange by a tool; nothing is a slide.', 0.6, 6.75, 12, 0.3, { fontSize: 10.5, italic: true, color: INK });
+    // Lane C: resilience and operations
+    dashed(s, 0.6, 5.4, 12.1, 1.55, GREEN);
+    label(s, 'Resilience and operations', 0.8, 5.5, 6, '1E8E3E');
+    const ops = [
+      ['A zone fails', 'Cloud Run, BigQuery, Healthcare API and AlloyDB are zone-redundant inside me-central1. Traffic re-routes, no data loss, nobody is paged.'],
+      ['The region fails', 'Residency rules keep data in country, so recovery is in-region: BigQuery time travel, AlloyDB and Storage backups. Stated RPO 24 h, RTO 4 h.'],
+      ['Gemini is saturated', 'The supervisor moves down a tested model list; if no model answers, the scripted engine runs the same tools without the language model.'],
+      ['Delivery and observability', 'Terraform · Cloud Build · Artifact Registry · Cloud Logging, Trace and Monitoring with SLOs on first token and answer time.'],
+    ];
+    for (let i = 0; i < ops.length; i++) {
+      const [t, sub] = ops[i]; const x = 0.8 + i * 2.98;
+      await pbox(s, x, 5.78, 2.8, 1.08, t, sub, { fill: LGREEN, line: LGREEN, fs: 9.5, subFs: 7.5 });
+    }
     footer(s, 8);
-    s.addNotes('Close the deck by making the demo the proof: three acts, twenty minutes, and the sentence "every number is computed live by a tool; nothing is a slide." Then switch to the browser. If time is short, phase 3 can be one sentence: "national scale is the same contracts on more managed services".');
+    s.addNotes('This slide exists for the technical questions. Top lane: one question is one synchronous path, five hops, streamed. Middle lane: the population numbers are batch, rebuilt nightly, because they move over weeks; only the per-patient signal is event-driven. Bottom lane: a zone failure is invisible by construction because every service is regional and zone-redundant; a region failure is the honest limit of in-country residency, so recovery is in-region with a stated RPO and RTO; Gemini saturation degrades to the scripted engine, which the demo can show; and delivery is Terraform plus Cloud Build with SLOs on first token and answer time.');
   }
 
-  await pres.writeFile({ fileName: 'Nabd_MOPH_Google_Cloud.pptx' });
+  /* ───────────────────────── 9. Demo agenda and service mapping ───────────────────────── */
+  {
+    const s = pres.addSlide();
+    headline(s, 'What you will see in the next twenty minutes', 'A working system on a 4,000-patient synthetic exchange. Every number is computed live by a tool call; nothing is pre-rendered.');
+    const acts = [
+      ['1', BLUE, 'The clinician\'s morning', 'A panel briefing, then one patient: the 360 view, an explained risk score, the guideline passage, and a draft prescription that waits for her signature. Then the what-if simulator on the same patient.'],
+      ['2', RED, 'The ministry\'s view', 'The national picture: control rates, care gaps by facility and nationality, cost concentration, and a simulation of five programmes before any money is spent.'],
+      ['3', GREEN, 'Under the hood', 'The population-health MCP server, the live agent trace, and the evaluation tab: held-out model accuracy, the agent evalset, model choice and cost per question.'],
+    ];
+    for (let i = 0; i < acts.length; i++) {
+      const [n, c, h, d] = acts[i]; const y = 2.0 + i * 1.45;
+      circle(s, 0.6, y, 0.5, c);
+      T(s, n, 0.6, y, 0.5, 0.5, { fontSize: 16, bold: true, color: 'FFFFFF', align: 'center', valign: 'middle' });
+      T(s, h, 1.3, y + 0.02, 5.6, 0.4, { fontSize: 14, bold: true, color: INK });
+      T(s, d, 1.3, y + 0.45, 5.7, 0.95, { fontSize: 10.5, color: GREY, lineSpacingMultiple: 1.2 });
+    }
+    rect(s, 7.6, 1.95, 5.1, 4.55, CARD);
+    T(s, 'What each demo component is on Google Cloud', 7.85, 2.1, 4.7, 0.3, { fontSize: 12, bold: true, color: INK });
+    const map = [
+      ['HIE tables', 'BigQuery, streamed from the Cloud Healthcare API FHIR store'],
+      ['Guideline retrieval', 'Vertex AI RAG Engine over a Cloud Storage corpus'],
+      ['Risk model', 'BigQuery ML or Vertex AI training; online endpoint for scoring'],
+      ['Agents', 'ADK on Cloud Run in Doha; Agent Engine when available in region'],
+      ['Population-health MCP', 'Cloud Run service, alongside Google\'s MCP Toolbox'],
+      ['Approval queue', 'AlloyDB; signed items written back as FHIR Task'],
+      ['Voice', 'Speech-to-Text and Text-to-Speech, Arabic and English'],
+      ['Evaluation', 'Gen AI Evaluation Service with Gemini Pro as judge, in Cloud Build'],
+    ];
+    for (let i = 0; i < map.length; i++) {
+      const [k, v] = map[i]; const y = 2.5 + i * 0.48;
+      T(s, k, 7.85, y, 1.75, 0.42, { fontSize: 9.5, bold: true, color: INK, valign: 'middle' });
+      T(s, v, 9.6, y, 2.95, 0.42, { fontSize: 9, color: GREY, valign: 'middle', lineSpacingMultiple: 1.05 });
+      if (i < map.length - 1) s.addShape(pres.ShapeType.line, { x: 7.85, y: y + 0.45, w: 4.7, h: 0, line: { color: LINE, width: 0.5 } });
+    }
+    footer(s, 9);
+    s.addNotes('Close the deck by making the demo the proof: three acts, twenty minutes, every number computed live. The right-hand table is for the question "what would this be on Google Cloud": each demo component has a named managed service, and the mapping is one sentence each. Then switch to the browser.');
+  }
+
+  await pres.writeFile({ fileName: 'Nabd_Google_Cloud.pptx' });
   console.log('written');
 })().catch((e) => { console.error(e); process.exit(1); });

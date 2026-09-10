@@ -373,7 +373,7 @@ def llm_selection() -> dict:
                          "prompt the model reads on every hop is ~1/4 of a flat agent's; specialists can be "
                          "evaluated, rate-limited and permissioned separately (least privilege: the guideline "
                          "agent cannot draft prescriptions); and the MCP agent is swappable for Google's "
-                         "managed servers in phase 2 without touching the others."),
+                         "managed servers on Google Cloud without touching the others."),
         },
     }
 
@@ -382,19 +382,19 @@ def llm_selection() -> dict:
 
 def governance() -> list[dict]:
     return [
-        {"area": "Data", "control": "Synthetic data only, zero PHI in this PoC", "status": "implemented", "evidence": "Data tab · generator is seeded and documented"},
+        {"area": "Data", "control": "Synthetic data only, zero PHI in this demonstration", "status": "implemented", "evidence": "Data tab · generator is seeded and documented"},
         {"area": "Data", "control": "Consent enforcement, restricted patients blocked at the tool layer, denial audited", "status": "implemented", "evidence": "Audit tab · CONSENT·DENY events"},
-        {"area": "Data", "control": "FHIR consent enforcement (consentConfig.accessEnforced) + de-identified analytics zone", "status": "phase 2", "evidence": "Architecture tab · Store & Govern lane"},
+        {"area": "Data", "control": "FHIR consent enforcement (consentConfig.accessEnforced) + de-identified analytics zone", "status": "google_cloud", "evidence": "Reference architecture, ingestion subsystem"},
         {"area": "Model", "control": "Held-out evaluation, calibration and subgroup fairness reported per model version", "status": "implemented", "evidence": "This tab · Model evaluation"},
         {"area": "Model", "control": "Model cards with intended use and limitations; versions pinned", "status": "implemented", "evidence": "Risk & Models dashboard"},
-        {"area": "Model", "control": "Vertex Model Registry + in-region drift monitoring (BigQuery drift jobs; Model Monitoring where offered) + scheduled retraining with a fairness gate", "status": "phase 2", "evidence": "Architecture tab · Analytics & ML lane · ADR-10"},
+        {"area": "Model", "control": "Vertex Model Registry + in-region drift monitoring (BigQuery drift jobs; Model Monitoring where offered) + scheduled retraining with a fairness gate", "status": "google_cloud", "evidence": "Reference architecture, Vertex AI models"},
         {"area": "Agent", "control": "Numbers only from tools; clinical claims only with citations; actions only via the human queue", "status": "implemented", "evidence": "Supervisor instruction · agent trace"},
         {"area": "Agent", "control": "Golden evalset with trajectory, groundedness, action-safety and faithfulness checks", "status": "implemented", "evidence": "This tab · Agent evaluation"},
         {"area": "Agent", "control": "Least-privilege tools per specialist (guideline agent cannot draft; action agent cannot read cohorts)", "status": "implemented", "evidence": "Agent definitions"},
-        {"area": "Agent", "control": "Prompt & response screening, Sensitive Data Protection in me-central1, then Model Armor (injection / jailbreak)", "status": "phase 2", "evidence": "Architecture tab · Agents lane"},
-        {"area": "Agent", "control": "adk eval in CI as a release gate; Gen AI Evaluation Service as LLM judge", "status": "phase 2", "evidence": "Evalset format is ADK-compatible"},
+        {"area": "Agent", "control": "Prompt & response screening, Sensitive Data Protection in me-central1, then Model Armor (injection / jailbreak)", "status": "google_cloud", "evidence": "Reference architecture, agent runtime"},
+        {"area": "Agent", "control": "adk eval in CI as a release gate; Gen AI Evaluation Service as LLM judge", "status": "google_cloud", "evidence": "Evalset format is ADK-compatible"},
         {"area": "Operations", "control": "Full audit trail of tool calls, scores, drafts and human decisions", "status": "implemented", "evidence": "Audit tab"},
-        {"area": "Operations", "control": "Cloud Audit Logs + OpenTelemetry traces from the ADK runtime to Cloud Trace", "status": "phase 2", "evidence": "Architecture tab · Observability rail"},
-        {"area": "Sovereignty", "control": "Data and agent runtime in me-central1 (Doha) under an Assured Workloads Qatar Data Boundary; CMEK; VPC Service Controls; LLM receives pseudonymous data only", "status": "phase 2", "evidence": "Architecture tab · ADR-01 · ADR-10"},
+        {"area": "Operations", "control": "Cloud Audit Logs + OpenTelemetry traces from the ADK runtime to Cloud Trace", "status": "google_cloud", "evidence": "Reference architecture, operations"},
+        {"area": "Sovereignty", "control": "Data and agent runtime in me-central1 (Doha) under an Assured Workloads Qatar Data Boundary; CMEK; VPC Service Controls; LLM receives pseudonymous data only", "status": "google_cloud", "evidence": "Reference architecture, sovereignty strip"},
         {"area": "Clinical safety", "control": "Human-in-the-loop for every clinical write; no autonomous prescribing", "status": "implemented", "evidence": "Queue tab"},
     ]

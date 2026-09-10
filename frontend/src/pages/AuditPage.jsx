@@ -30,7 +30,7 @@ export default function AuditPage() {
         </h1>
         <p className="text-[11px] mt-1 mb-5" style={{ color: 'var(--text-dim)' }}>
           Every agent tool call, guideline retrieval, model score, consent denial and human decision: 
-          logged. Phase 2 maps this to Cloud Audit Logs + OpenTelemetry tracing on Agent Engine.
+          logged. On Google Cloud this is Cloud Audit Logs plus OpenTelemetry traces from the agent runtime into Cloud Trace.
         </p>
 
         <div className="glass-card">

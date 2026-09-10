@@ -147,7 +147,7 @@ export default function LandingPage({ go }) {
               <button className="btn-secondary" onClick={() => go('overview')}>Registry dashboards</button>
             </div>
             <p className="text-[11px] mt-5 reveal d5" style={{ color: 'var(--text-faint)' }}>
-              Gemini · Agent Development Kit · Model Context Protocol · gemini-embedding-001 · Phase 2: Cloud Healthcare API, BigQuery and Vertex AI in me-central1 (Doha)
+              Gemini · Agent Development Kit · Model Context Protocol · gemini-embedding-001 · Target platform: Google Cloud, me-central1 (Doha)
             </p>
           </div>
 
@@ -315,15 +315,19 @@ export default function LandingPage({ go }) {
         {/* ── BUILT ON GOOGLE ── */}
         <section className="landing-section pb-8">
           <div className="section-eyebrow">Built on Google Cloud</div>
-          <h2 className="section-title">Phase 1 runs today. Phase 2 moves the same contracts to Google Cloud in Doha.</h2>
-          <div className="flex flex-wrap gap-2 mt-4">
-            {[['Gemini 3', '#8A1538'], ['Agent Development Kit', '#8A1538'], ['Model Context Protocol', '#b8862e'],
+          <h2 className="section-title">Google AI in this demonstration, and the Google Cloud services it maps to in Doha.</h2>
+          <div className="text-[10px] font-bold uppercase tracking-[0.14em] mt-4 mb-1.5" style={{ color: 'var(--text-faint)' }}>In this demonstration</div>
+          <div className="flex flex-wrap gap-2">
+            {[['Gemini Flash', '#8A1538'], ['Agent Development Kit', '#8A1538'], ['Model Context Protocol', '#b8862e'],
               ['gemini-embedding-001', '#8A1538'], ['Web Speech · EN/AR', '#8a6a4e']].map(([n, c]) => (
               <span key={n} className="gcloud-chip"><span className="dot" style={{ background: c }} />{n}</span>
             ))}
-            {['Cloud Healthcare API · FHIR R4', 'BigQuery · BigQuery ML', 'Vertex AI endpoint',
-              'RAG Engine', 'Cloud Run · me-central1', 'Assured Workloads · Qatar Data Boundary'].map((n) => (
-              <span key={n} className="gcloud-chip phase2"><span className="dot" style={{ background: '#94a3b8' }} />{n} · phase 2</span>
+          </div>
+          <div className="text-[10px] font-bold uppercase tracking-[0.14em] mt-4 mb-1.5" style={{ color: 'var(--text-faint)' }}>On Google Cloud, me-central1</div>
+          <div className="flex flex-wrap gap-2">
+            {['Cloud Healthcare API · FHIR R4', 'BigQuery · BigQuery ML', 'Vertex AI endpoint', 'RAG Engine',
+              'Cloud Run', 'AlloyDB', 'Assured Workloads · Qatar Data Boundary'].map((n) => (
+              <span key={n} className="gcloud-chip target"><span className="dot" style={{ background: '#94a3b8' }} />{n}</span>
             ))}
           </div>
           <p className="text-[10.5px] mt-6" style={{ color: 'var(--text-faint)' }}>

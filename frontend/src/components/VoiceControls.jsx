@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 
 /**
  * Voice input (Web Speech API, English + Arabic) and optional spoken answers.
- * Phase 2 upgrades this to the Gemini Live API (GA) for native bidirectional audio.
+ * On Google Cloud: the Gemini Live API for native bidirectional audio.
  */
 export function VoiceInput({ onTranscript, disabled, lang }) {
   const [listening, setListening] = useState(false);

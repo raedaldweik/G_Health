@@ -15,7 +15,7 @@ Everything else is supporting detail. If time collapses, protect these three.
 | Clock | Segment | Minutes |
 |---|---|---|
 | 0:00 | Opening and framing | 1 |
-| 1:00 | Deck, eight slides | 9 |
+| 1:00 | Deck, nine slides | 9 |
 | 10:00 | Demo: landing page | 1 |
 | 11:00 | Act I: the clinician's morning (Kamal Miah) | 7 |
 | 18:00 | Risk simulator | 3 |
@@ -53,73 +53,71 @@ NOTE: Do not narrate your CV. The first slide is the customer, and the deck says
 
 SCREEN: Nabd, the Google colours, the subtitle.
 
-SAY: The customer is Qatar's Ministry of Public Health. They already have a national Health Information Exchange, a diabetes registry, and a predictive programme that was built on SAS Viya. I worked on that programme. What I want to show today is the next step: letting any clinician or any director ask the exchange a question and get an answer that is grounded, governed and actionable, running on Google Cloud in Doha.
+SAY: The customer is the health ministry of a Gulf state with a national Health Information Exchange. They already have a diabetes registry and a predictive programme that was built on SAS Viya. I worked on that programme. What I want to show today is the next step: letting any clinician or any director ask the exchange a question and get an answer that is grounded, governed and actionable, and what that looks like on Google Cloud in Doha.
 
-### Slide 2 — The problem (1:45, 75 seconds)
+NOTE: Do not name the ministry or the country's institutions on this slide. Qatar as a country and its public statistics are fine; the client is not.
+
+### Slide 2 — The problem (1:45, 60 seconds)
 
 SCREEN: three numbers across the top, three pains below.
 
 SAY: Three numbers frame it. Qatar is in the top five countries for adult diabetes prevalence. The cost of diabetes care is projected to rise from 1.8 to 5 billion riyals a year by 2035. And half of all dialysis in the country is attributable to diabetes.
 
-SAY: What clinicians and the ministry told us is not about those numbers. It is three frustrations. The patient story is fragmented: eighteen-plus facilities, an exchange with eight relational tables, and guidelines in PDFs. Care is reactive: risk is recognised at the admission, not before it. And insight is rationed: a director's question becomes an analyst's week, and a clinician cannot ask at all.
+SAY: What clinicians and health leaders told us is not about those numbers. It is three frustrations. The patient story is fragmented across facilities, tables and PDFs. Care is reactive: risk is recognised at the admission, not before it. And insight is rationed: a director's question becomes an analyst's week, and a clinician cannot ask at all. The registry can describe the population. It cannot yet tell a nurse who to call this morning.
 
-SAY: The sentence I would underline is this one. The registry can describe the population. It cannot yet tell a nurse who to call this morning.
-
-### Slide 3 — The journey (3:00, 60 seconds)
+### Slide 3 — From registry to agentic (2:45, 45 seconds)
 
 SCREEN: three stages, the third highlighted.
 
-SAY: The ministry is already two stages into this journey. Stage one is the registry: describe. How many, where, who. Stage two is the predictive programme: deterioration prediction, high versus low risk profiles, visit forecasts, cost impact. That is the work you saw on SAS.
+SAY: The ministry is two stages into this journey. Stage one is the registry: describe. Stage two is the predictive programme: deterioration prediction, risk profiles, visit forecasts, cost impact. Stage three is what I am proposing: ask and act. Agents query the exchange, cite the national guideline, run the models, and draft actions a human signs. The registry and the models are not replaced; they become tools the agent calls.
 
-SAY: Stage three is what I am proposing: ask and act. Any clinician or director asks in plain language; agents query the exchange, cite the national guideline, run the models, and draft actions a human signs. Nothing is thrown away. The registry and the models become tools the agent calls.
+### Slide 4 — Solution overview (3:30, 60 seconds)
 
-### Slide 4 — Solution overview (4:00, 75 seconds)
-
-SCREEN: four capability tiles on the left, the trust column on the right.
+SCREEN: four capability tiles on the left, the controls column on the right.
 
 SAY: Nabd is the Arabic word for pulse. It is one conversation over the exchange, the guidelines and the models. Four capabilities, deliberately the same four as the programme: a diabetic patient 360, risk stratification and visit prediction, guideline-grounded decision support, and population and cost simulation.
 
-SAY: The right-hand column is the answer to the question everyone is thinking, which is whether this is AI garbage. Four rules, all enforced in code and all visible in the demo. Numbers come only from tools; the model narrates, it never invents a value. Clinical claims come only with a citation, document and page. Actions come only with a signature; drafts wait in a queue for a named clinician. And every step is audited. Arabic and English, by voice.
+SAY: The right-hand column is what makes it usable in a clinical setting. Four controls, all enforced in code and all visible in the demo. Numbers come only from tools; the model narrates and never invents a value. Clinical claims come only with a citation to a document and a page. Actions come only with a signature; drafts wait in a queue for a named clinician. And every step is audited. Arabic and English, by voice. The scope of this build is type 2 diabetes on a 4,000-patient synthetic exchange with zero PHI.
 
-SAY: Scope for this build: type 2 diabetes, a 4,000-patient synthetic exchange shaped like QHIE, coded in LOINC, ICD-10 and ATC, thirty-six months, FHIR R4 export. Zero PHI.
-
-### Slide 5 — How it works (5:15, 75 seconds)
+### Slide 5 — How it works (4:30, 75 seconds)
 
 SCREEN: the question at the top, the supervisor, five specialists, the evidence strip.
 
-SAY: One supervisor, five specialists. The supervisor is Gemini 3.8 Flash on the Agent Development Kit. It plans, routes and composes; it never produces a number itself. The data specialist queries the exchange, BigQuery in phase two. The guideline specialist retrieves from the national guidelines with page citations. The risk specialist runs the four models. The population-health specialist talks over the Model Context Protocol to a server we built; hold that thought, it is the most interesting part. And the action specialist drafts prescriptions, recalls and referrals into a human approval queue.
+SAY: One supervisor, five specialists. The supervisor is Gemini Flash on the Agent Development Kit. It plans, routes and composes; it never produces a number itself. The data specialist queries the exchange; on Google Cloud that is BigQuery through the MCP Toolbox. The guideline specialist retrieves from the national guidelines with page citations; on Google Cloud that is RAG Engine. The risk specialist runs the four models; on Google Cloud, a Vertex AI endpoint. The population-health specialist talks over the Model Context Protocol to a server we built; hold that thought. And the action specialist only drafts, into a human approval queue.
 
-SAY: Why five agents and not one? Least privilege: the guideline agent physically cannot draft a prescription. Independent evaluation: each specialist has its own test set. And it is cheaper per question, which I will show you measured, not asserted.
+SAY: Why five agents and not one? Least privilege: the guideline agent physically cannot draft a prescription. Independent evaluation: each specialist has its own test set. And cost: a single agent re-reads every tool schema on every hop, and function declarations are billed as input tokens. I will show you that measured, not asserted.
 
-### Slide 6 — Reference architecture A, SAS Viya (6:30, 75 seconds)
+### Slide 6 — Reference architecture A, SAS Viya (5:45, 60 seconds)
 
 SCREEN: the SAS diagram.
 
-SAY: Credit where it is due. This is where the pattern was proven, at a federal health entity in the region, and I was part of that build. An orchestrating agent with guideline grounding over a vector store, and an MCP server exposing four tools: SQL over the in-memory CAS tables, a decision flow in Intelligent Decisioning, model runs for forecasting and simulation, and chart generation. It delivered natural-language questions into governed analytics, cohorts and charts.
+SAY: Credit where it is due. This is where the pattern was proven, at a federal health entity in the region, and I was part of that build. An orchestrating agent with guideline grounding over a vector store, and an MCP server exposing four tools: SQL over the in-memory CAS tables, a decision flow, model runs, and chart generation. The pattern is right. The question for the ministry is which platform runs it at national scale, in Doha, with managed services underneath.
 
-SAY: The pattern is right. The question for the ministry is which platform runs it at national scale, in Doha, with managed services underneath. That is the next slide.
-
-### Slide 7 — Reference architecture B, Google Cloud in Doha (7:45, 105 seconds)
+### Slide 7 — Reference architecture B, Google Cloud in Doha (6:45, 90 seconds)
 
 SCREEN: ingestion subsystem left, serving subsystem right, sovereignty strip at the bottom.
 
-SAY: Read it left to right, the way Google's own RAG reference architecture is drawn: a data ingestion subsystem and a serving subsystem.
+SAY: Read it left to right, the way Google's own RAG reference architecture is drawn. Ingestion: the FHIR exchange and the hospital feeds land in the Cloud Healthcare API, with consent enforcement, de-identification and Pub/Sub events, and stream into BigQuery. Guidelines go to Cloud Storage and into RAG Engine, which gives page-level citations without building a vector pipeline. Vertex AI trains the risk model on BigQuery data, registers it, and serves it on an endpoint.
 
-SAY: Ingestion. The FHIR exchange and the hospital EHR feeds land in the Cloud Healthcare API: a FHIR store with consent enforcement, de-identification and Pub/Sub events. From there the exchange streams into BigQuery, where the curated marts live and where BigQuery ML can train. The national guidelines go to Cloud Storage as a versioned corpus and into RAG Engine, which gives us page-level citations without building a vector pipeline. Vertex AI pipelines train the risk model on BigQuery data, register it, and serve it on an online endpoint for point-of-care scoring, with batch prediction for the nightly cohort.
+SAY: Serving: the app on Cloud Run, with Speech-to-Text and Text-to-Speech for Arabic and English. The same ADK graph on Gemini, calling four tool families: Google's MCP Toolbox for BigQuery and FHIR, our population-health MCP server, the Vertex endpoint, and RAG Engine. Actions go to the approval queue and, once signed, back to the EHR as a FHIR Task.
 
-SAY: Serving. Clinicians and directors come in through the Nabd app on Cloud Run, with Speech-to-Text and Text-to-Speech for Arabic and English. The agent runtime is the same ADK graph on Gemini. It calls four families of tools: Google's MCP Toolbox for BigQuery and FHIR, our population-health MCP server, the Vertex endpoint for scores and drivers, and RAG Engine for cited passages. Actions go to the approval queue, and a signed action goes back to the EHR as a FHIR Task through the Healthcare API.
+SAY: Underneath: PHI at rest in me-central1 under an Assured Workloads Qatar data boundary, VPC Service Controls, customer-managed keys. Two Doha decisions I want to name now. Gemini is served from the global endpoint, which is acceptable because the agent only ever sees pseudonymised identifiers and aggregates. And the agent runtime is Cloud Run in Doha, not Agent Engine, because Agent Engine is not yet available in me-central1 and the session state carries clinical context.
 
-SAY: Underneath all of it: PHI at rest in me-central1 under an Assured Workloads Qatar data boundary, VPC Service Controls, customer-managed keys, least-privilege service accounts.
+### Slide 8 — Technical view (8:15, 75 seconds)
 
-SAY: Two Doha-specific decisions I want to name now, so they do not look like accidents later. First, Gemini is served from the global endpoint. That is acceptable because the agent only ever sees pseudonymised identifiers and aggregates; re-identification is a join inside the perimeter. Second, the agent runtime is Cloud Run in Doha, not Agent Engine, because Agent Engine is not yet available in me-central1 and the session state carries clinical context. It becomes a deploy-target change the day Agent Engine lands in Qatar.
+SCREEN: three lanes: request path, data path, resilience.
 
-### Slide 8 — Phased delivery and the demo agenda (9:30, 30 seconds)
+SAY: For the technical questions, three lanes. The request path: one question is one synchronous path, five hops, streamed to the user, p95 under fifteen seconds. Identity-Aware Proxy in front, Cloud Run for the app, the ADK supervisor on Gemini with sessions in AlloyDB, the specialist tools, and the answer with its trace and citations; drafts go to the queue and signed items leave as FHIR Tasks.
 
-SCREEN: three phases, three acts.
+SAY: The data path: population numbers are batch. The FHIR store streams into BigQuery, Dataform rebuilds the marts at two in the morning, BigQuery ML re-scores every patient nightly. Only the per-patient signal is event-driven: a new HbA1c fires Pub/Sub and one patient is re-scored in seconds. Streaming the aggregates would cost many times more for numbers that move over weeks.
 
-SAY: Three phases. Phase one is what runs today. Phase two, eight to twelve weeks, is the same container on Cloud Run in Doha, the exchange in BigQuery, Gemini through Vertex AI with service-account auth, and the risk model on a Vertex endpoint. Phase three is national scale: FHIR streaming from every facility, HL7 v2 bridges for the legacy sites, Looker for governed KPIs, MedGemma for clinical notes.
+SAY: Resilience: every service is regional and zone-redundant inside me-central1, so a zone failure re-routes traffic with no data loss and nobody is paged. A region failure is the honest limit of in-country residency: recovery is in-region from BigQuery time travel and AlloyDB and Storage backups, with a stated RPO of twenty-four hours and RTO of four. If Gemini is saturated, the supervisor moves down a tested model list, and if no model answers, the scripted engine runs the same tools without the language model. You will see that engine exists.
 
-SAY: The next twenty minutes: a clinician's morning, the ministry's view, and under the hood. One rule for everything you are about to see. Every number is computed live by a tool. Nothing is a slide.
+### Slide 9 — The demo agenda and the service mapping (9:30, 30 seconds)
+
+SCREEN: three acts on the left, the component-to-service table on the right.
+
+SAY: The next twenty minutes: a clinician's morning, the ministry's view, and under the hood. On the right, what each demo component is on Google Cloud, one line each, for when you ask. One rule for everything you are about to see: every number is computed live by a tool call. Nothing is pre-rendered.
 
 DO: Switch to the browser. Tab 1, landing page.
 
@@ -267,13 +265,13 @@ SAY: Why Gemini 3.8 Flash: chosen on this evalset, not on a leaderboard. It is G
 
 DO: Click Governance. Ten seconds.
 
-SAY: Fifteen controls. Nine implemented today, six delivered by the platform in phase two. Zero autonomous writes.
+SAY: Fifteen controls. Nine implemented in this build, six delivered by Google Cloud services in the target architecture. Zero autonomous writes.
 
 ### Close (29:00, 60 seconds)
 
 DO: Click Home.
 
-SAY: Phase one is what you just saw. Phase two is the same contracts on Google-native services. The cohort agent becomes BigQuery over a streamed Cloud Healthcare API FHIR store. The risk model moves to a Vertex endpoint. The forecast becomes AI.FORECAST in BigQuery. The guideline corpus becomes RAG Engine. The same ADK graph runs on Cloud Run in Doha, and on Agent Engine the day it reaches me-central1. PHI never leaves the Qatar data boundary, and the language model only ever sees pseudonymous data.
+SAY: What you saw runs today on one container. On Google Cloud the same contracts map to managed services. The cohort agent becomes BigQuery over a streamed Cloud Healthcare API FHIR store. The risk model moves to a Vertex endpoint. The forecast becomes AI.FORECAST in BigQuery. The guideline corpus becomes RAG Engine. The same ADK graph runs on Cloud Run in Doha, and on Agent Engine the day it reaches me-central1. PHI never leaves the Qatar data boundary, and the language model only ever sees pseudonymous data.
 
 SAY: I built this in the shape of the job: understand the customer, build on the portfolio, find the gap, prototype the fix, and hand it to the team that ships it. That is my thirty minutes. Over to you.
 
@@ -286,13 +284,13 @@ NOTE: Answer in three moves: the direct answer in one sentence, the evidence in 
 ### The solution
 
 Q: How do you stop it hallucinating clinical advice?
-A: Three walls and a test. Numbers come only from tools; the model narrates, it never invents a value. Clinical claims come only with a citation to a document and page. Actions go only through the approval queue. Then the evalset re-computes every headline number from the tables and fails the case if it does not match. In phase two the same set runs in Cloud Build on every change and on a sample of production weekly, and Model Armor sits on the runtime once it is in region.
+A: Three walls and a test. Numbers come only from tools; the model narrates, it never invents a value. Clinical claims come only with a citation to a document and page. Actions go only through the approval queue. Then the evalset re-computes every headline number from the tables and fails the case if it does not match. On Google Cloud the same set runs in Cloud Build on every change and on a sample of production weekly, and Model Armor sits on the runtime once it is in region.
 
 Q: Why five agents instead of one? Isn't that just complexity?
 A: Three reasons, and one of them is measured. Least privilege: the guideline agent cannot draft a prescription because it does not have the tool. Independent evaluation: each specialist has its own test set. And cost: a flat agent re-reads about 2,500 tokens of tool schema on every hop, the supervisor reads under 700, and function declarations are billed as input tokens. At scale that is roughly thirty percent cheaper per question. The cost of the design is one extra hop of latency, which streaming hides.
 
 Q: Why ADK and not LangGraph or CrewAI?
-A: Native Gemini function calling, a first-class MCP client in McpToolset, agent-to-agent protocol built in, and Agent Engine as the managed runtime, so the same graph deploys to phase two without a rewrite. For a Google Cloud customer the framework the platform evaluates, traces and hosts natively is the right default. LangGraph is a fine choice if the customer is multi-cloud; the tools and the MCP server would not change.
+A: Native Gemini function calling, a first-class MCP client in McpToolset, agent-to-agent protocol built in, and Agent Engine as the managed runtime, so the same graph deploys to Google Cloud without a rewrite. For a Google Cloud customer the framework the platform evaluates, traces and hosts natively is the right default. LangGraph is a fine choice if the customer is multi-cloud; the tools and the MCP server would not change.
 
 Q: Why MCP? Isn't that just function calling with extra steps?
 A: Function calling binds a tool to one agent in one framework. MCP makes the tool a service any client can use: our ADK agent, Gemini CLI, Gemini Enterprise, a partner's agent. The population-health server is the asset the ministry keeps if they change agent frameworks. And Google has committed to it: over fifty managed MCP servers, an MCP Toolbox with a Cloud Healthcare source for FHIR, and an MCP endpoint on the Agent Platform for calling models.
@@ -316,19 +314,19 @@ Q: What does it cost to run?
 A: Order of magnitude at list prices: around 1,600 dollars a month for a four-site pilot, and around 12,600 dollars a month at national scale with twenty thousand questions a day, roughly thirty percent of it Gemini tokens. One deterioration episode costs the system about 18,500 riyals, so the national platform costs the equivalent of two or three episodes a month. The programme simulation you saw is how the ministry would decide whether it is worth it.
 
 Q: How did you evaluate it?
-A: Two layers. The model: a stratified 25% hold-out the model never saw, discrimination, calibration, threshold economics and subgroup fairness, all computed on the page, not pasted in. The agent: a golden evalset of ten questions run through the real graph, scored on tool trajectory, groundedness, safety and numeric faithfulness against a recomputation. Phase two adds the Gen AI Evaluation Service with Pro as an LLM judge, in CI and on a production sample.
+A: Two layers. The model: a stratified 25% hold-out the model never saw, discrimination, calibration, threshold economics and subgroup fairness, all computed on the page, not pasted in. The agent: a golden evalset of ten questions run through the real graph, scored on tool trajectory, groundedness, safety and numeric faithfulness against a recomputation. On Google Cloud, the Gen AI Evaluation Service adds Gemini Pro as an LLM judge, in CI and on a production sample.
 
 Q: Is the model fair?
-A: We report true-positive and false-positive rates at the operating threshold by nationality group, gender and age band, and compute gaps only over groups with enough events. Small groups are shown but not judged. The age gap is a prevalence difference, and the page says so rather than hiding it. In phase two a monthly job re-runs that table and alerts on drift. Fairness is a monitoring discipline, not a one-time certificate.
+A: We report true-positive and false-positive rates at the operating threshold by nationality group, gender and age band, and compute gaps only over groups with enough events. Small groups are shown but not judged. The age gap is a prevalence difference, and the page says so rather than hiding it. On Google Cloud a monthly job re-runs that table and alerts on drift. Fairness is a monitoring discipline, not a one-time certificate.
 
 Q: Why XGBoost? And why the monotonic constraints?
-A: Tabular clinical data at this scale, native per-feature contributions that a clinician can read, and BigQuery ML has the same estimator, so phase two is a CREATE MODEL statement. The monotonic constraints encode clinical priors: risk cannot fall as HbA1c rises or rise as adherence improves. Without them a tree model on four thousand patients learns local noise, and a slider would show blood pressure going down and risk going up. With them the held-out AUC went from 0.844 to 0.854. It is a governance control that also improved accuracy.
+A: Tabular clinical data at this scale, native per-feature contributions that a clinician can read, and BigQuery ML has the same estimator, so on Google Cloud it is a CREATE MODEL statement. The monotonic constraints encode clinical priors: risk cannot fall as HbA1c rises or rise as adherence improves. Without them a tree model on four thousand patients learns local noise, and a slider would show blood pressure going down and risk going up. With them the held-out AUC went from 0.844 to 0.854. It is a governance control that also improved accuracy.
 
 Q: Is the programme simulation causal?
 A: No, and I say that on the screen. It is a model-based what-if with stated assumptions: event cost per episode, therapy costs from the medication table, guideline-average effect sizes. It ranks levers; a trial or a stepped-wedge rollout confirms them. That is exactly how I would say it to a minister. The value is that the ranking is computed on their population, not borrowed from a paper.
 
 Q: Is the data real?
-A: No. Four thousand synthetic patients, zero PHI. But the shape is real: eight relational tables, LOINC, ICD-10, SNOMED and ATC codes, thirty-six months longitudinal, a FHIR R4 export. Four thousand is big enough for the models to be honest on a thousand-patient hold-out and small enough to run on one container. BigQuery removes that ceiling in phase two, and the first real workstream is loading a de-identified extract from the exchange.
+A: No. Four thousand synthetic patients, zero PHI. But the shape is real: eight relational tables, LOINC, ICD-10, SNOMED and ATC codes, thirty-six months longitudinal, a FHIR R4 export. Four thousand is big enough for the models to be honest on a thousand-patient hold-out and small enough to run on one container. BigQuery removes that ceiling, and the first real workstream is loading a de-identified extract from the exchange.
 
 Q: Real-time or batch?
 A: Both, deliberately. Per-patient signals stream: a new HbA1c result re-scores that patient in seconds through the FHIR store, Pub/Sub and the endpoint. Population metrics batch nightly: stratification, care gaps, quality measures, equity. Streaming the aggregates would cost many times more for numbers that move over weeks.
@@ -340,22 +338,22 @@ Q: How does this scale to a million patients?
 A: Compute is not the constraint anywhere in the design. Scoring is a millisecond per patient on a CPU endpoint; BigQuery is serverless; Cloud Run autoscales the app and the agent. The variables that actually move cost and latency are Gemini tokens per question and synchronous hops per question, and the evaluation tab measures both. Scale is a token-budget problem, not an infrastructure problem.
 
 Q: Why build a custom agent instead of using Gemini Enterprise?
-A: Gemini Enterprise is the right front door for knowledge workers, and it speaks MCP, so the population-health server plugs into it in phase three. What it does not give you out of the box is the governed clinical action path: drafts, the approval queue, FHIR write-back, and evaluation on tool trajectories. So Gemini Enterprise at the front, the ADK agent as the clinical backend behind it.
+A: Gemini Enterprise is the right front door for knowledge workers, and it speaks MCP, so the population-health server plugs into it. What it does not give you out of the box is the governed clinical action path: drafts, the approval queue, FHIR write-back, and evaluation on tool trajectories. So Gemini Enterprise at the front, the ADK agent as the clinical backend behind it.
 
 Q: Why not just BigQuery, Looker and a chatbot?
-A: Looker answers the questions someone anticipated; the agent answers the one nobody did, and it can act. But Looker is in phase three for exactly the governed KPIs a ministry publishes, and the dashboards in the demo run the same queries the agent runs, so the two never disagree. It is not either-or. The chatbot without tools, citations and a queue is the thing I would refuse to ship.
+A: Looker answers the questions someone anticipated; the agent answers the one nobody did, and it can act. But Looker belongs in the target architecture for exactly the governed KPIs a ministry publishes, and the dashboards in the demo run the same queries the agent runs, so the two never disagree. It is not either-or. The chatbot without tools, citations and a queue is the thing I would refuse to ship.
 
 Q: Where does SAS fit? Would you tell the ministry to leave SAS?
 A: Not on day one, and not as a rip-and-replace. SAS is where the pattern was proven and where the ministry's current models live; those models can be exposed as MCP tools and called by the same agent. The argument for Google is data gravity in the exchange, a sovereign region in Doha, a managed agent stack, and price at scale, not that SAS is bad. Over time BigQuery ML and Vertex reduce the licence footprint, and the customer decides the pace.
 
 Q: What about MedGemma and clinical notes?
-A: Everything in the demo is structured data. Clinical notes are phase three, and MedGemma is the right model for them: open weights, so it can run in region, on the unstructured parts of the record. The pattern does not change; it is one more specialist with one more tool. I would not start there, because the structured registry already carries most of the signal for deterioration.
+A: Everything in the demo is structured data. Clinical notes are a later workstream, and MedGemma is the right model for them: open weights, so it can run in region, on the unstructured parts of the record. The pattern does not change; it is one more specialist with one more tool. I would not start there, because the structured registry already carries most of the signal for deterioration.
 
 Q: Security. What about prompt injection through a guideline PDF or a record?
-A: The agent's tools are read-only against the data and draft-only against actions, so an injected instruction can at most produce a bad draft, which a human sees before anything happens. Tool inputs are validated schemas, not free text. Retrieved passages are quoted with their source so an odd instruction is visible. Phase two adds Model Armor on prompts and responses, and the evalset carries adversarial cases.
+A: The agent's tools are read-only against the data and draft-only against actions, so an injected instruction can at most produce a bad draft, which a human sees before anything happens. Tool inputs are validated schemas, not free text. Retrieved passages are quoted with their source so an odd instruction is visible. On Google Cloud, Model Armor screens prompts and responses, and the evalset carries adversarial cases.
 
 Q: Why did you put voice in?
-A: Because the customer asked for it in the original programme, and because a clinician between patients does not type. Arabic and English through the Web Speech API today, Chirp 3 through Speech-to-Text in phase two. It is a thirty-second beat in the demo and a real adoption lever in a clinic.
+A: Because the customer asked for it in the original programme, and because a clinician between patients does not type. Arabic and English through the Web Speech API today, Chirp 3 through Speech-to-Text on Google Cloud. It is a thirty-second beat in the demo and a real adoption lever in a clinic.
 
 Q: What would you cut? What worries you?
 A: I would cut the demand forecast: the weakest model and the least surprising insight. I would trade it for a hypoglycaemia-risk loop on the insulin-treated cohort, which prevents admissions. What worries me is adoption, not accuracy. The queue exists so clinicians own the decision; the equity view exists so the ministry owns the gap. Tools do not change outcomes; workflows do.
@@ -447,6 +445,6 @@ A: Three things. Agent Engine, Model Armor and Model Monitoring in me-central1, 
 | Model: AUC 0.854 vs 0.809 · AP 0.573 · Brier 0.067 vs 0.096 · slope 0.83 · 1,000 held out, 107 events | Evaluation |
 | Gemini 3.8 Flash $0.75 / $3.75 per million tokens (intro) · Pro 3.1 judge · 2.5 Flash retiring Oct 2026 | LLM & cost |
 | Schema tokens per hop: flat agent ≈2,500 · supervisor ≈700 | LLM & cost |
-| Governance: 15 controls · 9 implemented · 6 phase two · 0 autonomous writes | Governance |
+| Governance: 15 controls · 9 implemented · 6 Google Cloud · 0 autonomous writes | Governance |
 | Run cost: ≈$1.6k/month pilot · ≈$12.6k/month national at 20k questions/day · QAR 18,500 per episode | Q&A |
-| Phase two: 8–12 weeks · Cloud Run me-central1 · BigQuery · Vertex AI · RAG Engine | Slide 8 |
+| Google Cloud mapping: BigQuery · RAG Engine · Vertex endpoint · ADK on Cloud Run · AlloyDB · FHIR Task | Slide 9 |

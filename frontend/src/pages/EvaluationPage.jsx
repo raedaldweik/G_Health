@@ -14,7 +14,7 @@ import { AgentChip, KpiStrip, Panel, Spinner } from '../components/ui';
  *   Model   · held-out discrimination, calibration, threshold economics, subgroup fairness
  *   Agents  · golden evalset run through the real graph: trajectory, groundedness, safety, faithfulness, cost
  *   LLM     · why this model, why not Pro everywhere, why specialists beat one fat agent (measured in tokens)
- *   Govern  · the control list, implemented vs phase 2
+ *   Govern  · the control list, implemented here vs delivered by Google Cloud
  * Every number here is computed on request from data the model never trained on.
  */
 
@@ -242,7 +242,7 @@ function ModelView() {
                 Gaps are computed only across groups with ≥ {d.subgroups[0]?.min_events} events; smaller groups are shown but not judged.
                 The age gap is expected: event prevalence is {pct(d.subgroups.find((s) => s.dimension === 'age_band')?.rows.find((r) => r.group === '65+')?.prevalence, 0)} over 65 versus
                 {' '}{pct(d.subgroups.find((s) => s.dimension === 'age_band')?.rows.find((r) => r.group === '<50')?.prevalence, 0)} under 50, so a single threshold catches more of the older group.
-                Phase 2 monitors these rows monthly in Vertex Model Monitoring and alerts on drift.
+                On Google Cloud these rows are re-run monthly (a BigQuery drift job, Model Monitoring where offered in region) and alert on drift.
               </p>
             </div>
           </Panel>
@@ -405,7 +405,7 @@ function AgentsView() {
             <div className="px-1 text-[10px] flex flex-col gap-1.5" style={{ color: 'var(--text-md)' }}>
               {[
                 ['Tool-trajectory recall', 'Did the graph call every tool a clinician-reviewer said it must? Same idea as ADK\'s tool_trajectory_avg_score, scored in-order-agnostic.'],
-                ['Groundedness', 'Clinical claims must carry a guideline citation (doc + page). Phase 2: Gen AI Evaluation Service groundedness autorater on the citation spans.'],
+                ['Groundedness', 'Clinical claims must carry a guideline citation (doc + page). On Google Cloud: the Gen AI Evaluation Service groundedness autorater on the citation spans.'],
                 ['Action safety', 'A draft prescription / recall / referral may only appear as a queued item, never as a completed write. Zero tolerance.'],
                 ['Numeric faithfulness', 'Every headline number in the answer is re-computed from the HIE tables and matched within tolerance. Catches the classic LLM failure: a fluent, wrong number.'],
                 ['Latency · tokens · cost', 'Wall-clock per question, tokens from ADK usage metadata, priced at the list rates on the LLM tab.'],
@@ -417,7 +417,7 @@ function AgentsView() {
               ))}
             </div>
           </Panel>
-          <Panel title="Release gate (phase 2)">
+          <Panel title="Release gate on Google Cloud">
             <div className="px-1 text-[10px]" style={{ color: 'var(--text-md)' }}>
               <p>The evalset file is ADK-compatible (<code className="text-[9px]">adk eval</code>). In Cloud Build it runs on every PR:</p>
               <ul className="mt-1 ml-3 list-disc" style={{ color: 'var(--text-dim)' }}>
@@ -555,8 +555,8 @@ function GovernanceView() {
   return (
     <div className="flex flex-col gap-2.5">
       <KpiStrip items={[
-        { icon: 'check', tone: 'green', label: 'Controls implemented in this PoC', value: impl, suffix: `/ ${d.length}` },
-        { icon: 'activity', tone: 'gold', label: 'Controls delivered by the phase-2 platform', value: d.length - impl },
+        { icon: 'check', tone: 'green', label: 'Controls implemented in this demonstration', value: impl, suffix: `/ ${d.length}` },
+        { icon: 'activity', tone: 'gold', label: 'Controls delivered by Google Cloud services', value: d.length - impl },
         { icon: 'alert', tone: 'maroon', label: 'Autonomous clinical writes permitted', value: 0 },
         { icon: 'users', tone: 'sand', label: 'Real patient records touched', value: 0 },
       ]} />
@@ -568,7 +568,7 @@ function GovernanceView() {
                 <div key={x.control} className="flex items-start gap-2 text-[10px] rounded-lg px-2 py-1.5"
                   style={{ background: 'rgba(255,255,255,0.55)', border: '1px solid var(--hairline)' }}>
                   <span className={`badge ${x.status === 'implemented' ? 'badge-green' : 'badge-amber'} shrink-0`} style={{ fontSize: 8, marginTop: 1 }}>
-                    {x.status === 'implemented' ? 'implemented' : 'phase 2'}
+                    {x.status === 'implemented' ? 'implemented' : 'Google Cloud'}
                   </span>
                   <div className="min-w-0">
                     <p className="font-semibold" style={{ color: 'var(--text)' }}>{x.control}</p>
@@ -582,7 +582,7 @@ function GovernanceView() {
       </div>
       <div className="glass-card px-4 py-2.5 text-[10.5px]" style={{ color: 'var(--text-md)' }}>
         <b style={{ color: 'var(--text)' }}>Regulatory frame.</b> Qatar PDPPL (Law 13/2016) treats health data as sensitive personal data, processing needs a lawful basis and a
-        permit; MOPH's National Health Strategy requires auditability of decision support. The design answer is the same in every lane: PHI stays in Doha, the
+        permit; the National Health Strategy requires auditability of decision support. The design answer is the same in every lane: PHI stays in Doha, the
         model never prescribes, every automated inference is logged with its inputs, and a human owns every clinical write.
       </div>
     </div>
@@ -596,7 +596,7 @@ export default function EvaluationPage() {
     model: 'The deterioration-risk model, evaluated on 1,000 held-out patients: discrimination, calibration, threshold trade-offs and subgroup fairness.',
     agents: 'Ten representative clinician and ministry questions, run through the live agent graph and scored against ground truth.',
     llm: 'Model selection rationale, cost per question, and the measured case for a supervisor with specialists over a single agent.',
-    governance: 'The control list: implemented in this proof of concept, delivered by the platform in phase 2, and never permitted.',
+    governance: 'The control list: implemented in this demonstration, delivered by Google Cloud services in the target architecture, and never permitted.',
   })[view], [view]);
 
   return (

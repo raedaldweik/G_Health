@@ -228,7 +228,7 @@ export default function DashboardRisk() {
             {[['Task', card.task], ['Training data', card.training_data],
               ['Intended use', card.intended_use], ['Clinical constraints', card.constraints],
               ['Limitations', card.limitations],
-              ['Phase 2 on Google Cloud', card.phase2]].filter(([, v]) => v).map(([k, v]) => (
+              ['On Google Cloud', card.phase2]].filter(([, v]) => v).map(([k, v]) => (
               <div key={k} className="mb-2.5">
                 <p className="text-[9.5px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{k}</p>
                 <p className="text-[12px] leading-relaxed" style={{ color: 'var(--text-md)' }}>{v}</p>

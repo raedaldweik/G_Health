@@ -57,7 +57,7 @@ python -m pophealth_mcp
 **Inside Nabd**: the ADK supervisor's `pophealth_agent` connects via
 `McpToolset(StdioConnectionParams(...))` — the hop is visible in the UI agent trace.
 
-## Phase 2
+## On Google Cloud
 
 Same seven tools, re-hosted as a remote MCP server on Cloud Run: cohorts and
 measures become BigQuery SQL over the streamed FHIR export, `stratify_risk` calls a
