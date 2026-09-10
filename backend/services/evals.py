@@ -363,9 +363,10 @@ def llm_selection() -> dict:
             {"model": "gemini-2.5-flash", "role": "Avoided", "chosen": False,
              **PRICES["gemini-2.5-flash"], "context": "1M", "latency": "fast",
              "why": "Retires mid-October 2026, weeks after the interview. Never build a clinical product on a model with a published retirement date."},
-            {"model": "gemini-embedding-001", "role": "RAG embeddings (hybrid with BM25)", "chosen": True,
+            {"model": "gemini-embedding-001", "role": "Not used (retrieval is keyword BM25)", "chosen": False,
              **PRICES["gemini-embedding-001"], "context": "2k/chunk", "latency": "n/a",
-             "why": "3072-dim, MRL-truncatable, GA; corpus is embedded once and cached, near-zero recurring cost."},
+             "why": "Guideline retrieval runs on an in-memory BM25 keyword index: zero credentials, zero "
+                    "network calls, deterministic. On Google Cloud the managed upgrade is Vertex AI RAG Engine."},
         ],
         "architecture_comparison": {
             "flat_single_agent_schema_tokens": flat,

@@ -2,14 +2,13 @@
 Where Nabd is running and which backends are live.
 
 Railway / local:   tables from csv.gz; the language model through an API key.
-Google Cloud:      HIE_BACKEND=bigquery, model + embeddings via Vertex AI with the Cloud Run
+Google Cloud:      HIE_BACKEND=bigquery, the model via Vertex AI with the Cloud Run
                    service account, region me-central1 (Doha).
 
 Language-model provider (LLM_PROVIDER, default auto):
   anthropic  ANTHROPIC_API_KEY, claude-sonnet-4-6 by default (the demo backend)
   gemini     GEMINI_API_KEY / GOOGLE_API_KEY, or Vertex AI with a service account
 Auto picks anthropic when its key is present, else gemini, else no LLM (direct tool mode).
-A Gemini key is still used for the guideline embeddings when present, whatever the provider.
 Everything here is read from the environment once; /api/health reports it so the UI can
 say truthfully what it is running on.
 """
@@ -67,6 +66,6 @@ def info() -> dict:
         "project": PROJECT or None,
         "data": bq.STATUS,
         "llm": llm_backend(), "vertex_location": VERTEX_LOCATION if VERTEX else None,
-        "embeddings": "vertex" if VERTEX else ("gemini-api" if API_KEY else "none"),
+        "retrieval": "bm25-keyword",
         "cloud_native": bool(COMPUTE == "cloud-run" or HIE_BACKEND == "bigquery" or VERTEX),
     }

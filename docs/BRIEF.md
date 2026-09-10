@@ -80,7 +80,7 @@ Data quality is treated as a care gap. An HbA1c that is overdue is either a clin
 
 ## 3. The AI models
 
-There are four trained models, one embedding model, and the language model. Each has a model card in the product with its version, task, training data, intended use, constraints and limitations.
+There are four trained models and the language model. Each has a model card in the product with its version, task, training data, intended use, constraints and limitations.
 
 ### Deterioration risk (XGBoost, v2.1.0)
 
@@ -118,9 +118,9 @@ A k-nearest-neighbour index over twelve standardised clinical features. It answe
 
 Trend plus month-of-year seasonality over thirty-six months of encounter volumes, with an 80 percent interval. It forecasts about 5 percent growth in outpatient and telehealth visits over the next twelve months and picks up the summer dip and the Ramadan pattern. It is the weakest model and the least surprising insight, and if something had to be cut this would be it. On Google Cloud it is one SQL call: AI.FORECAST in BigQuery, on the TimesFM foundation model, with no training step.
 
-### Guideline retrieval (BM25 plus gemini-embedding-001)
+### Guideline retrieval (BM25 keyword index)
 
-The national clinical guideline PDFs are chunked once into 445 overlapping passages of about 1,400 characters, cached on disk. Retrieval is hybrid: a BM25 keyword index that always works, plus a semantic index from gemini-embedding-001 at 768 dimensions (Matryoshka truncation of the 3,072-dimension model, which keeps quality and cuts storage four-fold). Scores are blended 45 percent lexical, 55 percent semantic. The embedding matrix is computed once, cached to disk, and committed, so a deployment never re-embeds and never hits an embedding quota at start-up. Every hit carries document, page and the passage, which is what the citation chip shows. On Google Cloud this layer is Vertex AI RAG Engine over a Cloud Storage corpus.
+The national clinical guideline PDFs are chunked once into 445 overlapping passages of about 1,400 characters, cached on disk. Retrieval is a BM25 keyword index built in memory at start-up: no credentials, no network calls on the query path, deterministic ranking, and a search returns in microseconds. Every hit carries document, page and the passage, which is what the citation chip shows. On Google Cloud this layer is Vertex AI RAG Engine over a Cloud Storage corpus.
 
 ### Gemini
 
@@ -227,7 +227,7 @@ The ministry owns the clinical decisions and the population, so it owns the mode
 
 A clinician question is typically three tool hops. Each hop is a Gemini Flash call; at low thinking level the first token arrives in under a second, and a full answer with a chart lands in five to eight seconds. The trace streams from the first hop, so the wait looks like work rather than a spinner. The nightly briefing is batch, so the morning panel is instant.
 
-The two levers that actually move latency are the thinking level on routing turns and the number of synchronous hops per question. Both are measured in the Evaluation tab. The things that do not move it: database queries (milliseconds on a summary table), model scoring (a millisecond per patient), retrieval (a BM25 lookup and one embedding call).
+The two levers that actually move latency are the thinking level on routing turns and the number of synchronous hops per question. Both are measured in the Evaluation tab. The things that do not move it: database queries (milliseconds on a summary table), model scoring (a millisecond per patient), retrieval (an in-memory BM25 lookup).
 
 Targets for the Google Cloud deployment, stated as SLOs in Cloud Monitoring: p95 first token under two seconds, p95 complete answer under fifteen seconds, dashboard refresh under one second. The demonstration meets all three on one container.
 
@@ -237,7 +237,7 @@ The risk model is an XGBoost booster, about a millisecond per patient on a CPU. 
 
 The population numbers are batch on purpose. Stratification, care gaps, quality measures and equity move over weeks; recomputing them on every question would cost many times more for no clinical benefit. Only the per-patient signal is event-driven: a new HbA1c resource in the FHIR store fires Pub/Sub, a Cloud Run scorer calls the endpoint, and that one patient is re-scored in seconds.
 
-Gemini inference runs on the global endpoint on pseudonymous prompts. Embeddings are computed once per corpus and cached. Nothing on the request path trains anything.
+Model inference runs on pseudonymous prompts. Guideline retrieval is computed locally against the in-memory keyword index. Nothing on the request path trains anything.
 
 ## 9. Running it on Google Cloud
 

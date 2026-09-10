@@ -147,7 +147,7 @@ export default function LandingPage({ go }) {
               <button className="btn-secondary" onClick={() => go('overview')}>Registry dashboards</button>
             </div>
             <p className="text-[11px] mt-5 reveal d5" style={{ color: 'var(--text-faint)' }}>
-              Agent Development Kit · Model Context Protocol · hybrid guideline retrieval · Target platform: Google Cloud, me-central1 (Doha)
+              Agent Development Kit · Model Context Protocol · cited guideline retrieval · Target platform: Google Cloud, me-central1 (Doha)
             </p>
           </div>
 
@@ -319,7 +319,7 @@ export default function LandingPage({ go }) {
           <div className="text-[10px] font-bold uppercase tracking-[0.14em] mt-4 mb-1.5" style={{ color: 'var(--text-faint)' }}>In this demonstration</div>
           <div className="flex flex-wrap gap-2">
             {[['Agent Development Kit', '#8A1538'], ['Model Context Protocol', '#b8862e'], ['Function-calling LLM supervisor', '#8A1538'],
-              ['Hybrid retrieval · BM25 + embeddings', '#8A1538'], ['XGBoost risk model · v2.1.0', '#8a6a4e'], ['Web Speech · EN/AR', '#8a6a4e']].map(([n, c]) => (
+              ['Keyword retrieval · BM25 · page citations', '#8A1538'], ['XGBoost risk model · v2.1.0', '#8a6a4e'], ['Web Speech · EN/AR', '#8a6a4e']].map(([n, c]) => (
               <span key={n} className="gcloud-chip"><span className="dot" style={{ background: c }} />{n}</span>
             ))}
           </div>

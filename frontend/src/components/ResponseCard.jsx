@@ -1,7 +1,7 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import DynamicChart from './DynamicChart';
-import ToolTrace from './ToolTrace';
+import GovernancePanel from './GovernancePanel';
 import { AgentChip } from './ui';
 
 const md = {
@@ -28,7 +28,7 @@ const md = {
 };
 
 /** One completed assistant answer: markdown, charts, citations, drafted actions,
- *  collapsible tool trace, usage footer + details view. */
+ *  collapsible governance panel (controls + trace + audit), usage footer + record view. */
 export default function ResponseCard({ data, onOpenSource, onOpenDetails }) {
   if (!data) return null;
   const usage = data.usage;
@@ -83,11 +83,11 @@ export default function ResponseCard({ data, onOpenSource, onOpenDetails }) {
         </div>
       )}
 
-      <ToolTrace trace={data.trace} />
+      <GovernancePanel data={data} />
 
       <div className="flex items-center gap-3 px-1 text-[10px]" style={{ color: 'var(--text-faint)' }}>
         {onOpenDetails && (
-          <button onClick={() => onOpenDetails(data)} title="Full trace: every agent hop, tool call and token count"
+          <button onClick={() => onOpenDetails(data)} title="Governance record: controls, data access, every agent hop, audit events"
             className="p-1 rounded-md transition-all hover:bg-[rgba(138,21,56,0.10)]" style={{ color: 'var(--text-dim)' }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />

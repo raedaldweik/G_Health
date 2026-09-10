@@ -37,7 +37,7 @@ RULE: Check the clock at 18:00 and at 26:00. More than two minutes behind at 18:
 - [ ] Open Dashboards → Geography once so the map tiles are cached.
 - [ ] Open Simulator once, press Reset. Kamal is preselected.
 - [ ] Dashboards: click a bar once (for example "High" in the registry tiers) and clear it, so the cross-filter is warm and you remember where the Clear button sits.
-- [ ] Documents tab: the retrieval line should read hybrid. If it says the semantic index is pending, run `python -m scripts.embed_corpus` locally with your key and commit the cache file before the day (see the README).
+- [ ] Documents tab: the retrieval line should read BM25 keyword index with the full chunk count. Retrieval is keyword-only and needs no credentials, nothing to pre-build.
 - [ ] Deck open in PowerPoint presenter view. Notes on your screen only. Slide 1 showing.
 - [ ] Browser at 100% zoom, window at least 1,600 px wide. Close every other tab. Notifications off.
 - [ ] Phone hotspot ready as a second network. Water within reach. A clock you can see.

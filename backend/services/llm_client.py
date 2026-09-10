@@ -2,8 +2,7 @@
 
   provider()            anthropic | gemini | none, the model behind the agent graph
   make_anthropic_client Anthropic SDK client (async by default) for the agent and the simulator
-  make_client           google-genai client: Gemini as a provider, and the embedding model
-  gemini_available()    whether a Gemini credential exists at all (embeddings need one)
+  make_client           google-genai client when Gemini is the provider
 """
 from __future__ import annotations
 
@@ -31,15 +30,10 @@ def llm_available() -> bool:
     return provider() != "none"
 
 
-def gemini_available() -> bool:
-    """A Gemini credential of any kind; used for the guideline embeddings."""
-    return P.VERTEX or bool(P.API_KEY)
-
-
 def describe() -> str:
     p = provider()
     if p == "anthropic":
-        return "Anthropic API · API key" + (" · Gemini credential for embeddings" if gemini_available() else "")
+        return "Anthropic API · API key"
     if P.VERTEX:
         return f"Vertex AI · project {P.PROJECT or '?'} · location {P.VERTEX_LOCATION} · service-account auth"
     if P.API_KEY:
@@ -59,7 +53,7 @@ def make_anthropic_client(async_client: bool = True, timeout_s: float = 45.0, ma
 
 
 def make_client(http_options=None):
-    """google-genai client (Gemini provider, or the embedding model; raises if no credential)."""
+    """google-genai client (Gemini provider; raises if no credential)."""
     from google import genai
     if P.VERTEX:
         return genai.Client(vertexai=True, project=P.PROJECT or None, location=P.VERTEX_LOCATION,

@@ -1,14 +1,20 @@
-"""Chat API, streams NDJSON events (live agent steps → final payload)."""
+"""Chat API, streams NDJSON events (live agent steps → final payload).
+
+Every final payload leaves this router with a `governance` record attached: the
+controls that were in force for that answer (grounding, consent, human
+oversight, data boundary, model transparency) plus the audit entries the turn
+wrote, computed by services.governance from the turn's own artefacts."""
 from __future__ import annotations
 
 import json
 import os
+from datetime import datetime, timezone
 
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from services import agent, scenarios
+from services import agent, governance, scenarios
 
 router = APIRouter()
 
@@ -27,6 +33,21 @@ def get_scenarios(persona: str = "clinician"):
     return {"persona": persona, "scenarios": scenarios.list_scenarios(persona),
             "llm_enabled": agent.llm_enabled(),
             "model": agent.active_model() if agent.llm_enabled() else None}
+
+
+def _with_governance(gen):
+    """Attach the per-answer governance record to every final event that lacks one."""
+    since = datetime.now(timezone.utc).isoformat()
+
+    async def wrapped():
+        async for ev in gen:
+            if isinstance(ev, dict) and ev.get("type") == "final" and "governance" not in ev:
+                try:
+                    ev = {**ev, "governance": governance.build(ev, since)}
+                except Exception:            # a governance failure must never lose the answer
+                    pass
+            yield ev
+    return wrapped()
 
 
 def _ndjson(gen):
@@ -50,7 +71,7 @@ async def chat(req: ChatRequest):
     if use_scripted:
         runner = scenarios.get_runner(req.scenario_id)
         if runner:
-            return _ndjson(runner(req.persona))
+            return _ndjson(_with_governance(runner(req.persona)))
 
     if not agent.llm_enabled():
         async def notice():
@@ -78,4 +99,4 @@ async def chat(req: ChatRequest):
                        "trace": [], "charts": [], "citations": [], "actions": [],
                        "usage": None, "model": None}
 
-    return _ndjson(run_with_fallback())
+    return _ndjson(_with_governance(run_with_fallback()))

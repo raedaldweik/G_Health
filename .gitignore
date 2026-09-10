@@ -10,8 +10,6 @@ venv/
 backend/models/*
 !backend/models/.gitkeep
 
-# RAG embedding cache (built lazily at runtime when GEMINI_API_KEY is set)
-backend/data/runtime/embeddings*
 backend/data/runtime/queue.json
 backend/data/runtime/audit.json
 backend/data/runtime/agent_eval_results.json
