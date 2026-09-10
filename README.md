@@ -3,8 +3,8 @@
 An agentic AI assistant on top of a national Health Information Exchange, built with Google's
 agentic stack: the Agent Development Kit (a supervisor and five specialists on a function-calling model), grounded
 retrieval with page-level citations over the national clinical guidelines, four trained ML models
-with model cards and held-out evaluation, a patient what-if simulator, a counterfactual programme
-simulator, a human-in-the-loop approval queue, a full audit trail, and a population-health MCP
+with model cards and held-out evaluation, a patient risk sensitivity simulator, predictive population risk
+scenarios, a human-in-the-loop approval queue, a full audit trail, and a population-health MCP
 server that any MCP client can use.
 
 All patient data is synthetic: a 4,000-patient national diabetes registry with 36 months of
@@ -23,11 +23,11 @@ managed services in me-central1 (Doha).
 | ML | XGBoost deterioration model with monotonic clinical constraints (held-out AUC 0.854 vs 0.809 for the registry's rule-based score), SHAP-style drivers; KMeans segments; patient similarity; seasonal demand forecast | BigQuery ML BOOSTED_TREE_CLASSIFIER, Vertex AI Model Registry and online endpoint, BigQuery AI.FORECAST (TimesFM), VECTOR_SEARCH |
 | Agents | ADK supervisor plus five specialists (data, guidelines, risk, population-health MCP, actions) on a hosted function-calling model (provider-agnostic: Anthropic API by default, Gemini optional), with a tested fallback chain and a direct tool runner that runs the same tools without the language model | Same graph on Cloud Run in me-central1 with sessions in AlloyDB; Agent Engine when available in region |
 | Retrieval | Hybrid BM25 plus gemini-embedding-001 over the national guideline PDFs, cached once, page-level citations | Vertex AI RAG Engine over a Cloud Storage corpus |
-| MCP | `pophealth_mcp`: population snapshot, cohorts, care gaps, quality measures, stratification, programme simulation, draft-only interventions | Cloud Run service beside Google's MCP Toolbox for BigQuery and FHIR |
-| Simulation | Patient what-if with live re-scoring, attribution, care gaps closed and a narrated explanation; counterfactual re-scoring of eligible cohorts for five programmes with costs | ML.PREDICT over counterfactual rows |
+| MCP | `pophealth_mcp`: population snapshot, cohorts, care gaps, quality measures, stratification, predictive risk scenarios, draft-only interventions (review tasks, recalls, referrals; never a prescription) | Cloud Run service beside Google's MCP Toolbox for BigQuery and FHIR |
+| Simulation | Patient risk sensitivity analysis with live re-scoring, attribution, rule-based gaps and a narrated explanation; predictive population risk scenarios (re-score a cohort with one input changed; never events prevented or savings) | ML.PREDICT over counterfactual rows |
 | Safety | Consent enforcement at the tool layer, human approval queue, audit trail, numbers only from tools, citations on every clinical claim | FHIR consent enforcement, Model Armor, Cloud Audit Logs, Cloud Trace |
 | Evaluation | Held-out ROC, precision-recall, calibration, threshold economics and subgroup fairness; golden agent evalset (trajectory, groundedness, action safety, numeric faithfulness); model choice with list prices; governance controls | Gen AI Evaluation Service as judge in Cloud Build |
-| UI | React glass UI: assistant with live agent trace, cross-filtered dashboards (registry, clinical quality, deterioration risk, cost and equity, geography), simulator, evaluation, queue, documents, HIE browser, audit; Arabic and English voice | Identity-Aware Proxy in front; Looker for published KPIs |
+| UI | React glass UI: assistant with live agent trace, cross-filtered dashboards (registry, clinical quality, deterioration risk, cost and population variation, geography), simulator, evaluation, queue, documents, HIE browser, audit; Arabic and English voice | Identity-Aware Proxy in front; Looker for published KPIs |
 
 ## Quickstart
 
@@ -48,8 +48,9 @@ npm run dev                             # http://localhost:5173 (proxies /api �
 
 **No API key?** Everything still works: the scenario chips run the tools directly, a runner that
 calls the same live services (HIE queries, RAG, model scoring, the simulator, the
-queue) — only free-form chat and the simulator's narrated explanation need model credentials (`ANTHROPIC_API_KEY`, or a Gemini credential with `LLM_PROVIDER=gemini`)
-([aistudio.google.com/apikey](https://aistudio.google.com/apikey)). This doubles as
+queue). Only free-form chat and the simulator's narrated explanation need model credentials
+(`ANTHROPIC_API_KEY`, or a Gemini credential with `LLM_PROVIDER=gemini`, from
+[aistudio.google.com/apikey](https://aistudio.google.com/apikey)). This doubles as
 the demo-day failover: if the live agent errors mid-scenario, the backend
 automatically falls back to the direct tool runner.
 
@@ -81,10 +82,9 @@ service Variables tab. Health check: `/api/health`.
 
 ## The population-health MCP server ★
 
-Google ships MCP tools to **read** FHIR (MCP Toolbox `cloud-healthcare`) and to
-**call** ML plumbing (Agent Platform `/mcp/predict`). Nothing — official or
-community — lets an agent reason about a **population**. `backend/pophealth_mcp`
-fills that gap with 7 tools (measures, gaps, cohorts, stratification, simulation,
+Google already provides MCP connectivity to the core data services (MCP Toolbox sources for
+BigQuery and the Cloud Healthcare API FHIR store). `backend/pophealth_mcp`
+adds the population-health layer with 7 tools (measures, gaps, cohorts, stratification, predictive risk scenarios,
 draft-only interventions) and speaks stdio to **any** MCP client:
 
 ```bash
@@ -93,7 +93,7 @@ cd backend && python -m pophealth_mcp        # or plug into Gemini CLI / Claude 
 
 See [backend/pophealth_mcp/README.md](backend/pophealth_mcp/README.md) for client
 configs and the full gap analysis. Inside Nabd, the ADK supervisor connects to it
-through `McpToolset` — a genuine MCP hop you can watch in the UI's agent trace.
+through `McpToolset`, a genuine MCP hop you can watch in the UI's agent trace.
 
 ## Repo layout
 
@@ -103,7 +103,7 @@ backend/
   routers/               chat (NDJSON streaming) · dashboards · evals · queue/audit/docs/data
   services/
     hie.py               the HIE query engine (single source of truth for chat + dashboards)
-    ml.py                model scoring, SHAP drivers, similarity, segments, counterfactual simulator
+    ml.py                model scoring, SHAP drivers, similarity, segments, predictive risk scenarios
     rag.py               hybrid retrieval over guideline PDFs (BM25 + gemini-embedding cache)
     agent.py             ADK multi-agent graph + NDJSON event streaming
     scenarios.py         direct tool runner for the chips (same services, real numbers, demo-day failover)

@@ -63,9 +63,9 @@ export default function DashboardRisk() {
       </div>
 
       <KpiStrip items={[
-        { icon: 'gauge', tone: 'teal', label: `Model AUC (legacy ${d.legacy_auc})`, value: d.auc,
-          trend: `+${((d.auc - d.legacy_auc) * 100).toFixed(0)}pts`, trendDir: 'up' },
-        { icon: 'alert', tone: 'red', label: 'Expected deterioration events, 12 months',
+        { icon: 'gauge', tone: 'teal', label: `AUC on synthetic held-out data (baseline rule-based score ${d.legacy_auc})`, value: d.auc,
+          trend: `+${((d.auc - d.legacy_auc) * 100).toFixed(0)}pts · methodology, not clinical validation`, trendDir: 'up' },
+        { icon: 'alert', tone: 'red', label: 'Model-expected deterioration events, 12 months (sum of predicted risk)',
           value: Math.round(d.expected_events_12m).toLocaleString() },
         ...bands.map((b, i) => ({
           icon: 'activity', tone: ['green', 'sand', 'amber', 'maroon'][i] || 'teal',

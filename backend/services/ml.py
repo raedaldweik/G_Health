@@ -31,14 +31,20 @@ from services import hie
 MODELS = Path(__file__).resolve().parent.parent / "models"
 
 # Cost assumptions for the simulator (documented, deliberately conservative)
-EVENT_COST_QAR = 18500          # average diabetes deterioration episode (admission + follow-up)
-INTERVENTION_COSTS = {          # annual programme cost per patient (from the HIE med table + programme design)
-    "sglt2_glp1_intensification": 6400,   # blended SGLT2i / GLP-1 RA therapy cost
-    "hba1c_recall_program": 350,          # recall call + test + nurse review
-    "adherence_support_program": 1200,    # pharmacist-led adherence coaching
-    "bp_control_program": 900,            # titration visits + one added agent
-    "renal_protection_program": 480,      # RAAS inhibitor + monitoring
+FEATURE_LABELS = {
+    "age": "Age", "is_male": "Male sex", "bmi": "BMI", "bmi_change_12m": "BMI change (12 m)",
+    "years_since_diagnosis": "Years since diagnosis", "smoker": "Smoking",
+    "hba1c_latest": "HbA1c", "hba1c_12m_ago": "HbA1c 12 months ago", "hba1c_days_since_test": "Days since HbA1c test",
+    "sbp_latest": "Systolic BP", "dbp_latest": "Diastolic BP", "egfr_latest": "eGFR", "acr_latest": "Urine ACR",
+    "albuminuria": "Albuminuria", "retinopathy": "Retinopathy", "neuropathy": "Neuropathy",
+    "foot_ulcer_history": "Foot ulcer history", "htn": "Hypertension", "on_metformin": "Metformin",
+    "on_sglt2_glp1": "SGLT2i / GLP-1 RA", "on_insulin": "Insulin", "on_raas_inhibitor": "RAAS inhibitor",
+    "adherence_pdc": "Adherence (PDC)", "admissions_12mo": "Admissions (12 m)", "ed_visits_12mo": "ED visits (12 m)",
+    "diabetes_medication_count": "Diabetes medicines", "care_gap_count": "Open care gaps",
 }
+BAND_ORDER = ["Low", "Moderate", "High", "Very High"]
+SCENARIO_DISCLAIMER = ("Predictive scenario analysis only. Changes in predicted risk are not estimates of "
+                       "causal treatment effect or events prevented.")
 
 
 @lru_cache(maxsize=1)
@@ -46,7 +52,14 @@ def _risk():
     booster = Booster()
     booster.load_model(str(MODELS / "complication_risk.xgb.json"))
     spec = json.loads((MODELS / "complication_risk.features.json").read_text())
-    return booster, spec["features"], spec["intervenable"]
+    return booster, spec["features"], spec.get("sensitivity_inputs", spec.get("intervenable", []))
+
+
+def model_version() -> str:
+    try:
+        return json.loads((MODELS / "complication_risk.features.json").read_text()).get("version", "2.2.0")
+    except Exception:
+        return "2.2.0"
 
 
 @lru_cache(maxsize=1)
@@ -96,7 +109,7 @@ def score_patient(patient_id: str) -> dict:
                                         (None if pd.isna(X.iloc[0].get(f)) else float(X.iloc[0].get(f)))),
                 "contribution": round(float(c), 4)}
                for f, c in pairs if f != "baseline"][:8]
-    return {"patient_id": patient_id, "model": "deterioration_risk v2.1.0",
+    return {"patient_id": patient_id, "model": f"deterioration_risk v{model_version()}",
             "event_probability_12m": round(prob, 4), "risk_band_model": _band(prob),
             "registry_tier": row.iloc[0]["registry_risk_tier"],
             "top_drivers": drivers,
@@ -184,92 +197,107 @@ def visit_forecast() -> dict:
     return json.loads((MODELS / "visit_forecast.json").read_text())
 
 
-# ─────────────────────────── counterfactual policy simulator ───────────────────────────
+# ─────────────────────────── population risk scenarios ───────────────────────────
+# Each scenario names an eligible cohort and a hypothetical change to the model's INPUTS.
+# The cohort is re-scored through the same deterioration-risk model and the shift in the
+# predicted-risk distribution is reported. Nothing here estimates a treatment effect: the
+# model is predictive, so a change in predicted risk is the model's response to different
+# inputs, not an estimate of events prevented or money saved.
 
-INTERVENTIONS = {
-    "sglt2_glp1_intensification": {
-        "label": "Treatment intensification: SGLT2i / GLP-1 RA in uncontrolled T2DM with obesity or CKD",
+SCENARIOS = {
+    "intensification_cohort_hba1c": {
+        "label": "Intensification-review cohort: HbA1c one point lower",
+        "cohort": "Type 2, HbA1c ≥ 8% with obesity, CKD or albuminuria, not on an SGLT2i / GLP-1 RA",
         "eligible": lambda s: (s["diabetes_type"] == "type2") & (s["on_sglt2_glp1"] == 0)
                               & (s["hba1c_latest"] >= 8)
                               & ((s["bmi"] >= 30) | (s["ckd"] == 1) | (s["albuminuria"] == 1)),
-        "apply": {"on_sglt2_glp1": 1},
+        "apply": lambda cf: cf.assign(hba1c_latest=cf["hba1c_latest"] - 1.0),
+        "inputs_changed": "HbA1c: 1.0 point lower",
     },
-    "hba1c_recall_program": {
-        "label": "HbA1c recall programme: bring every overdue patient back for testing and review",
+    "hba1c_recall": {
+        "label": "Overdue-HbA1c cohort: a test recorded 60 days ago",
+        "cohort": "Patients whose last HbA1c is more than 183 days old",
         "eligible": lambda s: s["hba1c_days_since_test"].fillna(9999) > 183,
-        "apply": {"hba1c_days_since_test": 60},
+        "apply": lambda cf: cf.assign(hba1c_days_since_test=60),
+        "inputs_changed": "Days since HbA1c test: 60",
     },
-    "adherence_support_program": {
-        "label": "Pharmacist-led adherence support for patients below 60% PDC",
+    "adherence_support": {
+        "label": "Low-adherence cohort: PDC at 0.85",
+        "cohort": "Patients with medication adherence (PDC) below 0.60",
         "eligible": lambda s: s["adherence_pdc"] < 0.6,
-        "apply": {"adherence_pdc": 0.85},
+        "apply": lambda cf: cf.assign(adherence_pdc=0.85),
+        "inputs_changed": "Adherence (PDC): 0.85",
     },
-    "bp_control_program": {
-        "label": "Blood-pressure control programme (titrate uncontrolled BP in diabetes)",
+    "bp_control": {
+        "label": "Uncontrolled-hypertension cohort: BP 14/7 mmHg lower",
+        "cohort": "Diabetes with hypertension and BP ≥ 140/90",
         "eligible": lambda s: (s["htn"] == 1) & (s["bp_controlled"] == 0),
-        "apply": "bp",   # special: lower sbp/dbp to guideline-adjacent values
-    },
-    "renal_protection_program": {
-        "label": "Renal protection: RAAS inhibitor for CKD or albuminuria",
-        "eligible": lambda s: ((s["ckd"] == 1) | (s["albuminuria"] == 1)) & (s["on_raas_inhibitor"] == 0),
-        "apply": {"on_raas_inhibitor": 1},
+        "apply": lambda cf: cf.assign(sbp_latest=np.maximum(cf["sbp_latest"] - 14, 126),
+                                      dbp_latest=np.maximum(cf["dbp_latest"] - 7, 76)),
+        "inputs_changed": "Systolic BP: 14 mmHg lower (floor 126); diastolic BP: 7 mmHg lower (floor 76)",
     },
 }
 
 
-def simulate_policy(intervention: str, horizon_months: int = 12) -> dict:
-    """Counterfactual what-if: flip the treatment for the eligible cohort and re-score
-    every patient through the SAME risk model. No canned numbers."""
-    if intervention == "combined":
-        parts = [simulate_policy(k, horizon_months) for k in INTERVENTIONS]
-        return {"intervention": "combined", "label": "All five programmes combined",
-                "horizon_months": horizon_months,
-                "components": parts,
-                "eligible_patients": sum(p["eligible_patients"] for p in parts),
-                "expected_events_avoided": round(sum(p["expected_events_avoided"] for p in parts), 1),
-                "event_cost_avoided_qar": int(sum(p["event_cost_avoided_qar"] for p in parts)),
-                "programme_cost_qar": int(sum(p["programme_cost_qar"] for p in parts)),
-                "net_benefit_qar": int(sum(p["net_benefit_qar"] for p in parts)),
-                "method": parts[0]["method"]}
+def _band_counts(bands: list[str]) -> dict:
+    return {b: int(sum(1 for x in bands if x == b)) for b in BAND_ORDER}
 
-    spec = INTERVENTIONS.get(intervention)
+
+def risk_scenario(scenario: str) -> dict:
+    """Population predictive-risk scenario: re-score an eligible cohort with a hypothetical
+    change to the model's inputs and report how the predicted-risk distribution shifts.
+    Never converts the shift into events prevented, savings or a return."""
+    spec = SCENARIOS.get(scenario)
     if not spec:
-        return {"error": f"unknown intervention '{intervention}'",
-                "available": list(INTERVENTIONS) + ["combined"]}
+        return {"error": f"unknown scenario '{scenario}'", "available": list(SCENARIOS)}
     s = hie.summary()
     s = s[s["consent_status"] != "restricted"]
-    mask = spec["eligible"](s).fillna(False)
-    cohort = s[mask]
+    cohort = s[spec["eligible"](s).fillna(False)]
     if cohort.empty:
-        return {"intervention": intervention, "eligible_patients": 0}
+        return {"scenario": scenario, "label": spec["label"], "eligible_patients": 0,
+                "disclaimer": SCENARIO_DISCLAIMER}
 
+    booster, features, _ = _risk()
     X0 = _feature_frame(cohort)
-    p0 = _score(X0)
-    cf = cohort.copy()
-    if spec["apply"] == "bp":
-        cf["sbp_latest"] = np.maximum(cf["sbp_latest"] - 14, 126)
-        cf["dbp_latest"] = np.maximum(cf["dbp_latest"] - 7, 76)
-    else:
-        for col, val in spec["apply"].items():
-            cf[col] = val
-    p1 = _score(_feature_frame(cf))
+    X1 = _feature_frame(spec["apply"](cohort.copy()))
+    p0, p1 = _score(X0), _score(X1)
+    c0 = booster.predict(DMatrix(X0), pred_contribs=True)[:, :-1]     # last column is the bias
+    c1 = booster.predict(DMatrix(X1), pred_contribs=True)[:, :-1]
+    mean_delta = (c1 - c0).mean(axis=0)
+    total = float(np.abs(mean_delta).sum()) or 1.0
+    attribution = [{"feature": f, "label": FEATURE_LABELS.get(f, f),
+                    "mean_delta_logodds": round(float(d), 4),
+                    "share_of_change_pct": round(abs(float(d)) / total * 100, 1)}
+                   for f, d in sorted(zip(features, mean_delta), key=lambda t: -abs(t[1]))
+                   if abs(float(d)) >= 1e-4][:5]
 
-    scale = horizon_months / 12
-    events_avoided = float((p0 - p1).sum()) * scale
-    rel = float(1 - (p1.mean() / p0.mean())) * 100
-    programme = int(len(cohort) * INTERVENTION_COSTS[intervention] * scale)
-    avoided_cost = int(events_avoided * EVENT_COST_QAR)
+    b0 = [_band(float(p)) for p in p0]
+    b1 = [_band(float(p)) for p in p1]
+    order = {b: i for i, b in enumerate(BAND_ORDER)}
+    lower = sum(1 for a, b in zip(b0, b1) if order[b] < order[a])
+    higher = sum(1 for a, b in zip(b0, b1) if order[b] > order[a])
+    trans: dict = {}
+    for a, b in zip(b0, b1):
+        if a != b:
+            trans[(a, b)] = trans.get((a, b), 0) + 1
+    transitions = [{"from": a, "to": b, "patients": n}
+                   for (a, b), n in sorted(trans.items(), key=lambda t: -t[1])]
+
+    def dist(p, bands):
+        return {"mean_predicted_risk": round(float(np.mean(p)), 4),
+                "median_predicted_risk": round(float(np.median(p)), 4),
+                "p90_predicted_risk": round(float(np.percentile(p, 90)), 4),
+                "bands": _band_counts(bands)}
+
     return {
-        "intervention": intervention, "label": spec["label"],
-        "horizon_months": horizon_months, "eligible_patients": int(len(cohort)),
-        "mean_risk_before": round(float(p0.mean()), 4),
-        "mean_risk_after": round(float(p1.mean()), 4),
-        "relative_risk_reduction_pct": round(rel, 1),
-        "expected_events_avoided": round(events_avoided, 1),
-        "event_cost_avoided_qar": avoided_cost,
-        "programme_cost_qar": programme,
-        "net_benefit_qar": avoided_cost - programme,
-        "method": ("Counterfactual re-scoring: the eligible cohort is re-scored through the "
-                   "deterioration-risk XGBoost model with the programme applied; the "
-                   f"event delta is costed at QAR {EVENT_COST_QAR:,} per avoided deterioration episode."),
+        "scenario": scenario, "label": spec["label"], "cohort": spec["cohort"],
+        "inputs_changed": spec["inputs_changed"], "eligible_patients": int(len(cohort)),
+        "baseline": dist(p0, b0), "hypothetical": dist(p1, b1),
+        "band_movement": {"to_lower_band": int(lower), "unchanged": int(len(cohort) - lower - higher),
+                          "to_higher_band": int(higher), "transitions": transitions},
+        "feature_attribution": attribution,
+        "disclaimer": SCENARIO_DISCLAIMER,
+        "method": ("Every eligible patient is re-scored through the deployed deterioration-risk model with "
+                   "the stated inputs changed; the shift is the model's response to different inputs, "
+                   "attributed with SHAP-style pred_contribs. " + SCENARIO_DISCLAIMER),
     }

@@ -1,33 +1,30 @@
-# population-health-mcp ★
+# population-health-mcp
 
-**The first population-health MCP server on Google Cloud's healthcare stack.**
+**Domain-specific population-health operations, exposed as MCP tools beside Google's own data connectivity.**
 
-## The gap (verified 2026-09-07)
+## Where it sits
 
-| What Google ships | What it does | What it can't do |
-|---|---|---|
-| MCP Toolbox `cloud-healthcare` source (official, Nov 2025) | 15 read-only tools: FHIR store metadata, `get_fhir_resource`, `fhir_patient_search`, `fhir_patient_everything`, DICOM search | Single-patient lookups only |
-| Agent Platform remote MCP server (official, June 2026) | `/mcp/predict` (endpoint scoring), `/mcp/models` (registry), `/mcp/evaluation`, … | Generic ML plumbing, no clinical semantics |
-| 50+ Google-managed MCP servers (Next '26) | BigQuery `execute_sql`, Cloud Run, GKE, Workspace… | No healthcare population reasoning |
-| Community FHIR MCP servers (wso2, the-momentum, …) | FHIR CRUD wrappers | Record plumbing, not population intelligence |
+Google already provides MCP connectivity to the core data services this system relies on:
+the MCP Toolbox has an official `cloud-healthcare` source (FHIR store metadata, resource
+reads, patient search, `$everything`) and a `bigquery` source (SQL over the warehouse).
+Those tools answer record-level and table-level questions.
 
-**Nothing lets an agent reason about a population**: quality measures, care gaps,
-cohort building, model-backed risk stratification, counterfactual policy
-simulation, or a *safe* write-back path. This server does exactly that — checked
-against GitHub (google/googleapis/GoogleCloudPlatform orgs), PulseMCP (22k+
-servers), mcpservers.org and mcpmarket.
+Nabd's server adds the population-health layer on top of that data: quality measures,
+cohort construction, care-gap identification, model-backed stratification, predictive
+risk scenarios, and a human-approved drafting path for interventions. It is a small,
+domain-specific service, not a replacement for the platform's tools.
 
 ## Tools
 
 | Tool | What it answers |
 |---|---|
-| `get_population_snapshot` | "How is the nation doing?" — registry KPIs |
-| `build_cohort` | "Uncontrolled T2DM over 65 in Al Rayyan" — declarative criteria |
-| `find_care_gaps` | "Who has an open statin gap, by facility?" |
+| `get_population_snapshot` | "How is the registry doing?" — headline KPIs |
+| `build_cohort` | "Uncontrolled type 2 over 65 in Al Rayyan" — declarative criteria |
+| `find_care_gaps` | "Who has an open retinal-screening gap, by facility?" |
 | `compute_quality_measure` | HEDIS-style measures with numerator/denominator vs target |
 | `stratify_risk` | Score any cohort through the deployed XGBoost risk model |
-| `simulate_policy` | Counterfactual what-if: flip the therapy, re-score the cohort |
-| `draft_intervention` | DRAFT-ONLY interventions → human approval queue (never writes to the EMR) |
+| `risk_scenario` | Predictive scenario: re-score a cohort with one input changed and report the shift in predicted risk. Predictive, not causal; never events prevented or savings |
+| `draft_intervention` | DRAFT-ONLY review lists, recalls, referrals, outreach → human approval queue (never writes to the EMR; never a prescription) |
 
 ## Use it from any MCP client
 
@@ -51,16 +48,15 @@ python -m pophealth_mcp
 }
 ```
 
-**Claude Desktop** (`claude_desktop_config.json`) — identical block under
-`mcpServers`.
+**Claude Desktop** (`claude_desktop_config.json`): identical block under `mcpServers`.
 
 **Inside Nabd**: the ADK supervisor's `pophealth_agent` connects via
-`McpToolset(StdioConnectionParams(...))` — the hop is visible in the UI agent trace.
+`McpToolset(StdioConnectionParams(...))`; the hop is visible in the UI agent trace.
 
-## On Google Cloud
+## On Google Cloud (target architecture, to validate in discovery)
 
-Same seven tools, re-hosted as a remote MCP server on Cloud Run: cohorts and
-measures become BigQuery SQL over the streamed FHIR export, `stratify_risk` calls a
-Vertex AI online endpoint, and `draft_intervention` writes draft FHIR `Task`
-resources to the Cloud Healthcare API store — sitting beside Google's official
-servers, filling the layer they don't cover.
+The same seven tools re-hosted as a remote MCP server on Cloud Run in `me-central1`:
+cohorts and measures become BigQuery SQL over the FHIR export, `stratify_risk` calls a
+Vertex AI online endpoint, and `draft_intervention` writes draft FHIR `Task` resources
+to the Cloud Healthcare API store for a clinician to approve, beside the platform's own
+MCP tools.

@@ -19,7 +19,7 @@ const DASH_TABS = [
   { id: 'overview', label: 'Registry' },
   { id: 'clinical', label: 'Clinical Quality' },
   { id: 'risk', label: 'Deterioration Risk' },
-  { id: 'cost', label: 'Cost & Equity' },
+  { id: 'cost', label: 'Cost & Variation' },
   { id: 'geography', label: 'Geography' },
 ];
 const DASH_IDS = DASH_TABS.map((t) => t.id);
@@ -131,7 +131,7 @@ function Header({ tab, setTab }) {
   return (
     <header className="app-header">
       <button onClick={() => setTab('landing')}>
-        <img className="brand-logo" src="/google-g.svg" alt="Google" />
+        <img className="brand-logo" src="/nabd-mark.svg" alt="Nabd" />
       </button>
 
       <div className="title-block">
@@ -144,6 +144,7 @@ function Header({ tab, setTab }) {
           <h1 className="app-title">
             <b>Nabd</b> <span className="title-ar">نبض</span> <span className="title-sep">·</span> Population Health Intelligence
           </h1>
+          <span className="platform-tag">Target platform: Google Cloud</span>
           <div className="accent-line" />
         </div>
         <div className="nav-row">

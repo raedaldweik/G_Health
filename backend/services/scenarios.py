@@ -116,16 +116,16 @@ async def sc_patient_deepdive(persona: str):
     drivers = ", ".join(f"{d['feature']} ({'+' if d['contribution']>0 else ''}{d['contribution']:.2f})"
                         for d in score["top_drivers"][:4])
     renal = (p.get("ckd") == 1) or (p.get("albuminuria") == 1)
-    drug = "Empagliflozin 10mg daily" if (renal or (p.get("egfr_latest") or 100) >= 30) else "Semaglutide 0.25mg weekly"
-    why = ("CKD/albuminuria, renal and glycaemic benefit" if renal else "obesity with HbA1c above target")
+    why = ("chronic kidney disease or albuminuria" if renal else "obesity")
     item = queue_service.add_draft(
-        "prescription", drug,
-        f"Treatment intensification, type 2 diabetes, HbA1c {p['hba1c_latest']}% "
-        f"(from {p.get('hba1c_12m_ago') or 'n/a'}% a year ago) on metformin without an SGLT2i/GLP-1 RA; {why}. "
-        f"BMI {p['bmi']}, eGFR {p['egfr_latest']}. Model 12-month deterioration risk {score['event_probability_12m']*100:.0f}%.",
+        "clinical_review", "Clinical review: therapy intensification options per the cited guideline",
+        f"Type 2 diabetes, HbA1c {p['hba1c_latest']}% (from {p.get('hba1c_12m_ago') or 'n/a'}% a year ago) on "
+        f"metformin alone, with {why}; BMI {p['bmi']}, eGFR {p['egfr_latest']}. Model 12-month deterioration risk "
+        f"{score['event_probability_12m']*100:.0f}%. The patient appears to meet the cited guideline's criteria for a "
+        f"therapy intensification review. Please review the options; the choice of therapy rests with you.",
         patient_id=pid, citation=f"{hits[0]['doc']}, p.{hits[0]['page']}" if hits else "")
     audit_svc.log("HITL·DRAFT", "action_agent",
-                  f"Prescription draft {drug} for {pid} → approval queue", pid, "action")
+                  f"Clinical review task (therapy intensification) for {pid} → approval queue", pid, "action")
     ev = [
         {"agent": "cohort_agent", "tool": "get_patient", "args_summary": pid,
          "result_summary": "record + conditions + meds + encounters retrieved"},
@@ -134,8 +134,8 @@ async def sc_patient_deepdive(persona: str):
         {"agent": "guideline_agent", "tool": "search_guidelines",
          "args_summary": "intensification: SGLT2i / GLP-1 RA when HbA1c above target",
          "result_summary": f"{len(hits)} guideline passages"},
-        {"agent": "action_agent", "tool": "draft_prescription",
-         "args_summary": f"{drug} for {pid}",
+        {"agent": "action_agent", "tool": "draft_clinical_review",
+         "args_summary": f"therapy_intensification review for {pid}",
          "result_summary": f"draft {item['id']} → pending human approval"},
     ]
     async for e in _steps(ev):
@@ -150,9 +150,9 @@ async def sc_patient_deepdive(persona: str):
 
 **Model assessment:** the deterioration model puts the 12-month probability of a deterioration event at **{score['event_probability_12m']*100:.0f}%** ({score['risk_band_model']}); the registry's rule-based tier is **{p['registry_risk_tier']}**. Main drivers: {drivers}.
 
-**The actionable gap:** HbA1c above target on metformin without an SGLT2 inhibitor or GLP-1 receptor agonist, with {why}. The national guideline recommends adding one of these agents at this point (see citation).
+**The actionable finding:** HbA1c above target on metformin alone, with {why}, and no SGLT2 inhibitor or GLP-1 receptor agonist on the record. On the cited guideline passage the patient appears to meet the criteria for a therapy intensification review.
 
-**Drafted for your approval:** {drug} (draft `{item['id']}`). Nothing is prescribed until you approve it.
+**Drafted for your approval:** a clinical review task, "review therapy intensification options per the cited guideline" (draft `{item['id']}`). Nabd does not choose a drug or a dose; the clinical decision is yours.
 """
     chart = None
     if tl["series"].get("hba1c"):
@@ -165,14 +165,14 @@ async def sc_patient_deepdive(persona: str):
            "charts": [chart] if chart else [],
            "citations": [{"doc": h["doc"], "file": h["file"], "page": h["page"],
                           "snippet": h["snippet"]} for h in hits],
-           "actions": [{"draft_id": item["id"], "tool": "draft_prescription",
+           "actions": [{"draft_id": item["id"], "tool": "draft_clinical_review",
                         "status": "pending_human_approval"}],
            "usage": None, "model": "direct tool run · live data"}
 
 
 async def sc_intensification_gap(persona: str):
     panel = hie.gap_panel("glp1_sglt2_gap", limit=8)
-    sim = ml.simulate_policy("sglt2_glp1_intensification", 24)
+    sim = ml.risk_scenario("intensification_cohort_hba1c")
     hits = rag.search("SGLT2 inhibitor GLP-1 receptor agonist type 2 diabetes HbA1c above target obesity kidney", 2)
     pids = [p["patient_id"] for p in panel["patients"]]
     item = queue_service.add_draft(
@@ -185,9 +185,9 @@ async def sc_intensification_gap(persona: str):
     ev = [
         {"agent": "pophealth_agent", "tool": "find_care_gaps", "args_summary": "gap_key=glp1_sglt2_gap",
          "result_summary": f"{panel['total']} patients meet intensification criteria"},
-        {"agent": "risk_agent", "tool": "simulate_policy",
-         "args_summary": "sglt2_glp1_intensification, 24 months",
-         "result_summary": f"{sim['expected_events_avoided']:.0f} events avoided, net {_fmt_qar(sim['net_benefit_qar'])}"},
+        {"agent": "risk_agent", "tool": "risk_scenario",
+         "args_summary": "intensification_cohort_hba1c (HbA1c one point lower)",
+         "result_summary": f"mean predicted risk {sim['baseline']['mean_predicted_risk']*100:.1f}% → {sim['hypothetical']['mean_predicted_risk']*100:.1f}%; {sim['band_movement']['to_lower_band']} to a lower band"},
         {"agent": "guideline_agent", "tool": "search_guidelines",
          "args_summary": "SGLT2i / GLP-1 RA intensification",
          "result_summary": f"{len(hits)} passages"},
@@ -198,14 +198,14 @@ async def sc_intensification_gap(persona: str):
     async for e in _steps(ev):
         yield e
     tier_rows = [{"tier": r["group"], "patients": r["value"]} for r in panel["by_tier"]]
-    net_word = "positive" if sim["net_benefit_qar"] > 0 else "negative"
-    answer = f"""**{panel['total']} type 2 patients** have an HbA1c of 8% or more with obesity or kidney disease and are **not on an SGLT2 inhibitor or GLP-1 receptor agonist**, the largest treatment gap in the registry.
+    top_feat = sim["feature_attribution"][0]["label"] if sim.get("feature_attribution") else "HbA1c"
+    answer = f"""**{panel['total']} type 2 patients** have an HbA1c of 8% or more with obesity or kidney disease and are **not on an SGLT2 inhibitor or GLP-1 receptor agonist**: the largest guideline-derived care gap in the registry.
 
-**What closing it is worth (counterfactual, 24 months):** the deterioration model re-scored all {sim['eligible_patients']} eligible patients with therapy applied, **{sim['relative_risk_reduction_pct']}% relative risk reduction**, ≈**{sim['expected_events_avoided']:.0f} deterioration events avoided**, {_fmt_qar(sim['event_cost_avoided_qar'])} of episode cost avoided against {_fmt_qar(sim['programme_cost_qar'])} of therapy cost → **net {_fmt_qar(sim['net_benefit_qar'])}** ({net_word} on cost alone; the clinical benefit is the case).
+**Predictive scenario (model inputs only):** if the model received an HbA1c one point lower for the {sim['eligible_patients']} eligible patients, the mean predicted 12-month deterioration risk moves from **{sim['baseline']['mean_predicted_risk']*100:.1f}%** to **{sim['hypothetical']['mean_predicted_risk']*100:.1f}%** and **{sim['band_movement']['to_lower_band']} patients** move to a lower predictive band; {top_feat} accounts for most of the change. Predictive scenario analysis only: this is how the model's estimate responds to a different input, not an estimate of causal treatment effect or events prevented.
 
-The national guideline recommends adding one of these agents when HbA1c remains above target on metformin, with preference for an SGLT2 inhibitor in kidney disease (see citation).
+The cited guideline passage covers therapy intensification when HbA1c remains above target on metformin (see citation). Which therapy, if any, is a decision for each treating clinician.
 
-**Drafted for approval:** a priority-ordered review list for the full gap cohort is in the queue (`{item['id']}`).
+**Drafted for approval:** a priority-ordered clinical review list for the full gap cohort is in the queue (`{item['id']}`).
 """
     yield {"type": "final", "answer": answer, "trace": _trace(ev),
            "charts": [{"type": "bar", "title": "Intensification gap by registry risk tier",
@@ -302,7 +302,7 @@ Mean HbA1c is **{kpi['mean_hba1c']}%** ({'down' if yoy<0 else 'up'} {abs(yoy):.2
 
 **Complication burden:** {kpi['pct_retinopathy']}% of patients have retinopathy, {kpi['pct_neuropathy']}% neuropathy and {kpi['pct_ckd']}% chronic kidney disease; {kpi['pct_on_sglt2_glp1']}% are on an SGLT2 inhibitor or GLP-1 receptor agonist.
 
-**Geography:** the map shows control concentrated in Doha. The flagged facilities are in the north (Al Shamal, Al Khor) and around the Industrial Area (Hazm Mebaireek), where the expatriate workforce lives, distance from the capital and the access gradient follow the same line.
+**Geography:** the map shows control concentrated in Doha; the flagged facilities are in the north (Al Shamal, Al Khor) and around the Industrial Area (Hazm Mebaireek). This is descriptive variation by facility: it points to where further investigation is needed, not to why the differences exist.
 """
     yield {"type": "final", "answer": answer, "trace": _trace(ev),
            "charts": [
@@ -357,41 +357,57 @@ The '{segs[0]['segment']}' segment is where case-management pays for itself; the
            "citations": [], "actions": [], "usage": None, "model": "direct tool run · live data"}
 
 
-async def sc_policy_sim(persona: str):
-    sims = [ml.simulate_policy(k, 24) for k in ml.INTERVENTIONS]
-    comb = ml.simulate_policy("combined", 24)
+async def sc_risk_scenarios(persona: str):
+    sims = [ml.risk_scenario(k) for k in ml.SCENARIOS]
     ev = [
-        {"agent": "pophealth_agent", "tool": "simulate_policy",
-         "args_summary": f"{s['intervention']}, 24 months",
-         "result_summary": f"{s['expected_events_avoided']:.0f} events avoided, net {_fmt_qar(s['net_benefit_qar'])}"}
-        for s in sims
-    ] + [{"agent": "risk_agent", "tool": "simulate_policy", "args_summary": "combined, 24 months",
-          "result_summary": f"net {_fmt_qar(comb['net_benefit_qar'])}"}]
+        {"agent": "pophealth_agent", "tool": "risk_scenario",
+         "args_summary": x["scenario"],
+         "result_summary": f"{x['eligible_patients']} eligible; mean predicted risk {x['baseline']['mean_predicted_risk']*100:.1f}% → "
+                           f"{x['hypothetical']['mean_predicted_risk']*100:.1f}%; {x['band_movement']['to_lower_band']} to a lower band"}
+        for x in sims
+    ]
     async for e in _steps(ev):
         yield e
     rows = "\n".join(
-        f"| {s['label'][:48]} | {s['eligible_patients']:,} | {s['relative_risk_reduction_pct']}% "
-        f"| {s['expected_events_avoided']:.0f} | {_fmt_qar(s['programme_cost_qar'])} | **{_fmt_qar(s['net_benefit_qar'])}** |"
-        for s in sims)
-    best = max(sims, key=lambda x: x["net_benefit_qar"]); worst = min(sims, key=lambda x: x["net_benefit_qar"])
-    most_events = max(sims, key=lambda x: x["expected_events_avoided"])
-    answer = f"""**Programme simulation, five candidate programmes, 24-month horizon.** Every eligible patient is re-scored through the deployed deterioration model with the programme applied; the figures are computed, not assumed.
+        f"| {x['label']} | {x['eligible_patients']:,} | {x['baseline']['mean_predicted_risk']*100:.1f}% → "
+        f"{x['hypothetical']['mean_predicted_risk']*100:.1f}% | {x['band_movement']['to_lower_band']:,} | "
+        f"{x['feature_attribution'][0]['label'] if x['feature_attribution'] else 'n/a'} |"
+        for x in sims)
+    most = max(sims, key=lambda x: x["baseline"]["mean_predicted_risk"] - x["hypothetical"]["mean_predicted_risk"])
+    answer = f"""**Population risk scenarios, four eligible cohorts.** Every eligible patient is re-scored through the deployed deterioration model with one of its inputs changed; the table shows how the model's predicted-risk distribution shifts. The figures are computed, not assumed.
 
-| Programme | Eligible | Relative risk reduction | Events avoided | Programme cost | Net benefit |
-|---|---|---|---|---|---|
+| Scenario (input change) | Eligible | Mean predicted risk, baseline → hypothetical | Patients moving to a lower predictive band | Feature accounting for the change |
+|---|---|---|---|---|
 {rows}
 
-**All five combined: ≈{comb['expected_events_avoided']:.0f} deterioration events avoided and a net {_fmt_qar(comb['net_benefit_qar'])}** over 24 months (episodes costed at QAR {ml.EVENT_COST_QAR:,}).
-
-**Reading the table:** {best['label'].split(':')[0]} delivers the largest net benefit; {most_events['label'].split(':')[0].lower()} avoids the most events. {worst['label'].split(':')[0]} does not pay back within 24 months on cost alone, its case rests on clinical outcomes, which this model does not price. On Google Cloud the same simulation is BigQuery `ML.PREDICT` over the counterfactual cohort.
+**Reading the table:** the model's estimate is most responsive in the {most['label'].split(':')[0].lower()}, which is where further investigation and intervention design would start. {ml.SCENARIO_DISCLAIMER} Estimating what a programme would prevent, or save, needs causal evidence: an evaluated pilot or published intervention-effect estimates, with costs from finance.
 """
     yield {"type": "final", "answer": answer, "trace": _trace(ev),
            "charts": [{"type": "bar",
-                       "title": "Net benefit by programme (24 months)",
-                       "data": [{"intervention": s["intervention"].replace("_program", "").replace("_", " "),
-                                 "net_qar_m": round(s["net_benefit_qar"] / 1e6, 2)} for s in sims],
-                       "xKey": "intervention",
-                       "yKeys": [{"key": "net_qar_m", "label": "Net benefit (QAR M)"}]}],
+                       "title": "Patients moving to a lower predictive band, by scenario",
+                       "subtitle": "Predictive scenario analysis, not events prevented",
+                       "data": [{"scenario": x["label"].split(":")[0].replace(" cohort", ""),
+                                 "patients": x["band_movement"]["to_lower_band"]} for x in sims],
+                       "xKey": "scenario",
+                       "yKeys": [{"key": "patients", "label": "Patients"}]}],
+           "citations": [], "actions": [], "usage": None, "model": "direct tool run · live data"}
+
+
+async def sc_causal_guardrail(persona: str):
+    """Guardrail: a causal / ROI question answered with the model's limits, not a number."""
+    x = ml.risk_scenario("adherence_support")
+    ev = [{"agent": "risk_agent", "tool": "risk_scenario", "args_summary": "adherence_support",
+           "result_summary": f"predictive shift only: mean predicted risk {x['baseline']['mean_predicted_risk']*100:.1f}% → "
+                             f"{x['hypothetical']['mean_predicted_risk']*100:.1f}%"}]
+    async for e in _steps(ev):
+        yield e
+    answer = f"""**I can't give you that number from this model, and I would not trust one that did.** The deterioration model is predictive, not causal: it estimates who is likely to deteriorate given what the exchange knows about them. It cannot tell you what an adherence programme would cause, so a change in its output is not a count of admissions prevented and cannot be priced as savings.
+
+**What the model can show:** if it received an adherence (PDC) of 0.85 instead of the recorded value for the {x['eligible_patients']} patients below 0.60, its mean predicted 12-month risk moves from **{x['baseline']['mean_predicted_risk']*100:.1f}%** to **{x['hypothetical']['mean_predicted_risk']*100:.1f}%**, with {x['band_movement']['to_lower_band']} patients in a lower predictive band. That tells you where the estimate is sensitive to adherence, which is useful for designing and targeting the programme.
+
+**What a prevented-admissions or savings figure would need:** causal evidence of the programme's effect, from an evaluated pilot (ideally randomised or a quasi-experimental design) or published intervention-effect estimates applied to this eligible cohort, plus episode costs from finance. I can draft the pilot cohort and the measures to evaluate it against, for approval.
+"""
+    yield {"type": "final", "answer": answer, "trace": _trace(ev), "charts": [],
            "citations": [], "actions": [], "usage": None, "model": "direct tool run · live data"}
 
 
@@ -403,13 +419,13 @@ async def sc_equity(persona: str):
     async for e in _steps(ev):
         yield e
     worst, best = eq[0], eq[-1]
-    answer = f"""**The equity gap is real and measurable.** Mean HbA1c ranges from **{best['mean_hba1c']}%** ({best['nationality']}) to **{worst['mean_hba1c']}%** ({worst['nationality']}), a {worst['mean_hba1c']-best['mean_hba1c']:.2f}pp spread, and control rates follow the same gradient.
+    answer = f"""**Outcomes vary by nationality group; this is descriptive variation.** Mean HbA1c ranges from **{best['mean_hba1c']}%** ({best['nationality']}) to **{worst['mean_hba1c']}%** ({worst['nationality']}), a {worst['mean_hba1c']-best['mean_hba1c']:.2f}-point spread, and control rates follow the same ordering. The groups with the highest mean HbA1c ({', '.join(e['nationality'] for e in eq[:3])}) also carry more open care gaps per patient ({eq[0]['mean_gaps']:.1f} vs {eq[-1]['mean_gaps']:.1f}).
 
-The pattern tracks healthcare access, not biology: the largest gaps sit in expatriate worker populations ({', '.join(e['nationality'] for e in eq[:3])}), who also carry more open care gaps per patient. A multilingual outreach programme (SMS in Bengali, Nepali, Urdu, Tagalog) is the cheapest intervention on the board and aligns directly with the National Health Strategy's equity pillar.
+These are descriptive differences in synthetic demonstration data. They identify where further investigation is needed, starting with the open care gaps, and should not be read as causal or biological findings about any group. The same view is what a fairness monitor would track for the model's subgroup performance.
 """
     yield {"type": "final", "answer": answer, "trace": _trace(ev),
            "charts": [{"type": "bar", "title": "Mean HbA1c by nationality",
-                       "subtitle": "Diabetes cohort, the access gradient",
+                       "subtitle": "Diabetes cohort, descriptive variation by nationality",
                        "data": [{"nationality": e["nationality"], "HbA1c": e["mean_hba1c"]}
                                 for e in eq],
                        "xKey": "nationality", "yKeys": [{"key": "HbA1c", "label": "Mean HbA1c %"}]}],
@@ -482,11 +498,11 @@ SCENARIOS = {
         {"id": "c_briefing", "tag": "C1", "label": "Morning panel briefing",
          "question": "Give me my morning briefing: review the panel and tell me who needs attention today.",
          "runner": sc_morning_briefing},
-        {"id": "c_deepdive", "tag": "C2", "label": "Patient review + draft prescription",
-         "question": "Review my highest-risk patient whose HbA1c is rising on metformin alone: summarise, score the risk, check the guideline, and draft what is needed.",
+        {"id": "c_deepdive", "tag": "C2", "label": "Patient review + clinical review task",
+         "question": "Review my highest-risk patient whose HbA1c is rising on metformin alone: summarise, score the risk, check the guideline, and draft the review task.",
          "runner": sc_patient_deepdive},
         {"id": "c_intensify", "tag": "C3", "label": "Treatment intensification gap",
-         "question": "How many type 2 patients with HbA1c above 8% are not on an SGLT2 inhibitor or GLP-1 agonist, what is closing that gap worth, and draft the review list.",
+         "question": "How many type 2 patients with HbA1c above 8% are not on an SGLT2 inhibitor or GLP-1 agonist, how does the model's predicted risk respond if their HbA1c were a point lower, and draft the review list.",
          "runner": sc_intensification_gap},
         {"id": "c_screening", "tag": "C4", "label": "Retinal screening recall",
          "question": "Which patients are overdue for retinal screening, where is the backlog, and draft the recall.",
@@ -499,11 +515,11 @@ SCENARIOS = {
         {"id": "e_cost", "tag": "E2", "label": "Cost concentration & segments",
          "question": "Where is our spend concentrated, and what do the population segments look like?",
          "runner": sc_cost},
-        {"id": "e_sim", "tag": "E3", "label": "Programme simulation (ML)",
-         "question": "Simulate our five candidate programmes over 24 months and rank them by net benefit.",
-         "runner": sc_policy_sim},
-        {"id": "e_equity", "tag": "E4", "label": "Equity analysis",
-         "question": "Show me the equity picture: outcomes by nationality.",
+        {"id": "e_sim", "tag": "E3", "label": "Population risk scenarios (ML)",
+         "question": "Run the population risk scenarios: if the model received better inputs for each eligible cohort, how does the predicted-risk distribution shift?",
+         "runner": sc_risk_scenarios},
+        {"id": "e_equity", "tag": "E4", "label": "Variation by nationality",
+         "question": "Show me outcomes by nationality group.",
          "runner": sc_equity},
         {"id": "e_forecast", "tag": "E5", "label": "Demand forecast",
          "question": "Forecast outpatient demand for the next 12 months.",
@@ -511,6 +527,12 @@ SCENARIOS = {
         {"id": "e_quality", "tag": "E6", "label": "Diabetes quality scorecard (MCP)",
          "question": "Compute the clinical quality scorecard against our targets.",
          "runner": sc_quality},
+    ],
+    # Not shown as chips: exercised by the evalset (and on request) to prove the guardrail.
+    "guardrail": [
+        {"id": "g_causal", "tag": "G1", "label": "Causal question guardrail",
+         "question": "How many admissions will the adherence programme prevent next year, and how much money will it save us?",
+         "runner": sc_causal_guardrail},
     ],
 }
 

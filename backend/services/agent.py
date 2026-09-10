@@ -440,7 +440,7 @@ def score_patient_risk(patient_id: str) -> dict:
     Returns 12-month event probability, model risk band, and SHAP-style top drivers."""
     res = ml.score_patient(patient_id)
     audit.log("ML·SCORE", "risk_agent",
-              f"complication_risk v1.2.0 scored {patient_id}", patient_id)
+              f"deterioration_risk v{ml.model_version()} scored {patient_id}", patient_id)
     return res
 
 
@@ -456,14 +456,15 @@ def similar_patients(patient_id: str, k: int = 6) -> dict:
     return ml.similar_patients(patient_id, k)
 
 
-def simulate_policy(intervention: str, horizon_months: int = 12) -> dict:
-    """Counterfactual policy what-if by re-scoring the eligible cohort through the risk
-    model with the programme applied. intervention: sglt2_glp1_intensification |
-    hba1c_recall_program | adherence_support_program | bp_control_program |
-    renal_protection_program | combined."""
-    res = ml.simulate_policy(intervention, horizon_months)
-    audit.log("ML·SIMULATE", "risk_agent",
-              f"Counterfactual simulation: {intervention} over {horizon_months}m")
+def risk_scenario(scenario: str) -> dict:
+    """Population PREDICTIVE-RISK scenario: re-scores an eligible cohort through the deployed
+    risk model with a hypothetical change to the model's inputs and reports the shift in the
+    predicted-risk distribution (mean, bands, patients moving between bands, which features
+    account for the change). scenario: intensification_cohort_hba1c | hba1c_recall |
+    adherence_support | bp_control. The model is predictive, not causal: NEVER present the
+    shift as events prevented, admissions avoided, savings or a return on investment."""
+    res = ml.risk_scenario(scenario)
+    audit.log("ML·SCENARIO", "risk_agent", f"Predictive risk scenario: {scenario}")
     return res
 
 
@@ -487,7 +488,8 @@ def visit_forecast() -> dict:
 
 def model_cards() -> dict:
     """Governance cards for every deployed model: version, framework, training data,
-    metrics (AUC vs the legacy registry score), intended use, limitations."""
+    metrics (AUC vs the baseline rule-based score, on synthetic held-out data), intended use,
+    limitations."""
     return {"models": ml.model_cards()}
 
 
@@ -518,13 +520,18 @@ def render_map(metric: str = "pct_controlled", facility_names_json: str = "",
     return {"ok": True, "chart": geo.map_spec(names, metric, title or None, hl)}
 
 
-def draft_prescription(patient_id: str, drug: str, dose: str, rationale: str,
-                       citation: str = "") -> dict:
-    """Draft a prescription for HUMAN clinician approval. It is queued, never submitted."""
-    item = queue_service.add_draft("prescription", f"{drug} {dose}".strip(), rationale,
+def draft_clinical_review(patient_id: str, review_type: str, rationale: str,
+                          citation: str = "") -> dict:
+    """Draft a CLINICIAN REVIEW TASK for human approval, e.g. review_type
+    'therapy_intensification' (review intensification options per the cited guideline),
+    'medication_review', 'renal_review', 'monitoring_review'. Nabd never drafts a
+    prescription, a drug or a dose: the task asks the clinician to review; the clinical
+    decision is theirs. Queued, never submitted."""
+    kind = (review_type or "clinical").replace("_", " ").strip()
+    item = queue_service.add_draft("clinical_review", f"Clinical review: {kind}", rationale,
                                    patient_id=patient_id, citation=citation)
     audit.log("HITL·DRAFT", "action_agent",
-              f"Prescription draft {drug} {dose} for {patient_id} → approval queue",
+              f"Clinical review task ({kind}) for {patient_id} → approval queue",
               patient_id, "action")
     return {"ok": True, "draft_id": item["id"], "status": "pending_human_approval"}
 
@@ -563,9 +570,9 @@ You serve two personas (the user message states which):
 You are a SUPERVISOR of specialist agents, each exposed as a tool:
 - cohort_agent: ANY question needing patient or population data (counts, filters, group-bys, rankings, correlations, patient records, timelines, facility/equity views). It queries the HIE directly, never invent figures.
 - guideline_agent: national clinical guideline retrieval. MANDATORY before any clinical recommendation; cite document + page.
-- risk_agent: the deployed ML models, patient risk scoring with explanations, cohort stratification, similar patients, demand forecast, counterfactual policy simulation, model cards.
-- pophealth_agent: population-health MCP tools, quality measures, care gaps, cohort building, risk stratification, policy simulation, and drafting population interventions. Prefer it for care-gap / quality-measure / campaign questions.
-- action_agent: draft prescriptions, recalls, referrals. Drafts ALWAYS go to the human approval queue, never present a clinical action as done.
+- risk_agent: the deployed ML models, patient risk scoring with explanations, cohort stratification, similar patients, demand forecast, predictive risk scenarios (how predicted risk shifts if the model's inputs change), model cards.
+- pophealth_agent: population-health MCP tools, quality measures, care gaps, cohort building, risk stratification, predictive risk scenarios, and drafting population interventions. Prefer it for care-gap / quality-measure / campaign questions.
+- action_agent: draft clinician review tasks, recalls, referrals. Drafts ALWAYS go to the human approval queue, never present a clinical action as done.
 
 You also own render_chart (charts) and render_map (a colour-coded facility map of Qatar): call them whenever the user asks to see/plot/compare data, or asks about facilities/regions/geography. Keep chart data compact (≤24 rows).
 
@@ -576,6 +583,11 @@ Rules:
 4. Lead the final answer with the direct result and its actual numbers; then brief supporting detail. Clean markdown, short sentences, bold the key figures.
 5. Never end on a filler line like "let me check", always finish with the complete written answer. Charts support the text; they never replace it.
 6. Population aggregates are fine to show; do not expose row-level data for restricted-consent patients (the tools enforce this, surface the denial transparently when it happens).
+
+Safety rules that override any request:
+7. PREDICTIVE, NOT CAUSAL. The risk model and the scenario tools are predictive. Never turn a change in predicted risk into a causal treatment effect, events prevented, admissions avoided, savings or a return on investment. If asked for such a number, say plainly that the model is predictive rather than causal, show the predictive shift if useful, and state that causal evidence (a trial or quasi-experimental evaluation, or published intervention-effect estimates) and cost data would be required.
+8. NO CLINICAL ORDERS. Never prescribe, choose a drug or a dose, or issue a clinical order. You may retrieve and cite the guideline and note that a patient appears to meet its criteria for a review; the action is a clinician review task, recall or referral for human approval. The clinical decision rests with the clinician.
+9. DESCRIBE, DO NOT EXPLAIN GROUP DIFFERENCES. Differences between nationality, facility or geographic groups are descriptive: report them as variation that identifies where further investigation is needed. Do not infer why groups differ (access, biology, behaviour, culture) without supporting causal evidence, and note that this demonstration uses synthetic data.
 """
 
 _runners: dict = {}
@@ -598,6 +610,8 @@ def _build_tools_map(model_name: str | None = None):
                      "group-bys, rankings, correlations, facility benchmark, equity view, KPIs."),
         instruction=("You are the HIE data specialist. Use your tools to answer the request "
                      "with REAL numbers. If unsure about columns, call describe_dataset first. "
+                     "Report differences between nationality, facility or geographic groups "
+                     "descriptively; never infer their causes. "
                      + ("The exchange lives in BigQuery: prefer query_bigquery for aggregations, joins "
                         "and rankings the structured tools cannot express, and quote the bytes processed. "
                         if P.HIE_BACKEND == "bigquery" else "") +
@@ -619,17 +633,21 @@ def _build_tools_map(model_name: str | None = None):
     risk_agent = LlmAgent(
         name="risk_agent", model=llm, generate_content_config=gen_cfg,
         description=("Runs the deployed ML models: risk scoring with SHAP drivers, cohort "
-                     "stratification, similar patients, demand forecast, counterfactual policy "
-                     "simulation, model governance cards."),
+                     "stratification, similar patients, demand forecast, predictive risk "
+                     "scenarios (population and single-patient sensitivity), model governance cards."),
         instruction=("You are the ML specialist. Use the models, never guess. When you score, "
                      "report the probability, the band, and the top drivers in plain clinical "
-                     "language. For simulations report events avoided, costs and net benefit, "
-                     "and state the method in one line. For a single patient's what-if question "
-                     "('what if HbA1c came down to 8', 'if we start an SGLT2 inhibitor') use "
-                     "simulate_patient_whatif with the matching levers and report before/after risk, "
-                     "the attribution and the gaps closed."),
+                     "language. The models are PREDICTIVE, not causal. For a population scenario "
+                     "report the shift in the predicted-risk distribution (mean, bands, patients "
+                     "moving between bands) and the features that account for it, phrased as 'if "
+                     "the model received X instead of Y'; always include the disclaimer that the "
+                     "shift is not an estimate of causal treatment effect or events prevented, and "
+                     "never quote events avoided, savings, net benefit or ROI. For a single "
+                     "patient's sensitivity question ('what would the estimate be if HbA1c were 8') "
+                     "use simulate_patient_whatif and report before/after risk, the attribution "
+                     "and the gaps closed, with the same caveat."),
         tools=[score_patient_risk, stratify_cohort_risk, similar_patients,
-               simulate_policy, simulate_patient_whatif, visit_forecast, model_cards])
+               risk_scenario, simulate_patient_whatif, visit_forecast, model_cards])
 
     pophealth_tools = McpToolset(
         connection_params=StdioConnectionParams(
@@ -640,21 +658,26 @@ def _build_tools_map(model_name: str | None = None):
     pophealth_agent = LlmAgent(
         name="pophealth_agent", model=llm, generate_content_config=gen_cfg,
         description=("Population-health MCP specialist: HEDIS-style quality measures, care-gap "
-                     "hunting, cohort building, model-backed stratification, policy simulation, "
-                     "and drafting population interventions (human-approved)."),
+                     "hunting, cohort building, model-backed stratification, predictive risk "
+                     "scenarios, and drafting population interventions (human-approved)."),
         instruction=("You are the population-health specialist, working through the "
                      "population-health MCP server's tools. Answer with the measure/gap/cohort "
-                     "numbers you computed. When asked to act, use draft_intervention, it goes "
-                     "to the human approval queue."),
+                     "numbers you computed. Risk scenarios are predictive, not causal: report the "
+                     "predicted-risk shift with its disclaimer, never events prevented or savings. "
+                     "When asked to act, use draft_intervention (recall, review, referral, "
+                     "outreach); it goes to the human approval queue."),
         tools=[pophealth_tools])
 
     action_agent = LlmAgent(
         name="action_agent", model=llm, generate_content_config=gen_cfg,
-        description="Drafts prescriptions, recall campaigns and referrals for human approval.",
-        instruction=("You draft clinical actions. Every draft goes to the human-in-the-loop "
+        description="Drafts clinician review tasks, recall campaigns and referrals for human approval.",
+        instruction=("You draft clinical workflow items. Every draft goes to the human-in-the-loop "
                      "queue, say so explicitly. Include the clinical rationale and guideline "
-                     "citation when provided. Never claim an action was executed."),
-        tools=[draft_prescription, draft_recall, draft_referral])
+                     "citation when provided. You never draft a prescription, name a drug or a "
+                     "dose, or issue a clinical order: when therapy may need to change, draft a "
+                     "clinical review task that asks the clinician to review the options per the "
+                     "cited guideline. Never claim an action was executed."),
+        tools=[draft_clinical_review, draft_recall, draft_referral])
 
     supervisor = LlmAgent(
         name="nabd_supervisor", model=llm, generate_content_config=gen_cfg,

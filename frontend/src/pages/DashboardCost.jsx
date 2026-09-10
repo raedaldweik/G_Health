@@ -7,7 +7,7 @@ import { useApp } from '../context/AppContext';
 
 const shortFacility = (f) => f.replace(' Health Center', '').replace(' Hospital', ' H.');
 
-/** Dashboard 4: cost concentration and the equity gradient. */
+/** Dashboard 4: cost concentration and descriptive variation by population group. */
 export default function DashboardCost() {
   const { dashFilter, toggleFilter } = useApp();
   const [d, setD] = useState(null);
@@ -36,10 +36,10 @@ export default function DashboardCost() {
       <div className="flex items-end justify-between gap-4 shrink-0 px-1">
         <div>
           <h1 className="text-[17px] font-extrabold tracking-tight leading-none" style={{ color: 'var(--text)' }}>
-            Cost &amp; Equity
+            Cost &amp; Population Variation
           </h1>
           <p className="text-[10.5px] mt-1" style={{ color: 'var(--text-dim)' }}>
-            Where the spend concentrates, and which groups the system reaches least. The equity gradient tracks access, not biology; it is a National Health Strategy pillar.
+            Where the spend concentrates, and how outcomes vary by population group. Descriptive variation that identifies where further investigation is needed; group differences in this synthetic demonstration data are not causal or biological findings.
           </p>
         </div>
         <FilterBar info={d.filter} />
@@ -51,7 +51,7 @@ export default function DashboardCost() {
         { icon: 'users', tone: 'sand', label: 'Share of spend from the costliest 10% of patients',
           value: `${cc.top10pct_share_pct}%` },
         { icon: 'alert', tone: 'red',
-          label: eq.length > 1 ? `Nationality gap in HbA1c: ${hi.nationality} ${hi.mean_hba1c.toFixed(1)}% vs ${lo.nationality} ${lo.mean_hba1c.toFixed(1)}%` : 'Nationality gap in HbA1c',
+          label: eq.length > 1 ? `Spread in mean HbA1c across nationality groups: ${hi.nationality} ${hi.mean_hba1c.toFixed(1)}% vs ${lo.nationality} ${lo.mean_hba1c.toFixed(1)}%` : 'Spread in mean HbA1c across nationality groups',
           value: gapPts, suffix: 'pts' },
         { icon: 'activity', tone: 'violet', label: 'Costliest population segment',
           value: segments[0]?.segment ?? 'n/a' },
@@ -87,7 +87,7 @@ export default function DashboardCost() {
         </div>
 
         <div className="col-span-3">
-          <Panel title="Mean HbA1c by nationality (the access gradient)">
+          <Panel title="Mean HbA1c by nationality group (descriptive variation)">
             <DynamicChart bare spec={{
               type: 'bar', xKey: 'nationality',
               data: eq.map((e) => ({ nationality: e.nationality, HbA1c: e.mean_hba1c })),
@@ -96,7 +96,7 @@ export default function DashboardCost() {
           </Panel>
         </div>
         <div className="col-span-3">
-          <Panel title="Control, gaps and cost by nationality" pad={false}>
+          <Panel title="Control, gaps and cost by nationality group (descriptive; synthetic data)" pad={false}>
             <div className="overflow-y-auto h-full px-3 pb-2">
               <table className="data-table">
                 <thead>

@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import { decideQueue, getQueue } from '../services/api';
 import { Spinner } from '../components/ui';
 
-const TYPE_ICONS = { prescription: '℞', recall_campaign: '📣', referral: '→', therapy_review: '⚕', prescription_draft: '℞' };
+const TYPE_ICONS = { clinical_review: '⚕', recall_campaign: '📣', referral: '→', therapy_review: '⚕', outreach_task: '☎', prescription: '⚕', prescription_draft: '⚕' };
 
 /** Human-in-the-loop queue: everything the agents draft waits here for a signature. */
 export default function QueuePage() {
@@ -79,8 +79,9 @@ export default function QueuePage() {
           Human-in-the-loop queue
         </h1>
         <p className="text-[11px] mt-1 mb-5" style={{ color: 'var(--text-dim)' }}>
-          The agents draft; a clinician signs. <b>No clinical write ever happens without a human</b>: 
-          this queue is the safety model, and every decision lands in the audit trail.
+          The agents draft review tasks, recalls and referrals; a clinician signs. <b>No clinical write ever happens without a human</b>, and
+          Nabd never drafts a prescription or an order: this queue is the safety model, and every decision lands in the audit trail.
+          On the target architecture an approved item is written back as a FHIR Task for the care team, never as a medication order.
         </p>
 
         <p className="panel-title mb-3">Awaiting approval · {pending.length}</p>

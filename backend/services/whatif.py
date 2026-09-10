@@ -1,14 +1,17 @@
-"""Patient-level what-if simulator.
+"""Patient-level risk sensitivity simulator.
 
-The clinician moves a lever (HbA1c, blood pressure, adherence, a therapy flag ...) and the
-SAME deployed deterioration-risk model re-scores the patient. Nothing here is canned:
+The clinician changes an INPUT the model reads (HbA1c, blood pressure, adherence, a test
+date ...) and the SAME deployed deterioration-risk model re-scores the patient. It answers
+"what does the model return if it received X instead of Y", a predictive sensitivity
+analysis; it does not estimate what changing X in the patient would cause. Therapy flags are
+not levers: the model is predictive, not a treatment-effect model. Nothing here is canned:
 
   * baseline and simulated probabilities come from the XGBoost booster in ml.py;
   * the per-feature attribution is the change in the booster's own pred_contribs
     (SHAP-style, log-odds space) allocated proportionally onto the probability change;
   * the registry percentile comes from scoring the whole registry once and caching it;
-  * rule-based care gaps that depend on the levers are re-derived, so closing the HbA1c
-    recall gap or starting an SGLT2 inhibitor is reflected in the gap list and in
+  * rule-based care gaps that depend on the inputs are re-derived, so a recorded HbA1c
+    test or a controlled blood pressure is reflected in the gap list and in
     care_gap_count (which is itself a model feature).
 
 The language model's role is explanation only: it is handed the numbers and asked to
@@ -48,18 +51,15 @@ LEVERS: list[dict] = [
     {"key": "bmi", "label": "BMI", "unit": "kg/m²", "kind": "range", "min": 17, "max": 47, "step": 0.1,
      "group": "Behaviour", "hint": "≥30 = obesity"},
     {"key": "smoker", "label": "Current smoker", "kind": "toggle", "group": "Behaviour"},
-    {"key": "on_metformin", "label": "Metformin", "kind": "toggle", "group": "Therapy"},
-    {"key": "on_sglt2_glp1", "label": "SGLT2 inhibitor / GLP-1 RA", "kind": "toggle", "group": "Therapy",
-     "hint": "Guideline-recommended intensification for uncontrolled type 2"},
-    {"key": "on_raas_inhibitor", "label": "RAAS inhibitor (ACEi / ARB)", "kind": "toggle", "group": "Therapy",
-     "hint": "Renal protection when albuminuria or CKD is present"},
     {"key": "admissions_12mo", "label": "Admissions, last 12 months", "unit": "", "kind": "range", "min": 0, "max": 4, "step": 1,
      "group": "Utilisation"},
     {"key": "ed_visits_12mo", "label": "ED visits, last 12 months", "unit": "", "kind": "range", "min": 0, "max": 4, "step": 1,
      "group": "Utilisation"},
 ]
 LEVER_KEYS = {l["key"] for l in LEVERS}
-THERAPY_FLAGS = ["on_metformin", "on_sglt2_glp1", "on_insulin", "on_raas_inhibitor"]
+THERAPY_FLAGS = ["on_metformin", "on_sglt2_glp1", "on_insulin", "on_raas_inhibitor"]   # read-only record flags
+DISCLAIMER = ("Predictive sensitivity analysis: association, not causal treatment effect. "
+              "For clinical decision support only.")
 
 FEATURE_LABELS = {
     "age": "Age", "is_male": "Male sex", "bmi": "BMI", "bmi_change_12m": "BMI change (12 m)",
@@ -83,21 +83,16 @@ DERIVED_GAPS = {
     "renal_protection_gap": lambda r: (bool(r["albuminuria"]) or bool(r["ckd"])) and not r["on_raas_inhibitor"],
 }
 
-# One-click presets applied on top of the record
+# One-click presets: alternative INPUT values handed to the model, on top of the record
 PRESETS = {
     "guideline_targets": {
-        "label": "Guideline targets",
-        "description": "HbA1c 7.0%, systolic 130 mmHg, HbA1c tested today, adherent (PDC 0.90); no change to therapy.",
+        "label": "Inputs at guideline targets",
+        "description": "What the model returns if it received HbA1c 7.0%, systolic 130 mmHg, an HbA1c test today and adherence (PDC) 0.90. No therapy input changes.",
         "set": {"hba1c_latest": 7.0, "sbp_latest": 130, "hba1c_days_since_test": 0, "adherence_pdc": 0.90},
     },
-    "intensify": {
-        "label": "Intensify therapy",
-        "description": "Start an SGLT2 inhibitor / GLP-1 RA and a RAAS inhibitor; everything else unchanged.",
-        "set": {"on_sglt2_glp1": 1, "on_raas_inhibitor": 1},
-    },
-    "deteriorate": {
-        "label": "Left untreated",
-        "description": "HbA1c +1.5 points, systolic +15 mmHg, adherence −0.20, one admission, the trajectory if nothing changes.",
+    "poorer_inputs": {
+        "label": "Poorer control inputs",
+        "description": "What the model returns if it received HbA1c 1.5 points higher, systolic 15 mmHg higher, adherence 0.20 lower and one more admission. A sensitivity check, not a forecast.",
         "delta": {"hba1c_latest": 1.5, "sbp_latest": 15, "adherence_pdc": -0.20, "admissions_12mo": 1},
     },
 }
@@ -222,7 +217,7 @@ def baseline(patient_id: str) -> dict:
         "presets": [{"id": k, **{kk: vv for kk, vv in v.items() if kk in ("label", "description")}} for k, v in PRESETS.items()],
         "risk": {"probability": round(prob, 4), "band": ml._band(prob), "percentile": round(_percentile(prob), 1)},
         "drivers": _top_drivers(contribs, row),
-        "event_cost_qar": ml.EVENT_COST_QAR, "model_version": _model_version(),
+        "model_version": _model_version(), "disclaimer": DISCLAIMER,
     }
 
 
@@ -278,18 +273,17 @@ def simulate(patient_id: str, overrides: dict | None) -> dict:
         "baseline": {"probability": round(p0, 4), "band": ml._band(p0), "percentile": round(_percentile(p0), 1)},
         "simulated": {"probability": round(p1, 4), "band": ml._band(p1), "percentile": round(_percentile(p1), 1)},
         "delta": {"absolute": round(dp, 4), "relative_pct": round((dp / p0 * 100) if p0 > 0 else 0.0, 1)},
-        "expected_cost_delta_qar": int(round(dp * ml.EVENT_COST_QAR)),
-        "event_cost_qar": ml.EVENT_COST_QAR,
         "changed": changed,
         "attribution": attribution,
         "gaps": {"closed": [hie.GAP_LABELS.get(g, g) for g in sorted(gaps0 - gaps1)],
                  "opened": [hie.GAP_LABELS.get(g, g) for g in sorted(gaps1 - gaps0)],
                  "open_after": len(gaps1)},
         "values": _lever_values(sim),
+        "disclaimer": DISCLAIMER,
         "method": ("The patient is re-scored through the deployed deterioration-risk model (XGBoost, "
-                   "v2.1.0, monotonic clinical constraints). Attribution is the change in each feature's SHAP-style contribution "
-                   f"(pred_contribs), allocated onto the probability change. Cost uses QAR {ml.EVENT_COST_QAR:,} "
-                   "per deterioration episode. Association, not a causal treatment effect."),
+                   f"v{_model_version()}, monotonic clinical constraints) with the changed inputs. Attribution is the "
+                   "change in each feature's SHAP-style contribution (pred_contribs), allocated onto the probability "
+                   "change. " + DISCLAIMER),
     }
 
 
@@ -332,15 +326,18 @@ def presets_patients() -> list[dict]:
 # ── Explanation ───────────────────────────────────────────────────────────────────────
 SYSTEM_INSTRUCTION = (
     "You are the explanation layer of Nabd, a population-health decision-support system used by "
-    "clinicians in Qatar's national diabetes registry. You receive the output of a deployed "
-    "deterioration-risk model before and after a clinician changed some inputs in a what-if "
-    "simulator. Explain, in plain clinical English, why the model's 12-month deterioration risk "
-    "moved. Rules: use only the numbers provided; attribute the change to the levers listed; "
-    "mention the largest one or two drivers with their values; note any care gaps closed; give "
-    "one sentence on what this means for the patient's management; finish with one short caveat "
-    "that this is a statistical association from a decision-support model, not a guaranteed "
-    "treatment effect, and that decisions rest with the clinician. 90 to 130 words, two short "
-    "paragraphs, no headings, no bullet lists, no emojis, no marketing tone."
+    "clinicians in a national diabetes registry. You receive the output of a deployed, PREDICTIVE "
+    "deterioration-risk model before and after a clinician changed some of its inputs in a sensitivity "
+    "simulator. Explain, in plain clinical English, how the model's 12-month deterioration-risk estimate "
+    "responded. Rules: use only the numbers provided, never compute or invent any figure; phrase every "
+    "change as 'if the model received X instead of Y, its estimate changes from A to B', never as "
+    "'lowering X will reduce the patient's risk'; attribute the change to the inputs listed and mention "
+    "the largest one or two with their values; note any rule-based care gaps that would no longer be open; "
+    "give one sentence on what the sensitivity tells the clinician about where the estimate is most "
+    "responsive; never mention cost, savings, events prevented or a treatment effect; finish with one "
+    "short caveat that this is a predictive sensitivity analysis from a decision-support model, an "
+    "association rather than a causal treatment effect, and that decisions rest with the clinician. "
+    "90 to 130 words, two short paragraphs, no headings, no bullet lists, no emojis, no marketing tone."
 )
 
 
@@ -367,14 +364,13 @@ def _explanation_context(patient_id: str, overrides: dict, result: dict) -> str:
         f"Simulated risk: {result['simulated']['probability']*100:.1f}% (band {result['simulated']['band']}, "
         f"higher than {result['simulated']['percentile']:.0f}% of the registry). "
         f"Change: {result['delta']['absolute']*100:+.1f} points ({result['delta']['relative_pct']:+.0f}% relative).",
-        "Levers changed by the clinician: " + ("; ".join(
+        "Inputs the clinician changed (hypothetical values handed to the model): " + ("; ".join(
             f"{FEATURE_LABELS.get(k, k)} {_fmt(k, v['from'])} -> {_fmt(k, v['to'])}" for k, v in result["changed"].items())
             or "none"),
         "Attribution of the change (probability points, model contributions): " + ("; ".join(
             f"{a['label']} {a['delta_probability']*100:+.1f}" for a in result["attribution"][:6]) or "none"),
         "Care gaps closed: " + (", ".join(result["gaps"]["closed"]) or "none") +
         ". Care gaps opened: " + (", ".join(result["gaps"]["opened"]) or "none") + ".",
-        f"Expected 12-month cost change at QAR {ml.EVENT_COST_QAR:,} per episode: QAR {result['expected_cost_delta_qar']:+,}.",
         "Baseline top drivers: " + "; ".join(f"{d['label']} = {_fmt(d['feature'], d['value'])} ({d['contribution']:+.2f} log-odds)" for d in b["drivers"][:5]),
     ]
     return "\n".join(lines)
@@ -382,34 +378,28 @@ def _explanation_context(patient_id: str, overrides: dict, result: dict) -> str:
 
 def deterministic_explanation(result: dict) -> str:
     """Deterministic narrative from the numbers, used when no LLM is configured."""
-    b, s, d = result["baseline"], result["simulated"], result["delta"]
+    b, s_, d = result["baseline"], result["simulated"], result["delta"]
     if not result["changed"]:
-        return (f"No lever has been changed. The model's baseline estimate is a {b['probability']*100:.1f}% "
+        return (f"No input has been changed. The model's baseline estimate is a {b['probability']*100:.1f}% "
                 f"probability of deterioration in the next 12 months ({b['band']}), higher than "
-                f"{b['percentile']:.0f}% of the registry. Move a lever to see how the estimate responds.")
-    direction = "fell" if d["absolute"] < 0 else "rose"
+                f"{b['percentile']:.0f}% of the registry. Change an input to see how the estimate responds.")
+    changes = "; ".join(f"{FEATURE_LABELS.get(k, k)} = {_fmt(k, c['to'])} instead of {_fmt(k, c['from'])}"
+                        for k, c in result["changed"].items())
+    direction = "falls" if d["absolute"] < 0 else "rises"
     attr = [a for a in result["attribution"] if abs(a["delta_probability"]) >= 0.002][:3]
-    parts = []
-    for a in attr:
-        chg = ""
-        if a["feature"] in result["changed"]:
-            c = result["changed"][a["feature"]]
-            chg = f" ({_fmt(a['feature'], c['from'])} to {_fmt(a['feature'], c['to'])})"
-        parts.append(f"{a['label']}{chg} accounted for {a['delta_probability']*100:+.1f} points")
+    parts = [f"{a['label']} accounts for {a['delta_probability']*100:+.1f} points" for a in attr]
     gaps = result["gaps"]["closed"]
-    txt = (f"The model's 12-month deterioration risk {direction} from {b['probability']*100:.1f}% to "
-           f"{s['probability']*100:.1f}% ({d['absolute']*100:+.1f} points, {d['relative_pct']:+.0f}% relative), "
-           f"moving the patient from the {b['band']} to the {s['band']} band" if b["band"] != s["band"] else
-           f"The model's 12-month deterioration risk {direction} from {b['probability']*100:.1f}% to "
-           f"{s['probability']*100:.1f}% ({d['absolute']*100:+.1f} points, {d['relative_pct']:+.0f}% relative), "
-           f"staying in the {s['band']} band")
-    txt += ". " + ("; ".join(parts) + "." if parts else "The change is spread across several small contributions.")
+    band = (f"moving from the {b['band']} to the {s_['band']} band" if b["band"] != s_["band"]
+            else f"staying in the {s_['band']} band")
+    txt = (f"If the model received {changes}, its predicted 12-month deterioration risk {direction} from "
+           f"{b['probability']*100:.1f}% to {s_['probability']*100:.1f}% ({d['absolute']*100:+.1f} points, "
+           f"{d['relative_pct']:+.0f}% relative), {band}. ")
+    txt += ("; ".join(parts) + "." if parts else "The change is spread across several small contributions.")
     if gaps:
-        txt += f" The change also closes {len(gaps)} care gap{'s' if len(gaps) > 1 else ''}: {', '.join(gaps)}."
-    txt += (f"\n\nAt QAR {result['event_cost_qar']:,} per deterioration episode this is an expected "
-            f"12-month cost change of QAR {result['expected_cost_delta_qar']:+,}. The estimate is a statistical "
-            "association learned from the registry, not a guaranteed treatment effect; the management "
-            "decision rests with the clinician.")
+        txt += f" With those inputs {len(gaps)} rule-based care gap{'s' if len(gaps) > 1 else ''} would no longer be open: {', '.join(gaps)}."
+    txt += ("\n\nThis is a predictive sensitivity analysis: it shows how the model's estimate responds to "
+            "different inputs, not what changing them in the patient would cause. It is an association learned "
+            "from the registry, not a causal treatment effect, and the management decision rests with the clinician.")
     return txt
 
 
@@ -492,7 +482,7 @@ async def explain(patient_id: str, overrides: dict | None, actor: str = "clinici
 
 
 def tool_simulate(patient_id: str, overrides_json: str = "") -> dict:
-    """Agent-facing wrapper: overrides as a JSON object of lever -> value."""
+    """Agent-facing wrapper: overrides as a JSON object of model input -> hypothetical value."""
     try:
         overrides = json.loads(overrides_json) if overrides_json else {}
     except json.JSONDecodeError as e:

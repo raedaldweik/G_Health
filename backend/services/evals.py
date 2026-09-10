@@ -218,7 +218,9 @@ def _score_case(case: dict, final: dict, latency_ms: int, facts: dict) -> dict:
         fact_total += 1
         if any(r in answer for r in facts.get(f, [])):
             fact_hits += 1
-    faithful = (fact_hits == fact_total)
+    phrases = case.get("must_contain", [])
+    phrase_hits = sum(1 for ph in phrases if ph.lower() in answer.lower())
+    faithful = (fact_hits == fact_total) and (phrase_hits == len(phrases))
     usage = final.get("usage") or {}
     model = final.get("model") or ""
     cost = None
@@ -237,6 +239,7 @@ def _score_case(case: dict, final: dict, latency_ms: int, facts: dict) -> dict:
         "grounded": grounded, "citations": len(final.get("citations") or []),
         "action_ok": action_ok, "actions": len(final.get("actions") or []),
         "faithful": faithful, "facts_checked": fact_total, "facts_hit": fact_hits,
+        "phrases_checked": len(phrases), "phrases_hit": phrase_hits,
         "latency_ms": latency_ms, "tokens": usage.get("total_tokens"), "llm_calls": usage.get("llm_calls"),
         "cost_usd": cost, "model": model, "passed": passed,
         "answer_preview": answer[:220],
@@ -327,9 +330,9 @@ def llm_selection() -> dict:
               A.groupby_aggregate, A.top_n, A.correlate, A.histogram, A.cohort_kpis, A.facility_benchmark,
               A.equity_breakdown]
     guideline = [A.search_guidelines]
-    risk = [A.score_patient_risk, A.stratify_cohort_risk, A.similar_patients, A.simulate_policy,
+    risk = [A.score_patient_risk, A.stratify_cohort_risk, A.similar_patients, A.risk_scenario,
             A.visit_forecast, A.model_cards]
-    action = [A.draft_prescription, A.draft_recall, A.draft_referral]
+    action = [A.draft_clinical_review, A.draft_recall, A.draft_referral]
     supervisor_own = [A.render_chart, A.render_map]
     mcp_tools_est = 7 * 180   # 7 MCP tools ≈ 180 tokens each (descriptions + arg schemas)
     flat = _tool_schema_tokens(cohort + guideline + risk + action + supervisor_own) + mcp_tools_est
@@ -341,16 +344,12 @@ def llm_selection() -> dict:
     }
     typical_hops = 3   # a clinician question touches ~3 specialists
     hier_per_turn = per_agent["nabd_supervisor"] * 2 + sum(sorted(per_agent.values())[-typical_hops:]) // 1
-    price = PRICES["gemini-3.8-flash"]
-    q_per_day = 20000
-    def monthly(tokens_per_turn, out_tokens=900):
-        return round((tokens_per_turn * price["in"] + out_tokens * price["out"]) / 1e6 * q_per_day * 30, 0)
     return {
         "prices_as_of": PRICES_AS_OF,
         "models": [
-            {"model": "gemini-3.8-flash", "role": "Supervisor + all specialists", "chosen": True,
+            {"model": "gemini-3.8-flash", "role": "Proposed default: supervisor + specialists", "chosen": True,
              **PRICES["gemini-3.8-flash"], "context": "1M", "latency": "fast",
-             "why": "Agent-tuned Flash (GA Sept 2 2026): best function-calling reliability per dollar on our evalset; thinking_level LOW on routing turns keeps first-token latency under a second; a 3-hop question stays under a cent. Served from the global endpoint, fine, because prompts carry pseudonymous ids only."},
+             "why": "Agent-tuned Flash (GA Sept 2 2026) at Flash pricing; thinking_level LOW on routing turns keeps first-token latency low. Function-calling reliability is confirmed on the customer's evalset during discovery. Regional processing where supported; the endpoint and the prompt content are agreed with the ministry's data-protection office."},
             {"model": "gemini-3.1-pro-preview", "role": "LLM-as-judge (eval) · complex synthesis on demand", "chosen": True,
              **PRICES["gemini-3.1-pro-preview"], "context": "1M", "latency": "slower",
              "why": "Reserved for where reasoning depth pays: grading answers in evaluation and long executive syntheses. Not on the hot path, still labelled Preview on the price page, and 3× the cost."},
@@ -362,7 +361,7 @@ def llm_selection() -> dict:
              "why": "Too weak for multi-step tool planning; would fit a front-door intent classifier if traffic grows. Not worth a second model to operate at PoC scale."},
             {"model": "gemini-2.5-flash", "role": "Avoided", "chosen": False,
              **PRICES["gemini-2.5-flash"], "context": "1M", "latency": "fast",
-             "why": "Retires mid-October 2026, weeks after the interview. Never build a clinical product on a model with a published retirement date."},
+             "why": "Retires mid-October 2026. Never build a clinical product on a model with a published retirement date."},
             {"model": "gemini-embedding-001", "role": "RAG embeddings (hybrid with BM25)", "chosen": True,
              **PRICES["gemini-embedding-001"], "context": "2k/chunk", "latency": "n/a",
              "why": "3072-dim, MRL-truncatable, GA; corpus is embedded once and cached, near-zero recurring cost."},
@@ -373,18 +372,21 @@ def llm_selection() -> dict:
             "per_agent_schema_tokens": per_agent,
             "typical_hops": typical_hops,
             "hierarchical_tokens_per_turn_est": hier_per_turn,
-            "flat_tokens_per_turn_est": flat * 3,   # flat agent re-sends the full schema on each of ~3 tool rounds
-            "monthly_cost_flat_usd": monthly(flat * 3),
-            "monthly_cost_hierarchical_usd": monthly(hier_per_turn),
-            "monthly_cost_hierarchical_usd_2027": round((hier_per_turn * price["std_in"] + 900 * price["std_out"]) / 1e6 * q_per_day * 30, 0),
-            "monthly_cost_hierarchical_pro_usd": round((hier_per_turn * PRICES["gemini-3.1-pro-preview"]["in"] + 900 * PRICES["gemini-3.1-pro-preview"]["out"]) / 1e6 * q_per_day * 30, 0),
-            "questions_per_day": q_per_day,
-            "assumptions": f"{q_per_day:,} single-turn questions/day, ~900 output tokens/turn, 3 tool rounds, gemini-3.8-flash intro pricing (global endpoint), no context caching. Caching the system prompt and schemas at $0.075/1M would cut the prompt share by ~90%; long multi-turn sessions raise it.",
-            "argument": ("Specialists are not decoration. Since Gemini 3.5, function declarations are billed as input tokens, so schema size is literally the invoice. Each specialist carries only its own tool schema, so the "
-                         "prompt the model reads on every hop is ~1/4 of a flat agent's; specialists can be "
-                         "evaluated, rate-limited and permissioned separately (least privilege: the guideline "
-                         "agent cannot draft prescriptions); and the MCP agent is swappable for Google's "
-                         "managed servers on Google Cloud without touching the others."),
+            "flat_tokens_per_turn_est": flat * 3,   # a flat agent re-sends the full schema on each of ~3 tool rounds
+            "prompt_ratio": round(flat * 3 / max(hier_per_turn, 1), 1),
+            "assumptions": ("Measured by introspecting the prototype's actual tool schemas; ~3 tool rounds per question. "
+                            "Output tokens are the same in both designs. A production cost is modelled in discovery from "
+                            "expected users, question volume, measured token consumption, warehouse scan volume and "
+                            "availability requirements, then validated in the pilot."),
+            "argument": ("This is the orchestration pattern used in the prototype, not a settled production architecture. "
+                         "The measurement shows one potential advantage of specialist separation: each specialist reads "
+                         "only its own tool schema, so the prompt per hop is smaller. Other potential advantages are "
+                         "modular evaluation and cleaner traces; each specialist's tool exposure is scoped, which is tool "
+                         "scoping, not a separate security identity."),
+            "discovery_plan": ("During technical discovery we would benchmark a single tool-calling agent, a supervisor/router "
+                               "and the specialist multi-agent pattern against the customer's evalset, comparing task "
+                               "accuracy, tool-selection reliability, safety, latency, token consumption, maintainability "
+                               "and operational complexity before choosing the production topology."),
         },
     }
 
@@ -401,11 +403,12 @@ def governance() -> list[dict]:
         {"area": "Model", "control": "Vertex Model Registry + in-region drift monitoring (BigQuery drift jobs; Model Monitoring where offered) + scheduled retraining with a fairness gate", "status": "google_cloud", "evidence": "Reference architecture, Vertex AI models"},
         {"area": "Agent", "control": "Numbers only from tools; clinical claims only with citations; actions only via the human queue", "status": "implemented", "evidence": "Supervisor instruction · agent trace"},
         {"area": "Agent", "control": "Golden evalset with trajectory, groundedness, action-safety and faithfulness checks", "status": "implemented", "evidence": "This tab · Agent evaluation"},
-        {"area": "Agent", "control": "Least-privilege tools per specialist (guideline agent cannot draft; action agent cannot read cohorts)", "status": "implemented", "evidence": "Agent definitions"},
+        {"area": "Agent", "control": "Tool scoping per specialist (the guideline agent has no drafting tool; the action agent has no cohort tools). Tool exposure in the prototype, not a separate IAM identity per agent", "status": "implemented", "evidence": "Agent definitions"},
+        {"area": "Agent", "control": "Safety rules in the supervisor: predictive outputs are never presented as causal effects, events prevented or savings; no drug, dose or clinical order is drafted; group differences are reported descriptively", "status": "implemented", "evidence": "Supervisor instruction · evalset guardrail case"},
         {"area": "Agent", "control": "Prompt & response screening, Sensitive Data Protection in me-central1, then Model Armor (injection / jailbreak)", "status": "google_cloud", "evidence": "Reference architecture, agent runtime"},
         {"area": "Agent", "control": "adk eval in CI as a release gate; Gen AI Evaluation Service as LLM judge", "status": "google_cloud", "evidence": "Evalset format is ADK-compatible"},
         {"area": "Operations", "control": "Full audit trail of tool calls, scores, drafts and human decisions", "status": "implemented", "evidence": "Audit tab"},
         {"area": "Operations", "control": "Cloud Audit Logs + OpenTelemetry traces from the ADK runtime to Cloud Trace", "status": "google_cloud", "evidence": "Reference architecture, operations"},
-        {"area": "Sovereignty", "control": "Data and agent runtime in me-central1 (Doha) under an Assured Workloads Qatar Data Boundary; CMEK; VPC Service Controls; LLM receives pseudonymous data only", "status": "google_cloud", "evidence": "Reference architecture, sovereignty strip"},
-        {"area": "Clinical safety", "control": "Human-in-the-loop for every clinical write; no autonomous prescribing", "status": "implemented", "evidence": "Queue tab"},
+        {"area": "Sovereignty", "control": "Target architecture: PHI and identifiable data inside the Assured Workloads Qatar data boundary in me-central1; CMEK; VPC Service Controls. The model endpoint and what may enter a prompt are agreed with the ministry's DPO and security team on supported regional processing; this demonstration uses synthetic data only", "status": "google_cloud", "evidence": "Reference architecture, to validate in discovery"},
+        {"area": "Clinical safety", "control": "Human-in-the-loop for every clinical write; the agent drafts review tasks, recalls and referrals, never a prescription or an order", "status": "implemented", "evidence": "Queue tab"},
     ]

@@ -13,7 +13,7 @@ import { Panel, Spinner } from '../components/ui';
 /*
  * What-if simulator, one patient, the deployed deterioration-risk model, live.
  *   Left    · the levers a clinician can move (record values marked, changes in gold)
- *   Centre  · baseline vs simulated risk: gauge, band, registry percentile, cost, gaps closed
+ *   Centre  · baseline vs simulated risk: gauge, band, registry percentile, gaps that would no longer be open
  *   Right   · which features moved the estimate (model attribution) and the narrated explanation
  * Every number comes from the backend: the model is re-scored on each change (debounced).
  */
@@ -239,10 +239,10 @@ export default function SimulatorPage() {
       <div className="flex items-end justify-between gap-4 shrink-0 px-1">
         <div className="min-w-0">
           <h1 className="text-[17px] font-extrabold tracking-tight leading-none" style={{ color: 'var(--text)' }}>
-            Risk Simulator: what changes one patient's deterioration risk
+            Risk Sensitivity Simulator: how the model's estimate responds to its inputs
           </h1>
           <p className="text-[10.5px] mt-1" style={{ color: 'var(--text-dim)' }}>
-            Move a lever and the deployed model re-scores the patient. The attribution shows which inputs moved the estimate; the assistant explains it in clinical language. Decision support, not a treatment recommendation.
+            Change an input and the deployed model re-scores the patient: "if the model received HbA1c 8.0 instead of 10.9, its predicted risk changes from X to Y". The attribution shows which inputs moved the estimate; the assistant narrates it. A predictive sensitivity analysis, not a treatment effect.
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -338,9 +338,8 @@ export default function SimulatorPage() {
                     tone={changed && result ? (result.delta.absolute < 0 ? 'good' : 'bad') : null} />
                   <Stat label="Registry percentile" value={sim ? `${sim.percentile.toFixed(0)}th` : b0 ? `${b0.percentile.toFixed(0)}th` : 'n/a'}
                     sub={changed && b0 ? `was ${b0.percentile.toFixed(0)}th · higher risk than that share of the registry` : 'higher risk than this share of the registry'} />
-                  <Stat label="Expected cost · 12 months" value={changed && result ? qar(result.expected_cost_delta_qar) : 'n/a'}
-                    sub={`at QAR ${(base.event_cost_qar || 18500).toLocaleString()} per deterioration episode`}
-                    tone={changed && result ? (result.expected_cost_delta_qar < 0 ? 'good' : 'bad') : null} />
+                  <Stat label="Inputs changed" value={changed && result ? Object.keys(result.changed || {}).length : 0}
+                    sub={changed && result ? `${result.gaps?.open_after ?? 'n/a'} rule-based care gap${result.gaps?.open_after === 1 ? '' : 's'} open with these inputs` : 'hypothetical values handed to the model'} />
                   <Stat label="Band" value={sim ? sim.band : b0?.band || 'n/a'}
                     sub={changed && b0 && sim && b0.band !== sim.band ? `was ${b0.band}` : 'model band (registry tier ' + pt.registry_tier + ')'}
                     color={BAND_COLOR[sim?.band || b0?.band]} />
@@ -407,7 +406,7 @@ export default function SimulatorPage() {
                     </span>
                   )}
                   <button className={`sim-chip ${!explain.text || explain.stale ? 'active' : ''}`} onClick={runExplain} disabled={explain.running || !result}>
-                    <GIcon /> {explain.running ? 'Explaining…' : explain.text ? 'Explain again' : 'Explain the change'}
+                    <SparkIcon /> {explain.running ? 'Explaining…' : explain.text ? 'Explain again' : 'Explain the change'}
                   </button>
                 </div>
               }>
@@ -429,7 +428,7 @@ export default function SimulatorPage() {
                   )}
                 </div>
                 <div className="flex items-center justify-between gap-2 pt-1.5 mt-1 border-t border-[rgba(15,23,42,0.06)] text-[9.5px]" style={{ color: 'var(--text-faint)' }}>
-                  <span>{explain.stale ? 'Levers changed since this explanation.' : explain.error ? `Language model unavailable (${explain.error}); deterministic narrative shown.` : `Deterioration-risk model v${base.model_version || '2.1.0'} · association, not a causal treatment effect · logged to the audit trail`}</span>
+                  <span>{explain.stale ? 'Inputs changed since this explanation.' : explain.error ? `Language model unavailable (${explain.error}); deterministic narrative shown.` : `Predictive sensitivity analysis: association, not causal treatment effect. For clinical decision support only. Deterioration-risk model v${base.model_version || '2.2.0'} · logged to the audit trail`}</span>
                 </div>
               </div>
             </Panel>
@@ -451,13 +450,11 @@ function Stat({ label, value, sub, tone, color }) {
   );
 }
 
-function GIcon() {
+function SparkIcon() {
   return (
-    <svg width="11" height="11" viewBox="0 0 48 48" aria-hidden="true">
-      <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z" />
-      <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z" />
-      <path fill="#FBBC05" d="M10.5 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.9-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.9-6.1z" />
-      <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.9 2.3-8.4 2.3-6.3 0-11.6-4.1-13.5-9.9l-7.9 6.1C6.5 42.6 14.6 48 24 48z" />
+    <svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" />
+      <path d="M19 16l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z" />
     </svg>
   );
 }

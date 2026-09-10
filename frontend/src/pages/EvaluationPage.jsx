@@ -87,7 +87,7 @@ function ModelView() {
   return (
     <div className="flex flex-col gap-2.5">
       <KpiStrip items={[
-        { icon: 'gauge', tone: 'maroon', label: 'AUC: held-out (legacy registry score)', value: d.auc.toFixed(3),
+        { icon: 'gauge', tone: 'maroon', label: 'AUC on synthetic held-out data (vs baseline rule-based score)', value: d.auc.toFixed(3),
           trend: `+${aucDelta} pts vs ${d.legacy_auc.toFixed(3)}`, trendDir: 'up' },
         { icon: 'activity', tone: 'gold', label: 'Average precision (event rate)', value: d.average_precision.toFixed(3),
           trend: `base ${pct(d.event_rate)}`, trendDir: 'flat' },
@@ -109,7 +109,7 @@ function ModelView() {
                 <Tooltip content={<TipBox fmt={(v) => `${v}%`} />} labelFormatter={(l) => `False-positive rate ${l}%`} />
                 <Legend wrapperStyle={{ fontSize: 10 }} />
                 <Line type="monotone" dataKey="chance" name="Chance" stroke="#94a3b8" strokeDasharray="4 4" dot={false} strokeWidth={1} isAnimationActive={false} />
-                <Line type="monotone" dataKey="legacy" name={`Legacy score · AUC ${d.legacy_auc.toFixed(3)}`} stroke={GOLD} dot={false} strokeWidth={2} />
+                <Line type="monotone" dataKey="legacy" name={`Baseline rule-based score · AUC ${d.legacy_auc.toFixed(3)}`} stroke={GOLD} dot={false} strokeWidth={2} />
                 <Line type="monotone" dataKey="model" name={`XGBoost · AUC ${d.auc.toFixed(3)}`} stroke={MAROON} dot={false} strokeWidth={2.6} />
               </LineChart>
             </ResponsiveContainer>
@@ -250,7 +250,8 @@ function ModelView() {
       </div>
 
       <div className="glass-card px-4 py-2.5 text-[10.5px]" style={{ color: 'var(--text-md)' }}>
-        <b style={{ color: 'var(--text)' }}>Method.</b> {d.method} Legacy score = the registry's rule-based points tier (age, HbA1c, prior admission, blood pressure) rescaled to [0,1].
+        <b style={{ color: 'var(--text)' }}>Method.</b> {d.method} Baseline rule-based score = the registry's points tier (age, HbA1c, prior admission, blood pressure) rescaled to [0,1].
+        <b style={{ color: 'var(--text)' }}> Scope.</b> Held-out performance on the synthetic demonstration dataset: it demonstrates the evaluation methodology, not clinical validation.
         Feature importance and SHAP-style per-patient contributions live on the Risk &amp; Models dashboard.
       </div>
     </div>
@@ -406,7 +407,7 @@ function AgentsView() {
               {[
                 ['Tool-trajectory recall', 'Did the graph call every tool a clinician-reviewer said it must? Same idea as ADK\'s tool_trajectory_avg_score, scored in-order-agnostic.'],
                 ['Groundedness', 'Clinical claims must carry a guideline citation (doc + page). On Google Cloud: the Gen AI Evaluation Service groundedness autorater on the citation spans.'],
-                ['Action safety', 'A draft prescription / recall / referral may only appear as a queued item, never as a completed write. Zero tolerance.'],
+                ['Action safety', 'A draft review task / recall / referral may only appear as a queued item, never as a completed write, and never as a prescription or order. Zero tolerance.'],
                 ['Numeric faithfulness', 'Every headline number in the answer is re-computed from the HIE tables and matched within tolerance. Catches the classic LLM failure: a fluent, wrong number.'],
                 ['Latency · tokens · cost', 'Wall-clock per question, tokens from ADK usage metadata, priced at the list rates on the LLM tab.'],
               ].map(([k, v]) => (
@@ -443,24 +444,22 @@ function LlmView() {
   if (!d) return <Spinner />;
   const ac = d.architecture_comparison;
   const perAgent = Object.entries(ac.per_agent_schema_tokens).map(([k, v]) => ({ label: k.replace('_agent', '').replace('nabd_', ''), value: v }));
-  const saving = ac.monthly_cost_flat_usd - ac.monthly_cost_hierarchical_usd;
 
   return (
     <div className="flex flex-col gap-2.5">
       <KpiStrip items={[
-        { icon: 'coins', tone: 'maroon', label: `Production LLM cost / month on Google Cloud · supervisor + specialists (${ac.questions_per_day.toLocaleString()} q/day)`, value: `$${ac.monthly_cost_hierarchical_usd.toLocaleString()}` },
-        { icon: 'coins', tone: 'gold', label: 'Same traffic · one flat agent carrying every tool', value: `$${ac.monthly_cost_flat_usd.toLocaleString()}`, trend: `+$${saving.toLocaleString()}/mo`, trendDir: 'down' },
-        { icon: 'coins', tone: 'violet', label: 'Same traffic · Gemini 3.1 Pro everywhere', value: `$${ac.monthly_cost_hierarchical_pro_usd.toLocaleString()}`, trend: `${(ac.monthly_cost_hierarchical_pro_usd / ac.monthly_cost_hierarchical_usd).toFixed(1)}×`, trendDir: 'down' },
-        { icon: 'activity', tone: 'sand', label: 'Budget after intro pricing ends (Jan 2027)', value: `$${ac.monthly_cost_hierarchical_usd_2027.toLocaleString()}` },
-        { icon: 'gauge', tone: 'green', label: 'Prompt tokens read per hop: specialist vs flat', value: `${ac.hierarchical_supervisor_schema_tokens} / ${ac.flat_single_agent_schema_tokens}` },
+        { icon: 'gauge', tone: 'maroon', label: 'Tool-schema tokens read per hop: supervisor vs one flat agent (measured)', value: `${ac.hierarchical_supervisor_schema_tokens} / ${ac.flat_single_agent_schema_tokens}` },
+        { icon: 'activity', tone: 'gold', label: `Prompt tokens per question, ~${ac.typical_hops} tool rounds: specialists vs flat (measured schemas)`, value: `${ac.hierarchical_tokens_per_turn_est.toLocaleString()} / ${ac.flat_tokens_per_turn_est.toLocaleString()}` },
+        { icon: 'coins', tone: 'violet', label: 'Proposed default model, list price per 1M tokens in / out', value: `$${d.models[0].in} / $${d.models[0].out}` },
+        { icon: 'users', tone: 'sand', label: 'Production cost model', value: 'discovery', trend: 'volumes · tokens · scans · availability', trendDir: 'flat' },
       ]} />
       <p className="text-[10px] px-1 -mt-1" style={{ color: 'var(--text-dim)' }}>
-        Model plan and cost projection for the Google Cloud deployment, at list prices. The demonstration runs the same agent graph, tools and evalset; the projection is what the production traffic would cost on the chosen models.
+        Proposed model plan for the Google Cloud target, at list prices, and a measurement of the prototype's prompt sizes. The evalset measures the prototype's actual tokens and cost per question when run live; a production cost is modelled in discovery from expected users, question volume, measured token consumption, warehouse scan volume and availability requirements, then validated in the pilot.
       </p>
 
       <div className="grid grid-cols-12 gap-2.5">
         <div className="col-span-7">
-          <Panel title="Production model plan on Google Cloud: list prices per 1M tokens (Vertex AI / Gemini API price pages)"
+          <Panel title="Proposed model plan on Google Cloud: list prices per 1M tokens (Vertex AI / Gemini API price pages)"
             right={<span className="text-[9.5px]" style={{ color: 'var(--text-faint)' }}>as of {d.prices_as_of}</span>}>
             <div className="px-1">
               <table className="w-full text-[10px]">
@@ -502,13 +501,14 @@ function LlmView() {
               <Bar3D data={perAgent} ramp={0} maxBars={6} unit=" tok" />
             </Panel>
           </div>
-          <Panel title="Why a supervisor with specialists rather than one agent: the token arithmetic">
+          <Panel title="The orchestration pattern used in this prototype, and what the prompt-size measurement shows">
             <div className="px-1 text-[10px]" style={{ color: 'var(--text-md)' }}>
-              <p>A flat agent re-reads <b>{ac.flat_single_agent_schema_tokens.toLocaleString()}</b> schema tokens on each of ~{ac.typical_hops} tool rounds
+              <p>A flat agent would re-read <b>{ac.flat_single_agent_schema_tokens.toLocaleString()}</b> schema tokens on each of ~{ac.typical_hops} tool rounds
                 (≈ {ac.flat_tokens_per_turn_est.toLocaleString()} / turn). The supervisor reads <b>{ac.hierarchical_supervisor_schema_tokens}</b> and hands off to specialists
                 that read only their own (≈ {ac.hierarchical_tokens_per_turn_est.toLocaleString()} / turn).</p>
               <p className="mt-1.5" style={{ color: 'var(--text-dim)' }}>{ac.argument}</p>
-              <p className="mt-1.5 text-[9px] italic" style={{ color: 'var(--text-faint)' }}>{ac.assumptions} Output tokens are the same in both designs, so the gap is entirely the prompt.</p>
+              <p className="mt-1.5" style={{ color: 'var(--text-md)' }}><b>Production topology:</b> {ac.discovery_plan}</p>
+              <p className="mt-1.5 text-[9px] italic" style={{ color: 'var(--text-faint)' }}>{ac.assumptions}</p>
             </div>
           </Panel>
         </div>
@@ -516,12 +516,12 @@ function LlmView() {
 
       <div className="grid grid-cols-3 gap-2.5">
         {[
-          ['How the LLM was chosen', [
-            'Function-calling reliability on our own evalset (trajectory recall): the metric that matters for an agent, not MMLU.',
-            'Price per question at 3 hops: Flash 3.8 ≈ 0.6¢, Flash 3.5 ≈ 1.3¢, Pro 3.1 ≈ 1.9¢, and quality on structured tool tasks was indistinguishable.',
+          ['How the default model is proposed', [
+            'Function-calling reliability on the evalset (trajectory recall) is the selection metric, not a general benchmark; it is confirmed on the customer\'s evalset in discovery.',
+            'Cost per question is measured on the prototype evalset; Flash-class pricing is a fraction of Pro at the same list prices, and the production figure is modelled in discovery.',
             'Lifecycle: 2.5 Flash retires Oct 2026; 3.1 Pro is still preview. Default must be GA and at least a year from deprecation.',
             'Latency: clinicians tolerate ~5 s for a briefing; Flash keeps p95 there with 3 hops, Pro does not.',
-            'Region & residency: the model is called with pseudonymised, aggregated payloads only, so the endpoint region is a latency question, not a PHI question.',
+            'Residency: PHI and identifiable data stay in the Qatar data boundary. The model endpoint and what may enter a prompt are agreed with the ministry\'s DPO and security team on supported regional processing; this demonstration uses synthetic data only.'
           ]],
           ['Where Pro is used deliberately', [
             'LLM-as-judge in evaluation: grading needs depth; it runs offline and on 10 cases, so cost is irrelevant.',
@@ -585,8 +585,8 @@ function GovernanceView() {
       </div>
       <div className="glass-card px-4 py-2.5 text-[10.5px]" style={{ color: 'var(--text-md)' }}>
         <b style={{ color: 'var(--text)' }}>Regulatory frame.</b> Qatar PDPPL (Law 13/2016) treats health data as sensitive personal data, processing needs a lawful basis and a
-        permit; the National Health Strategy requires auditability of decision support. The design answer is the same in every lane: PHI stays in Doha, the
-        model never prescribes, every automated inference is logged with its inputs, and a human owns every clinical write.
+        permit; the National Health Strategy requires auditability of decision support. The design answer is the same in every lane: PHI stays inside the in-country data boundary of the target architecture, the
+        model never prescribes, predictive outputs are never presented as causal effects, every automated inference is logged with its inputs, and a human owns every clinical write.
       </div>
     </div>
   );
@@ -596,9 +596,9 @@ function GovernanceView() {
 export default function EvaluationPage() {
   const [view, setView] = useState('model');
   const sub = useMemo(() => ({
-    model: 'The deterioration-risk model, evaluated on 1,000 held-out patients: discrimination, calibration, threshold trade-offs and subgroup fairness.',
-    agents: 'Ten representative clinician and ministry questions, run through the live agent graph and scored against ground truth.',
-    llm: 'Model selection rationale, cost per question, and the measured case for a supervisor with specialists over a single agent.',
+    model: 'The deterioration-risk model on 1,000 synthetic held-out patients: discrimination, calibration, threshold trade-offs and subgroup monitoring. Demonstrates the evaluation methodology, not clinical validation.',
+    agents: 'Representative clinician and executive questions, plus a guardrail case, run through the live agent graph and scored against ground truth.',
+    llm: 'Proposed model plan, measured prompt sizes for the prototype orchestration pattern, and how the production topology and cost would be settled in discovery.',
     governance: 'The control list: implemented in this demonstration, delivered by Google Cloud services in the target architecture, and never permitted.',
   })[view], [view]);
 

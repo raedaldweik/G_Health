@@ -162,7 +162,7 @@ const numCircle = (s, n, x, y, d, fill) => {
       ['MdPerson', BLUE, 'Diabetic patient 360', 'Summary, HbA1c trajectory, comorbidities, medications, open care gaps, assembled on request with consent enforced.'],
       ['MdOutlineAutoGraph', YELLOW, 'Risk stratification and visit prediction', 'Explainable 12-month deterioration risk, cohort bands, similar patients, and demand forecasts for planning.'],
       ['MdMenuBook', RED, 'Guideline-grounded decision support', 'Recommendations retrieved from the national clinical guidelines and cited to the page. No clinical claim without a source.'],
-      ['MdQueryStats', GREEN, 'Population and cost simulation', 'Control rates, care gaps and cost by facility and nationality; what-if simulation of programmes before money is spent.'],
+      ['MdQueryStats', GREEN, 'Population view and risk scenarios', 'Control rates, care gaps and cost by facility and population group; predictive risk scenarios that show where the model is most sensitive to which inputs.'],
     ];
     for (let i = 0; i < caps.length; i++) {
       const [ic, c, h, d] = caps[i]; const x = 0.6 + (i % 2) * 3.55, y = 1.95 + Math.floor(i / 2) * 2.2;
@@ -195,7 +195,7 @@ const numCircle = (s, n, x, y, d, fill) => {
   /* ───────────────────────── 5. How it works ───────────────────────── */
   {
     const s = pres.addSlide();
-    headline(s, 'How it works: one supervisor, five specialists', 'Each specialist carries only the tools it needs. The supervisor plans and composes; it never produces a number itself.');
+    headline(s, 'How it works in the prototype: a supervisor and five specialists', 'The orchestration pattern used in this prototype. Each specialist sees only its own tools; the production topology is benchmarked during discovery.');
     rect(s, 4.9, 1.9, 3.55, 0.5, CARD2);
     s.addImage({ data: await icon('MdRecordVoiceOver', GREY), x: 5.05, y: 2.01, w: 0.28, h: 0.28 });
     T(s, '"Who on my panel needs attention today?"', 5.42, 1.9, 3.0, 0.5, { fontSize: 10.5, color: INK, valign: 'middle', italic: true });
@@ -206,9 +206,9 @@ const numCircle = (s, n, x, y, d, fill) => {
     const specs = [
       ['Data specialist', 'MdStorage', BLUE, 'Cohorts, timelines, group-bys over the exchange', 'Typed query tools over the HIE tables'],
       ['Guideline specialist', 'MdMenuBook', RED, 'Retrieval over the national guidelines with page citations', 'Hybrid keyword and semantic search'],
-      ['Risk specialist', 'MdOutlineAutoGraph', YELLOW, 'Scores, explains, forecasts, simulates', 'XGBoost risk model (AUC 0.85) · segments · forecast'],
+      ['Risk specialist', 'MdOutlineAutoGraph', YELLOW, 'Scores, explains, forecasts, runs risk scenarios', 'XGBoost risk model (AUC 0.85, synthetic held-out) · segments · forecast'],
       ['Population-health MCP', 'MdHub', GREEN, 'Care gaps, quality measures, stratification', 'Nabd MCP server, seven tools, any MCP client'],
-      ['Action specialist', 'MdOutlineAssignmentTurnedIn', GREY, 'Drafts prescriptions, recalls, referrals', 'Human-in-the-loop approval queue'],
+      ['Action specialist', 'MdOutlineAssignmentTurnedIn', GREY, 'Drafts review tasks, recalls, referrals', 'Human-in-the-loop approval queue'],
     ];
     for (let i = 0; i < specs.length; i++) {
       const [name, ic, c, does, via] = specs[i]; const x = 0.6 + i * 2.45, w = 2.3;
@@ -226,7 +226,7 @@ const numCircle = (s, n, x, y, d, fill) => {
     T(s, [{ text: 'Every answer ships with its evidence: ', options: { bold: true, color: INK } }, { text: 'the tool trace, guideline citations, model drivers and any drafted action, streamed live so the user watches the agents work.', options: { color: GREY } }],
       1.2, 6.32, 11.4, 0.6, { fontSize: 10, valign: 'middle', lineSpacingMultiple: 1.1 });
     footer(s, 5);
-    s.addNotes('Walk top to bottom once: question, supervisor, specialists, tools, evidence. Say out loud: the language model is Gemini Flash and the framework is the Agent Development Kit; on Google Cloud the data specialist is the MCP Toolbox over BigQuery, the guideline specialist is Vertex AI RAG Engine, the risk specialist is a Vertex AI endpoint. Pre-empt "why five agents": least privilege (the guideline agent cannot draft a prescription), independent evaluation (each specialist has its own test set), and cost (a flat agent re-reads every tool schema on every hop; the measurement is in the evaluation tab). The MCP specialist is the interesting one: Google ships MCP servers to read FHIR and to query BigQuery; none reasons about a population. We built that one.');
+    s.addNotes('Walk top to bottom once: question, supervisor, specialists, tools, evidence. Say out loud: the language model is Gemini Flash and the framework is the Agent Development Kit; on Google Cloud the data specialist is the MCP Toolbox over BigQuery, the guideline specialist is Vertex AI RAG Engine, the risk specialist is a Vertex AI endpoint. Pre-empt "why five agents": this is the orchestration pattern used in the prototype, not a settled production architecture. It demonstrates potential advantages of specialist separation: tool scoping (the guideline agent has no drafting tool; tool exposure, not a separate security identity), modular evaluation (each specialist has its own test set), and a measured prompt-size difference (a flat agent re-reads every tool schema on every hop; the measurement is in the evaluation tab). In discovery we would benchmark a single tool-calling agent, a supervisor/router and the specialist pattern against the customer\'s evalset before choosing the production topology. The MCP specialist is the interesting one: Google provides MCP connectivity to BigQuery and the FHIR store; Nabd adds the population-health operations on top.');
   }
 
   /* ───────────────────────── 6. Architecture A: SAS Viya ───────────────────────── */
@@ -294,7 +294,7 @@ const numCircle = (s, n, x, y, d, fill) => {
     await pbox(s, 10.85, 2.35, 1.65, 1.0, 'Agent runtime', 'supervisor and specialists · language model · sessions · traces', { fill: '1E8E3E', line: '1E8E3E', titleColor: 'FFFFFF', fs: 9.5, subFs: 7.5 });
     arrow(s, 8.65, 2.85, 8.9, 2.85, GREY); arrow(s, 10.6, 2.85, 10.85, 2.85, GREY);
     label(s, 'Tools the agent calls', 7.0, 3.55, 4, GREY);
-    const tls = [['Data tools (MCP)', 'warehouse SQL · FHIR reads'], ['Nabd pop-health MCP', 'care gaps · measures · simulation'], ['Model endpoint', 'risk score and drivers'], ['Guideline retrieval', 'cited passages']];
+    const tls = [['Data tools (MCP)', 'warehouse SQL · FHIR reads'], ['Nabd pop-health MCP', 'care gaps · measures · risk scenarios'], ['Model endpoint', 'risk score and drivers'], ['Guideline retrieval', 'cited passages']];
     for (let i = 0; i < tls.length; i++) {
       const x = 7.0 + (i % 2) * 2.85, y = 3.8 + Math.floor(i / 2) * 0.66;
       await pbox(s, x, y, 2.7, 0.56, tls[i][0], tls[i][1], { fill: LGREEN, line: LGREEN, fs: 9, subFs: 7.5 });
@@ -306,16 +306,16 @@ const numCircle = (s, n, x, y, d, fill) => {
     arrow(s, 6.55, 4.35, 6.8, 4.35, BLUE2, 'dash');
     rect(s, 0.6, 6.45, 12.1, 0.5, CARD);
     s.addImage({ data: await icon('MdOutlineLock', GREY), x: 0.78, y: 6.56, w: 0.28, h: 0.28 });
-    T(s, [{ text: 'Sovereignty and operations: ', options: { bold: true, color: INK } }, { text: 'PHI at rest in country under a compliance boundary · customer-managed encryption keys · a network perimeter around the data services · least-privilege service identities · audit logs on every access · the language model sees pseudonymised prompts only.', options: { color: GREY } }],
+    T(s, [{ text: 'Sovereignty and operations: ', options: { bold: true, color: INK } }, { text: 'PHI at rest in country under a compliance boundary · customer-managed encryption keys · a network perimeter around the data services · least-privilege service identities · audit logs on every access · model endpoint and prompt content agreed with the ministry\'s data-protection office.', options: { color: GREY } }],
       1.15, 6.45, 11.5, 0.5, { fontSize: 9, valign: 'middle', lineSpacingMultiple: 1.05 });
     footer(s, 7);
-    s.addNotes('Read it left to right. Say the Google services out loud, box by box: the managed FHIR store is the Cloud Healthcare API; the warehouse is BigQuery with BigQuery ML; object storage is Cloud Storage; managed retrieval is Vertex AI RAG Engine; the model platform is Vertex AI (pipelines, Model Registry, online endpoint); the serverless app is Cloud Run; the agent runtime is the Agent Development Kit on Gemini, on Cloud Run in Doha until Agent Engine is available in me-central1; the data tools are the MCP Toolbox for BigQuery and FHIR; the queue lives in AlloyDB; write-back is a FHIR Task through the Healthcare API. Sovereignty: Assured Workloads with the Qatar data boundary, Cloud KMS keys, VPC Service Controls, Cloud Audit Logs; Gemini on the global endpoint on pseudonymised prompts only. This follows Google\'s own RAG reference architecture: an ingestion subsystem and a serving subsystem.');
+    s.addNotes('Read it left to right. Say the Google services out loud, box by box: the managed FHIR store is the Cloud Healthcare API; the warehouse is BigQuery with BigQuery ML; object storage is Cloud Storage; managed retrieval is Vertex AI RAG Engine; the model platform is Vertex AI (pipelines, Model Registry, online endpoint); the serverless app is Cloud Run; the agent runtime is the Agent Development Kit on Gemini, on Cloud Run in Doha until Agent Engine is available in me-central1; the data tools are the MCP Toolbox for BigQuery and FHIR; the queue lives in AlloyDB; write-back is a FHIR Task through the Healthcare API. Sovereignty: Assured Workloads with the Qatar data boundary, Cloud KMS keys, VPC Service Controls, Cloud Audit Logs; PHI and identifiable data stay inside the boundary, and the model endpoint and what may enter a prompt are agreed with the ministry\'s DPO and security team on supported regional processing; the demo uses synthetic data only. This follows Google\'s own RAG reference architecture: an ingestion subsystem and a serving subsystem.');
   }
 
   /* ───────────────────────── 8. Technical architecture ───────────────────────── */
   {
     const s = pres.addSlide();
-    headline(s, 'Technical view: the request path, the data path, and how it fails safely', 'Synchronous per question; batch per population; every component regional, in country, and zone-redundant.');
+    headline(s, 'Technical view: the request path, the data path, and how it fails safely', 'Synchronous per question; batch per population; regional managed services in country, with resilience validated against the customer\'s SLOs.');
     // Lane A: request path
     dashed(s, 0.6, 1.9, 12.1, 1.6, BLUE);
     label(s, 'Request path: one question, synchronous, p95 under 15 seconds', 0.8, 2.0, 8, BLUE2);
@@ -351,9 +351,9 @@ const numCircle = (s, n, x, y, d, fill) => {
     dashed(s, 0.6, 5.4, 12.1, 1.55, GREEN);
     label(s, 'Resilience and operations', 0.8, 5.5, 6, '1E8E3E');
     const ops = [
-      ['A zone fails', 'Every managed service is regional and zone-redundant: app, warehouse, FHIR store, database. Traffic re-routes, no data loss, nobody is paged.'],
-      ['The region fails', 'Residency rules keep data in country, so recovery is in-region: warehouse time travel, database and storage backups. Stated RPO 24 h, RTO 4 h.'],
-      ['The language model is saturated', 'The supervisor moves down a tested model list; if no model answers, the scripted engine runs the same tools without the language model.'],
+      ['Zonal resilience', 'Regional managed services for the app, warehouse, FHIR store and database; service-specific HA characteristics validated against the customer\'s SLOs.'],
+      ['Regional outage: an explicit trade-off', 'Strict in-country residency limits recovery options. RPO and RTO are agreed in discovery, with whether policy permits a compliant secondary recovery location.'],
+      ['The language model is saturated', 'The supervisor moves down a tested model list; if no model answers, the same tools run directly without the language model.'],
       ['Delivery and observability', 'infrastructure as code · CI with the evalset as a release gate · container registry · logs, traces and SLOs on first token and answer time.'],
     ];
     for (let i = 0; i < ops.length; i++) {
@@ -361,7 +361,7 @@ const numCircle = (s, n, x, y, d, fill) => {
       await pbox(s, x, 5.78, 2.8, 1.08, t, sub, { fill: LGREEN, line: LGREEN, fs: 9.5, subFs: 7.5 });
     }
     footer(s, 8);
-    s.addNotes('This slide exists for the technical questions. Say the Google names out loud: Identity-Aware Proxy in front, Cloud Run for the app and the agent, Gemini Flash via Vertex AI, sessions in AlloyDB, the MCP Toolbox over BigQuery, a Vertex AI endpoint, RAG Engine; the Cloud Healthcare API FHIR store, Pub/Sub events, BigQuery streaming export, Dataform marts, BigQuery ML batch scoring; Terraform, Cloud Build, Artifact Registry, Cloud Logging, Cloud Trace, Cloud Monitoring. Top lane: one question is one synchronous path, five hops, streamed. Middle lane: population numbers are batch, rebuilt nightly, because they move over weeks; only the per-patient signal is event-driven. Bottom lane: a zone failure is invisible by construction because every service is regional and zone-redundant in me-central1; a region failure is the honest limit of in-country residency, so recovery is in-region with a stated RPO and RTO; Gemini saturation degrades to the scripted engine, which the demo can show.');
+    s.addNotes('This slide exists for the technical questions. Say the Google names out loud: Identity-Aware Proxy in front, Cloud Run for the app and the agent, Gemini Flash via Vertex AI, sessions in AlloyDB, the MCP Toolbox over BigQuery, a Vertex AI endpoint, RAG Engine; the Cloud Healthcare API FHIR store, Pub/Sub events, BigQuery streaming export, Dataform marts, BigQuery ML batch scoring; Terraform, Cloud Build, Artifact Registry, Cloud Logging, Cloud Trace, Cloud Monitoring. Top lane: one question is one synchronous path, five hops, streamed. Middle lane: population numbers are batch, rebuilt nightly, because they move over weeks; only the per-patient signal is event-driven. Bottom lane: for zonal resilience we would use regional managed services and validate each service\'s HA characteristics against the customer\'s SLOs; a regional outage is the honest trade-off of strict in-country residency, so in discovery we agree the required RPO and RTO and whether policy permits a compliant secondary recovery location, and if cross-region replication is prohibited a complete regional outage is an accepted dependency on restoration of the Qatar region; model saturation degrades to the direct tool path, which the demo can show.');
   }
 
   /* ───────────────────────── 9. Demo agenda and service mapping ───────────────────────── */
@@ -369,8 +369,8 @@ const numCircle = (s, n, x, y, d, fill) => {
     const s = pres.addSlide();
     headline(s, 'What you will see in the next twenty minutes', 'A working system on a 4,000-patient synthetic exchange. Every number is computed live by a tool call; nothing is pre-rendered.');
     const acts = [
-      ['1', BLUE, 'The clinician\'s morning', 'A panel briefing, then one patient: the 360 view, an explained risk score, the guideline passage, and a draft prescription that waits for her signature. Then the what-if simulator on the same patient.'],
-      ['2', RED, 'The ministry\'s view', 'The national picture: control rates, care gaps by facility and nationality, cost concentration, and a simulation of five programmes before any money is spent.'],
+      ['1', BLUE, 'The clinician\'s morning', 'A panel briefing, then one patient: the 360 view, an explained risk score, the guideline passage, and a clinician review task that waits for her signature. Then the risk sensitivity simulator on the same patient.'],
+      ['2', RED, 'The population view', 'Control rates, care gaps by facility and population group, cost concentration, and predictive risk scenarios that show where the model\'s estimate is most sensitive.'],
       ['3', GREEN, 'Under the hood', 'The population-health MCP server, the live agent trace, and the evaluation tab: held-out model accuracy, the agent evalset, model choice and cost per question.'],
     ];
     for (let i = 0; i < acts.length; i++) {

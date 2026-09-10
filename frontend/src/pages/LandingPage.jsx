@@ -129,7 +129,7 @@ export default function LandingPage({ go }) {
 
         {/* ── HERO ── */}
         <section className="hero">
-          <img src="/google-g.svg" alt="" className="hero-g" />
+          <img src="/nabd-mark.svg" alt="" className="hero-g" />
           <div className="relative z-[1]">
             <div className="section-eyebrow reveal d1">National diabetes registry · Qatar Health Information Exchange</div>
             <h1 className="hero-title reveal d2">
@@ -191,13 +191,13 @@ export default function LandingPage({ go }) {
         {/* ── AGENTS ── */}
         <section className="landing-section grid grid-cols-2 gap-10 items-center">
           <div>
-            <div className="section-eyebrow">Multi-agent system · Google Agent Development Kit</div>
+            <div className="section-eyebrow">Prototype orchestration pattern · Google Agent Development Kit</div>
             <h2 className="section-title">A supervisor and five specialists,<br />with a complete audit trail.</h2>
             <p className="section-sub mt-3">
-              The supervisor plans and composes; it does not invent figures. The data specialist queries the exchange,
+              The orchestration pattern used in this prototype. The supervisor plans and composes; it does not invent figures. The data specialist queries the exchange,
               the guideline specialist retrieves and cites, the risk specialist runs the deployed models, the
-              population-health specialist works through the MCP server, and the action specialist drafts into a queue
-              that a clinician must approve.
+              population-health specialist works through the MCP server, and the action specialist drafts review tasks, recalls and referrals into a queue
+              that a clinician must approve. The production topology is benchmarked against the customer's evalset during discovery.
             </p>
             <div className="mt-5 space-y-3">
               {[
@@ -221,7 +221,7 @@ export default function LandingPage({ go }) {
           <div className="glass-card p-6">
             <Constellation />
             <p className="text-[10.5px] text-center mt-2" style={{ color: 'var(--text-faint)' }}>
-              The population-health specialist connects over the Model Context Protocol to a server built for this programme: care gaps, quality measures, stratification and simulation.
+              The population-health specialist connects over the Model Context Protocol to a server built for this programme: care gaps, quality measures, stratification and predictive risk scenarios.
             </p>
           </div>
         </section>
@@ -302,8 +302,8 @@ export default function LandingPage({ go }) {
                     <>HbA1c has risen from <b>{p.hba1c_12m_ago ?? 'n/a'}%</b> to <b>{p.hba1c_latest}%</b> in twelve months on <b>metformin alone</b>
                     {p.ckd || p.albuminuria ? <>, with early kidney involvement (eGFR {Math.round(p.egfr_latest)})</> : <>, with a BMI of {p.bmi}</>}.
                     The registry's rule-based tier lists {p.gender === 'female' ? 'her' : 'him'} as <b>{p.registry_risk_tier}</b>. The deterioration model puts the 12-month
-                    risk at <b>{Math.round((hero?.risk?.event_probability_12m ?? 0) * 100)}%</b>, and the national guideline recommends adding an SGLT2 inhibitor or
-                    GLP-1 receptor agonist at this point. Nabd surfaces the case, cites the guideline page, and drafts the prescription for Dr. Al-Mansoori to approve.</>
+                    risk at <b>{Math.round((hero?.risk?.event_probability_12m ?? 0) * 100)}%</b>, and the cited national guideline covers therapy intensification at this point.
+                    Nabd surfaces the case, cites the guideline page, and drafts a clinical review task for Dr. Al-Mansoori to approve; the treatment decision is hers.</>
                   ) : 'Loading the case…'}
                 </p>
               </div>
@@ -314,7 +314,7 @@ export default function LandingPage({ go }) {
 
         {/* ── BUILT ON GOOGLE ── */}
         <section className="landing-section pb-8">
-          <div className="section-eyebrow">Built on Google Cloud</div>
+          <div className="section-eyebrow">Target platform: Google Cloud</div>
           <h2 className="section-title">The agent stack in this demonstration, and the Google Cloud services it maps to in Doha.</h2>
           <div className="text-[10px] font-bold uppercase tracking-[0.14em] mt-4 mb-1.5" style={{ color: 'var(--text-faint)' }}>In this demonstration</div>
           <div className="flex flex-wrap gap-2">
@@ -323,7 +323,7 @@ export default function LandingPage({ go }) {
               <span key={n} className="gcloud-chip"><span className="dot" style={{ background: c }} />{n}</span>
             ))}
           </div>
-          <div className="text-[10px] font-bold uppercase tracking-[0.14em] mt-4 mb-1.5" style={{ color: 'var(--text-faint)' }}>On Google Cloud, me-central1</div>
+          <div className="text-[10px] font-bold uppercase tracking-[0.14em] mt-4 mb-1.5" style={{ color: 'var(--text-faint)' }}>Target architecture on Google Cloud, me-central1, to validate in discovery</div>
           <div className="flex flex-wrap gap-2">
             {['Cloud Healthcare API · FHIR R4', 'BigQuery · BigQuery ML', 'Vertex AI endpoint', 'RAG Engine',
               'Cloud Run', 'AlloyDB', 'Assured Workloads · Qatar Data Boundary'].map((n) => (

@@ -155,6 +155,11 @@ html, body, #root {
   gap: 1.4cqw;
   padding: 1.2cqw 1.8cqw 0;
 }
+.platform-tag {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text-faint); padding: 3px 8px; border-radius: 999px; margin-left: 10px; align-self: center;
+  background: rgba(255,255,255,0.55); border: 1px solid var(--hairline); white-space: nowrap;
+}
 .brand-logo {
   height: 4.8cqw; width: auto; min-height: 44px; max-height: 64px;
   object-fit: contain; display: block;

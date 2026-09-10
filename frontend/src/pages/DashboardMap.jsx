@@ -44,7 +44,7 @@ export default function DashboardMap() {
             Geography: glycaemic control by facility
           </h1>
           <p className="text-[10.5px] mt-1" style={{ color: 'var(--text-dim)' }}>
-            Control is concentrated in Doha. Facilities in the north and around the Industrial Area carry more open gaps and worse control; distance from the capital and the access gradient follow the same line.
+            Control is concentrated in Doha; facilities in the north and around the Industrial Area carry more open gaps and worse control. Descriptive variation by facility that identifies where further investigation is needed, not an explanation of why.
           </p>
         </div>
         <p className="text-[10px]" style={{ color: 'var(--text-faint)' }}>18 facilities · HMC hospitals + PHCC health centres · gold ring = flagged</p>

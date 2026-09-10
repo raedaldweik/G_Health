@@ -47,20 +47,23 @@ RISK_FEATURES = [
     "admissions_12mo", "ed_visits_12mo", "diabetes_medication_count", "care_gap_count",
 ]
 # Clinical priors as XGBoost monotonic constraints (+1 risk rises with the feature,
-# -1 risk falls, 0 unconstrained). A slider in the what-if simulator must never show risk
-# falling as HbA1c rises or rising as adherence improves; the constraint makes that a
-# property of the model rather than a hope. Insulin stays unconstrained on purpose, in the
-# registry it is a marker of advanced disease, not a treatment effect.
+# -1 risk falls, 0 unconstrained), applied only where the direction of the predictive
+# association is defensible: a measurement of worse control or worse organ function should
+# not lower the estimate. Therapy flags (metformin, SGLT2i/GLP-1 RA, RAAS inhibitor,
+# insulin) are deliberately UNCONSTRAINED: in a registry they mark disease severity and
+# treatment history, and the model is predictive, not a treatment-effect model. Encoding
+# a medication as automatically risk-reducing would smuggle a causal claim into the model.
 MONOTONE = {
     "age": 1, "bmi": 1, "bmi_change_12m": 1, "years_since_diagnosis": 1, "smoker": 1,
     "hba1c_latest": 1, "hba1c_days_since_test": 1, "sbp_latest": 1, "dbp_latest": 1,
     "egfr_latest": -1, "acr_latest": 1, "albuminuria": 1, "retinopathy": 1, "neuropathy": 1,
-    "foot_ulcer_history": 1, "htn": 1, "on_metformin": -1, "on_sglt2_glp1": -1, "on_raas_inhibitor": -1,
+    "foot_ulcer_history": 1, "htn": 1,
     "adherence_pdc": -1, "admissions_12mo": 1, "ed_visits_12mo": 1, "care_gap_count": 1,
 }
-MODEL_VERSION = "2.1.0"
-# Treatment / programme levers the counterfactual simulator may change
-INTERVENABLE = ["on_sglt2_glp1", "on_raas_inhibitor", "adherence_pdc", "hba1c_days_since_test", "sbp_latest"]
+MODEL_VERSION = "2.2.0"
+# Inputs the sensitivity simulator and the population scenarios may vary (measurements and
+# behaviour the model reads; never a therapy flag)
+SENSITIVITY_INPUTS = ["hba1c_latest", "hba1c_days_since_test", "sbp_latest", "adherence_pdc"]
 
 SIM_FEATURES = ["age", "bmi", "hba1c_latest", "years_since_diagnosis", "sbp_latest", "egfr_latest",
                 "acr_latest", "retinopathy", "neuropathy", "adherence_pdc", "admissions_12mo", "annual_cost_qar"]
@@ -104,7 +107,7 @@ def train_risk_model(s: pd.DataFrame) -> dict:
         [{"feature": fmap.get(k, k), "gain": round(v, 2)} for k, v in gain.items()],
         key=lambda r: -r["gain"])
 
-    # Compare against the legacy rules-based registry score
+    # Compare against the baseline rule-based score (the registry's points tier)
     legacy_auc = roc_auc_score(y_te, s.loc[X_te.index, "legacy_risk_score"])
 
     # Persist held-out predictions so the AI Evaluation tab computes ROC, calibration,
@@ -117,9 +120,9 @@ def train_risk_model(s: pd.DataFrame) -> dict:
 
     booster.save_model(OUT / "complication_risk.xgb.json")
     (OUT / "complication_risk.features.json").write_text(json.dumps({
-        "features": RISK_FEATURES, "intervenable": INTERVENABLE,
+        "features": RISK_FEATURES, "sensitivity_inputs": SENSITIVITY_INPUTS,
         "monotone": {f: MONOTONE.get(f, 0) for f in RISK_FEATURES}, "version": MODEL_VERSION}))
-    print(f"  complication_risk: AUC {auc:.3f} (legacy registry score {legacy_auc:.3f}), AP {ap:.3f}")
+    print(f"  complication_risk: AUC {auc:.3f} (baseline rule-based score {legacy_auc:.3f}), AP {ap:.3f}")
     return {"auc": round(auc, 3), "average_precision": round(ap, 3),
             "legacy_score_auc": round(legacy_auc, 3),
             "train_rows": len(X_tr), "test_rows": len(X_te),
@@ -236,9 +239,9 @@ def main():
          "task": "Binary classification, P(diabetes deterioration event within 12 months: admission for hypo/hyperglycaemia, DKA/HHS, foot infection or AKI, or progression to HbA1c ≥ 10%)",
          "training_data": f"{risk_metrics['train_rows']} patients (held-out test: {risk_metrics['test_rows']}), synthetic national HIE cohort",
          "features": RISK_FEATURES, "metrics": risk_metrics,
-         "intended_use": "Panel prioritisation for the diabetes programme, care-gap targeting, counterfactual programme simulation. Decision support only, never autonomous treatment decisions.",
-         "constraints": ("Monotonic constraints encode clinical priors: the estimate cannot fall as HbA1c, systolic BP, urine ACR, BMI, smoking, admissions, ED visits, monitoring delay or open care gaps rise, and cannot rise as eGFR, adherence, metformin, SGLT2i/GLP-1 RA or RAAS therapy improve. Insulin is deliberately unconstrained, in the registry it marks advanced disease rather than a treatment effect."),
-         "limitations": "Trained on synthetic data; requires clinical validation and bias audit before any production use. Programme counterfactuals assume guideline-average effect sizes. What-if estimates are associations, not causal treatment effects.",
+         "intended_use": "Panel prioritisation for the diabetes programme, care-gap targeting, predictive sensitivity and scenario analysis. Decision support only, never autonomous treatment decisions.",
+         "constraints": ("Monotonic constraints encode defensible clinical priors for a predictive model: the estimate cannot fall as HbA1c, systolic or diastolic BP, urine ACR, BMI, smoking, admissions, ED visits, monitoring delay or open care gaps rise, and cannot rise as eGFR or adherence improve. Therapy flags and insulin are deliberately unconstrained: in a registry they mark disease severity and treatment history, and the model estimates risk, not treatment effect."),
+         "limitations": "Trained on synthetic data: held-out metrics demonstrate the evaluation methodology, not clinical validation. Predictive sensitivity and scenario outputs are associations, not causal treatment effects or events prevented. Clinical validation and a fairness audit are required before any production use.",
          "phase2": "BigQuery ML BOOSTED_TREE_CLASSIFIER trained on the streamed FHIR export, registered in Vertex AI Model Registry, served on an online endpoint and scored through the Agent Platform /mcp/predict toolset."},
         {"model_id": "cohort_segments", "name": "Population Segmentation",
          "version": "1.0.1", "trained": today, "framework": "scikit-learn KMeans (k=4)",

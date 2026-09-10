@@ -1,5 +1,5 @@
 """Patient what-if simulator APIs: baseline, live re-scoring, presets, and a streamed
-Gemini explanation of why the deployed model's estimate moved."""
+narrated explanation of how the deployed model's estimate responded to changed inputs."""
 from __future__ import annotations
 
 import json

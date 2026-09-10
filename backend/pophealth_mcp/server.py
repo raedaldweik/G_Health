@@ -1,13 +1,11 @@
 """
-population-health-mcp, the first population-health MCP server on Google Cloud's
-healthcare stack.
+population-health-mcp: domain-specific population-health operations as MCP tools.
 
-Why it exists (verified gap, Sept 2026): Google ships official MCP tools to READ
-FHIR (MCP Toolbox `cloud-healthcare`: single-patient lookups, store metadata) and
-to CALL ML plumbing (Agent Platform remote MCP: /mcp/predict, /mcp/models). But no
-MCP server, official or community, lets an agent reason about a POPULATION:
-quality measures, care gaps, cohorts, risk stratification, policy what-ifs, or a
-safe write-back path for interventions. This server fills exactly that gap.
+Google already provides MCP connectivity to the core data services (the MCP Toolbox
+sources for BigQuery and the Cloud Healthcare API FHIR store). This server adds the
+population-health layer on top of that data: quality measures, cohort construction,
+care-gap identification, model-backed stratification, predictive risk scenarios, and a
+human-approved drafting path for interventions.
 
 Tools:
   get_population_snapshot   headline KPIs for the whole registry
@@ -15,13 +13,13 @@ Tools:
   find_care_gaps            open guideline-derived gaps, filterable by gap/facility
   compute_quality_measure   HEDIS-style measures (numerator/denominator/rate/target)
   stratify_risk             score a cohort through the deployed risk model
-  simulate_policy           counterfactual what-if via model re-scoring
-  draft_intervention        DRAFT-ONLY FHIR-style intervention → human approval queue
+  risk_scenario             predictive-risk scenario: re-score a cohort with changed inputs
+  draft_intervention        DRAFT-ONLY intervention (review, recall, referral) → approval queue
 
 Runs over stdio for any MCP client, the Nabd agent (ADK McpToolset), Gemini CLI,
 Claude Desktop. Start from backend/:  python -m pophealth_mcp
-Phase 2: same tools re-hosted on Cloud Run, backed by BigQuery + a Vertex AI
-endpoint instead of the local engine.
+On Google Cloud: the same tools re-hosted on Cloud Run beside the platform's own MCP
+tools, backed by BigQuery and a Vertex AI endpoint instead of the local engine.
 """
 from __future__ import annotations
 
@@ -42,8 +40,9 @@ mcp = FastMCP(
     instructions=(
         "Population-health reasoning over a national HIE cardiometabolic registry "
         "(4,000 synthetic patients). Use build_cohort/find_care_gaps/compute_quality_measure "
-        "for population questions, stratify_risk and simulate_policy for the ML-backed "
-        "prioritisation and what-ifs, and draft_intervention to queue actions for human "
+        "for population questions, stratify_risk and risk_scenario for the ML-backed "
+        "prioritisation and predictive scenarios (predictive, not causal: never events "
+        "prevented or savings), and draft_intervention to queue actions for human "
         "approval (nothing is ever written to the EMR autonomously)."),
 )
 
@@ -137,30 +136,30 @@ def stratify_risk(filters_json: str = "", top_n: int = 10) -> str:
 
 
 @mcp.tool()
-def simulate_policy(intervention: str, horizon_months: int = 12) -> str:
-    """Counterfactual policy what-if: flips the treatment flag for every eligible
-    patient and RE-SCORES them through the same risk model, projecting events
-    avoided, cost avoided, programme cost and net benefit. Not a canned number.
+def risk_scenario(scenario: str) -> str:
+    """Population PREDICTIVE-RISK scenario: re-scores every eligible patient through the
+    deployed deterioration-risk model with a hypothetical change to the model's inputs and
+    reports the shift in the predicted-risk distribution (mean, bands, patients moving
+    between bands, features accounting for the change). Predictive, not causal: the shift
+    is never an estimate of events prevented, savings or return.
 
     Args:
-        intervention: sglt2_glp1_intensification | hba1c_recall_program | adherence_support_program | renal_protection_program |
-            bp_control_program | combined.
-        horizon_months: projection horizon (12 or 24).
+        scenario: intensification_cohort_hba1c | hba1c_recall | adherence_support | bp_control.
     """
-    return _j(ml.simulate_policy(intervention, horizon_months))
+    return _j(ml.risk_scenario(scenario))
 
 
 @mcp.tool()
 def draft_intervention(patient_ids_json: str, action_type: str, title: str, rationale: str,
                        citation: str = "") -> str:
-    """DRAFT a population intervention (recall campaign, therapy review, referral batch)
-    for the listed patients. The draft is queued for HUMAN clinician approval, this
-    tool never writes to the EMR. Fills the write-back gap left by Google's read-only
-    healthcare MCP tools, safely.
+    """DRAFT a population intervention (recall campaign, clinical review list, referral
+    batch, outreach task) for the listed patients. The draft is queued for HUMAN clinician
+    approval; this tool never writes to the EMR and never drafts a prescription, drug or
+    dose.
 
     Args:
         patient_ids_json: JSON list of patient ids, e.g. '["QH-100042","QH-100077"]'.
-        action_type: recall_campaign | therapy_review | referral | prescription_draft.
+        action_type: recall_campaign | clinical_review | referral | outreach_task.
         title: short action title shown in the approval queue.
         rationale: clinical rationale (include the guideline basis).
         citation: optional guideline citation string.
